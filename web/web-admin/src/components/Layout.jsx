@@ -10,6 +10,8 @@ const NAV = [
   { to: '/categories',  label: 'Categorías' },
   { to: '/attributes',  label: 'Atributos' },
   { to: '/media',       label: 'Imágenes' },
+  { to: '/builder',     label: 'Web Builder' },
+  { to: '/themes',      label: 'Temas' },
   { to: '/site-config', label: 'Configuración' },
   { to: '/users',       label: 'Usuarios' },
 ];

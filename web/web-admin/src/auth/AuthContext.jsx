@@ -6,11 +6,12 @@
 //   - login(email, password) -> setea token + user, navega al dashboard.
 //   - logout() -> limpia todo, navega a /login.
 //
-// Boot: si hay token, intenta /api/auth/me. Si falla (401), limpia.
-//   Mientras tanto, status='loading' y la UI muestra un spinner.
+// Boot: si NO hay token en sessionStorage, asumimos 'guest' directo
+//   (sin gastar el request a /me que tiraría 401 y dejaría ruido en la
+//   pestaña Network del browser). Si hay token, intentamos /me.
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, ApiError } from '../api.js';
+import { api, ApiError, getToken } from '../api.js';
 
 const AuthContext = createContext(null);
 
@@ -18,9 +19,16 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState('loading');
   const [user, setUser] = useState(null);
 
-  // Al montar, intentar /me si hay token
   useEffect(() => {
     let cancelled = false;
+
+    // Sin token → guest inmediato, sin pegarle al server.
+    if (!getToken()) {
+      setStatus('guest');
+      return () => { cancelled = true; };
+    }
+
+    // Con token → verificar que sigue vivo.
     (async () => {
       try {
         const data = await api.me();
@@ -30,9 +38,13 @@ export function AuthProvider({ children }) {
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && (err.status === 401 || err.code === 'unauthorized')) {
+          // Token expirado o inválido → limpiar y guest.
+          // api.js no tiene logout acá, pero seteamos status y el
+          // siguiente render ya no muestra nada protegido.
+          try { sessionStorage.removeItem('techstore.admin.token'); } catch { /* ignore */ }
           setStatus('guest');
         } else {
-          // Error de red u otro: tratar como guest pero log
+          // Error de red u otro: tratar como guest pero log.
           console.error('auth boot error', err);
           setStatus('guest');
         }

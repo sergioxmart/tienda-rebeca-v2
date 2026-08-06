@@ -13,6 +13,8 @@ import Attributes from './pages/Attributes.jsx';
 import Media from './pages/Media.jsx';
 import SiteConfig from './pages/SiteConfig.jsx';
 import Users from './pages/Users.jsx';
+import PageBuilder from './pages/PageBuilder.jsx';
+import Themes from './pages/Themes.jsx';
 
 function RequireAuth({ children }) {
   const { status } = useAuth();
@@ -51,6 +53,8 @@ export default function App() {
         <Route path="/media" element={<Media />} />
         <Route path="/site-config" element={<SiteConfig />} />
         <Route path="/users" element={<Users />} />
+        <Route path="/builder" element={<PageBuilder />} />
+        <Route path="/themes" element={<Themes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

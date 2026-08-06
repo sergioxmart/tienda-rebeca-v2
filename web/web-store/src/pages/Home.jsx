@@ -1,84 +1,60 @@
-// Home: hero, categorías como chips, productos destacados y productos recientes.
+// Home: renderiza los page_modules activos en orden desde el backend
+// (Web Builder). El admin decide qué bloques aparecen y en qué orden.
+//
+//   GET /api/public/page-modules → { modules: [{id, type, position, settings}] }
+//
+// Cada tipo tiene su renderer en src/modules/registry.js. Si el admin
+// agrega un type nuevo, hay que sumarlo al registry Y al backend.
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { useSite } from '../site/SiteContext.jsx';
-import ProductCard from '../components/ProductCard.jsx';
-import Empty from '../components/Empty.jsx';
+import { MODULE_RENDERERS } from '../modules/registry.js';
 
 export default function Home() {
-  const { site, categories } = useSite();
-  const [featured, setFeatured] = useState([]);
-  const [recent, setRecent] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [modules, setModules] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [f, r] = await Promise.all([
-          api.products({ featured: 'true', limit: 8 }),
-          api.products({ sort: 'newest', limit: 8 }),
-        ]);
-        setFeatured(f.products || []);
-        setRecent(r.products || []);
-      } catch { /* ignore */ }
-      finally { setLoading(false); }
-    })();
+    api.pageModules()
+      .then((d) => setModules(d.modules || []))
+      .catch((e) => setError(e.message));
   }, []);
 
-  const storeName = site?.site_name || 'TechStore';
+  if (error) {
+    return (
+      <div className="empty">
+        <h3>No se pudo cargar la home</h3>
+        <p>{error}</p>
+      </div>
+    );
+  }
+  if (modules === null) {
+    return <div className="center"><span className="spinner" /></div>;
+  }
+  if (modules.length === 0) {
+    return (
+      <div className="empty">
+        <h3>La home está vacía</h3>
+        <p>El admin aún no agregó módulos desde el Web Builder.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <section className="hero">
-        <h1>Todo para tu celular, en un solo lugar</h1>
-        <p>Carcasas, forros, cargadores, audífonos y más. Envío a todo Colombia.</p>
-        {categories[0] && (
-          <Link to={`/categoria/${categories[0].slug}`} className="btn btn-accent">
-            Ver catálogo
-          </Link>
-        )}
-      </section>
-
-      {categories.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2>Categorías</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {categories.map((c) => (
-              <Link key={c.id} to={`/categoria/${c.slug}`} className="chip">
-                {c.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section style={{ marginBottom: 32 }}>
-        <h2>Destacados</h2>
-        {loading ? (
-          <div className="center"><span className="spinner" /></div>
-        ) : featured.length === 0 ? (
-          <Empty title="Sin destacados" description="Pronto vamos a marcar productos como destacados." />
-        ) : (
-          <div className="product-grid">
-            {featured.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <h2>Lo más nuevo</h2>
-        {loading ? (
-          <div className="center"><span className="spinner" /></div>
-        ) : recent.length === 0 ? (
-          <Empty title="Sin productos aún" />
-        ) : (
-          <div className="product-grid">
-            {recent.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
-        )}
-      </section>
+      {modules.map((m) => {
+        const Renderer = MODULE_RENDERERS[m.type];
+        if (!Renderer) {
+          // Tipo desconocido (probablemente agregado al backend pero no
+          // al registry del front). Mostramos placeholder para que se note.
+          return (
+            <div key={m.id} className="empty" style={{ padding: 16, marginBottom: 16 }}>
+              <p>Módulo de tipo <code>{m.type}</code> no soportado por esta versión del front.</p>
+            </div>
+          );
+        }
+        return <Renderer key={m.id} settings={m.settings || {}} />;
+      })}
     </div>
   );
 }

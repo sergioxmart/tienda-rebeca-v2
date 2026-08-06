@@ -43,7 +43,13 @@ const BODY_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
  */
 export function withJsonBody(handler) {
   return async (req, res, ...args) => {
-    if (BODY_METHODS.has(req.method) && req.body === undefined) {
+    // Si el Content-Type es multipart/form-data, el handler va a leer
+    // el body con multer o con for-await chunks. No intentamos parsear
+    // JSON porque rompe el stream.
+    const contentType = req.headers['content-type'] || '';
+    const isMultipart = contentType.startsWith('multipart/');
+
+    if (BODY_METHODS.has(req.method) && req.body === undefined && !isMultipart) {
       try {
         req.body = await readJsonBody(req);
       } catch {

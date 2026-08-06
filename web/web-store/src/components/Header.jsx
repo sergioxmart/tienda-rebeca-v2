@@ -1,4 +1,4 @@
-// Header de la tienda: logo, nav (categorías), botón de carrito.
+// Header de la tienda: logo (o texto si no hay), nav (categorías), botón de carrito.
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -10,13 +10,18 @@ export default function Header() {
   const { count } = useCart();
   const navigate = useNavigate();
   const name = site?.site_name || 'TechStore';
+  const logoUrl = site?.logo_url;
 
   return (
     <header className="header">
       <div className="header-inner">
-        <Link to="/" className="logo">{name}<span className="accent">.</span></Link>
+        <Link to="/" className="logo" aria-label={name}>
+          {logoUrl
+            ? <img src={logoUrl} alt={name} style={{ maxHeight: 32, maxWidth: 160, objectFit: 'contain' }} />
+            : <>{name}<span className="accent">.</span></>}
+        </Link>
         <nav className="nav">
-          {categories.slice(0, 5).map((c) => (
+          {Array.isArray(categories) && categories.slice(0, 5).map((c) => (
             <Link key={c.id} to={`/categoria/${c.slug}`}>{c.name}</Link>
           ))}
         </nav>

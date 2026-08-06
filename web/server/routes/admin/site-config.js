@@ -7,6 +7,10 @@
 //   GET   /api/admin/site-config         → devuelve TODO (objeto)
 //   PATCH /api/admin/site-config         → actualiza un subset
 //                                          body: { key: value, ... }
+//   POST  /api/admin/site-config/logo    → upload del logo (multipart)
+//                                          guarda en uploads/site/logo.<ext>
+//                                          y setea site_config.logo_url
+//   DELETE /api/admin/site-config/logo   → borra el logo (archivo + key)
 //
 // El PATCH es por key, no por path. Esto permite mandar varios keys
 // en una sola request. Internamente, hace UPSERT por cada key.
@@ -14,6 +18,7 @@
 import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
+import { upload, writeUploadFile, deleteUploadFile } from '../../lib/uploads.js';
 import { protect, recordAudit } from './_helpers.js';
 
 // --- Handlers -------------------------------------------------------------
@@ -63,11 +68,64 @@ export async function updateSiteConfig(req, res) {
   return json(res, 200, { ok: true, config: out });
 }
 
+// --- Logo upload ----------------------------------------------------------
+
+export async function uploadLogo(req, res) {
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      log.warn('logo upload error', { msg: err.message });
+      return json(res, 400, { ok: false, error: 'upload_failed', message: err.message });
+    }
+    if (!req.file) return json(res, 400, { ok: false, error: 'file_required' });
+
+    // Borrar el logo viejo si existe (best-effort)
+    const { rows: old } = await query(`SELECT value FROM site_config WHERE key = 'logo_url'`);
+    if (old[0]?.value && typeof old[0].value === 'string') {
+      try { await deleteUploadFile(old[0].value); } catch { /* ignore */ }
+    }
+
+    // Escribir el nuevo. Forzamos nombre estable "logo" para que el
+    // browser pueda cachearlo por URL.
+    const result = await writeUploadFile(req.file, { subdir: 'site', filename: 'logo' });
+    const { url } = result;
+
+    await tx(async (client) => {
+      await client.query(
+        `INSERT INTO site_config (key, value, updated_at)
+         VALUES ('logo_url', $1::jsonb, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [JSON.stringify(url)],
+      );
+    });
+    await recordAudit(req.user?.id, 'site_config.logo_upload', req.ip, { url });
+    log.info('logo uploaded', { url, by: req.user?.email });
+    return json(res, 200, { ok: true, logo_url: url });
+  });
+}
+
+export async function deleteLogo(req, res) {
+  const { rows } = await query(`SELECT value FROM site_config WHERE key = 'logo_url'`);
+  const current = rows[0]?.value;
+  if (current && typeof current === 'string') {
+    try { await deleteUploadFile(current); } catch { /* ignore */ }
+  }
+  await query(
+    `INSERT INTO site_config (key, value, updated_at)
+     VALUES ('logo_url', 'null'::jsonb, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+  );
+  await recordAudit(req.user?.id, 'site_config.logo_delete', req.ip, {});
+  log.info('logo deleted', { by: req.user?.email });
+  return json(res, 200, { ok: true });
+}
+
 // --- Router ---------------------------------------------------------------
 
 const routes = [
-  { method: 'GET',   pattern: /^\/api\/admin\/site-config\/?$/, handler: getSiteConfig,    section: 'site_config' },
-  { method: 'PATCH', pattern: /^\/api\/admin\/site-config\/?$/, handler: updateSiteConfig, section: 'site_config' },
+  { method: 'GET',    pattern: /^\/api\/admin\/site-config\/?$/,       handler: getSiteConfig,    section: 'site_config' },
+  { method: 'PATCH',  pattern: /^\/api\/admin\/site-config\/?$/,       handler: updateSiteConfig, section: 'site_config' },
+  { method: 'POST',   pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: uploadLogo,       section: 'site_config' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: deleteLogo,       section: 'site_config' },
 ];
 
 export async function tryHandleSiteConfig(req, res) {

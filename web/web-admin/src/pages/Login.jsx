@@ -2,8 +2,12 @@
 //
 // Errores: el server puede devolver 401 con code 'invalid_credentials' o
 // 'account_locked' (rate limit progresivo). Mostramos el mensaje tal cual.
+//
+// El color de fondo del shell se lee del site_config (key admin_login_bg).
+// Como esta página es pública (no requiere auth), lo trae con fetch
+// directo a /api/public/site-config, no via api wrapper con token.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { ApiError } from '../api.js';
@@ -16,6 +20,20 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [bg, setBg] = useState('#0F2A47');  // default azul TechStore
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/public/site-config');
+        const data = await res.json();
+        const c = data?.config;
+        if (c && typeof c.admin_login_bg === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(c.admin_login_bg)) {
+          setBg(c.admin_login_bg);
+        }
+      } catch { /* fallback al default */ }
+    })();
+  }, []);
 
   if (status === 'auth') {
     return <Navigate to={location.state?.from?.pathname || '/'} replace />;
@@ -41,7 +59,7 @@ export default function Login() {
   };
 
   return (
-    <div className="login-shell">
+    <div className="login-shell" style={{ background: bg }}>
       <form className="login-card" onSubmit={handleSubmit}>
         <h1>TechStore · Admin</h1>
         {error && <div className="alert alert-error">{error}</div>}

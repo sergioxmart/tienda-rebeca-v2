@@ -53,6 +53,10 @@ export const api = {
     const r = await request(`/api/public/products/${slug}`);
     return r.product || null;
   },
+  pageModules: async () => {
+    const r = await request('/api/public/page-modules');
+    return { modules: r.modules || [] };
+  },
 };
 
 export { ApiError };

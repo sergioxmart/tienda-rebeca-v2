@@ -8,6 +8,7 @@ import { listAttributes } from './attributes.js';
 import { getSiteConfig } from './site-config.js';
 import { listProducts } from './products.js';
 import { getProductBySlug } from './product-detail.js';
+import { listPublicModules } from './page-modules.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -44,6 +45,11 @@ export async function handlePublic(req, res) {
   const prodMatch = pathname.match(/^\/api\/public\/products\/([a-z0-9-]+)\/?$/);
   if (prodMatch && method === 'GET') {
     return getProductBySlug(req, res, prodMatch[1]);
+  }
+
+  // Page modules (Web Builder)
+  if (pathname === '/api/public/page-modules' && method === 'GET') {
+    return listPublicModules(req, res);
   }
 
   return json(res, 404, { ok: false, error: 'not_found' });

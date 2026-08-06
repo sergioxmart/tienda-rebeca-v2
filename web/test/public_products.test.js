@@ -58,7 +58,7 @@ test('listProducts sin filtros devuelve el producto', async () => {
   assert.equal(res.statusCode, 200);
   const found = body.products.find(p => p.slug === 'test-public-fixture');
   assert.ok(found, 'producto de prueba no apareció');
-  assert.equal(found.total_stock, 8);  // 5 + 3
+  assert.equal(Number(found.total_stock), 8);  // 5 + 3 (pg NUMERIC viene como string)
 });
 
 test('listProducts filtra por attribute=color:Rojo', async () => {
@@ -119,12 +119,12 @@ test('listProducts filtra por categoría', async () => {
 test('listProducts filtra por texto q', async () => {
   await ensureFixture();
   const req = mockReq();
-  req.url = '/api/public/products?q=PublicFixture';
+  req.url = '/api/public/products?q=Public';  // matchea 'Test Public Fixture'
   const res = mockRes();
   await listProducts(req, res);
   const body = parse(res);
   const found = body.products.find(p => p.slug === 'test-public-fixture');
-  assert.ok(found, 'q=PublicFixture debe matchear el producto de prueba');
+  assert.ok(found, 'q=Public debe matchear "Test Public Fixture"');
 });
 
 // Cleanup final

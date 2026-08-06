@@ -1,93 +1,107 @@
-// Helpers de fetch para el admin. CSRF double-submit cookie.
+// Wrapper de fetch para el admin.
+//
+// Maneja:
+//   - Authorization header con el access_token (de sessionStorage).
+//   - X-CSRF-Token en métodos que mutan (POST/PATCH/DELETE/PUT). El token
+//     CSRF viene en una cookie de doble submit (no httpOnly) que el server
+//     setea. En dev con Vite proxy y sameSite=lax funciona; si no aparece,
+//     el server tira 403 con error 'csrf_missing' y le decimos al usuario.
+//   - Parseo de respuesta: {ok, ...} o {ok: false, error: '...', ...}.
+//   - Errores como Error con `.status`, `.code`, `.details`.
+//
+// Por qué sessionStorage y no localStorage: el token vive solo en esta
+// pestaña. Si el admin abre múltiples pestañas, cada una maneja su propio
+// token. Es un trade-off de seguridad vs UX. Para nuestro caso (uso admin
+// interno) está bien.
 
-let accessToken = null;
+const TOKEN_KEY = 'techstore.admin.token';
+const CSRF_COOKIE = 'csrf_token';
 
-export function setAccessToken(t) { accessToken = t; }
-export function getAccessToken() { return accessToken; }
-
-export function getCookie(name) {
+export function getToken() {
+  try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+export function setToken(token) {
   try {
-    // document.cookie ya devuelve los valores URL-decoded. NO decodificar de nuevo.
-    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-    return m ? m[1] : null;
-  } catch {
-    return null;
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch { /* ignore */ }
+}
+
+function getCsrfCookie() {
+  const m = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+class ApiError extends Error {
+  constructor(message, { status, code, details } = {}) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
   }
 }
 
-export function authHeaders() {
-  const h = {};
-  if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
-  const csrf = getCookie('csrf_token');
-  if (csrf) h['X-CSRF-Token'] = csrf;
-  return h;
-}
+async function request(method, path, { body, isForm, headers } = {}) {
+  const token = getToken();
+  const finalHeaders = { ...headers };
+  if (token) finalHeaders['Authorization'] = `Bearer ${token}`;
 
-// Refresh deduplicado: React 18 StrictMode monta los efectos dos veces en dev,
-// y dos POST /api/auth/refresh concurrentes con la misma cookie hacen que el
-// segundo llegue con el token ya rotado → 401 → el server borra las cookies y
-// se cae la sesión. Compartimos una sola promesa entre llamadores concurrentes.
-let refreshInFlight = null;
-export function refreshSession() {
-  if (!refreshInFlight) {
-    refreshInFlight = api('/api/auth/refresh', { method: 'POST' }).finally(() => {
-      refreshInFlight = null;
-    });
-  }
-  return refreshInFlight;
-}
-
-async function doFetch(path, { method, body, json }) {
-  // body puede ser:
-  //  - undefined: sin body
-  //  - FormData (uploads): se manda tal cual, sin Content-Type (el browser lo setea con boundary)
-  //  - cualquier otro objeto: si json=true se JSON.stringify con Content-Type
-  const isFormData = body instanceof FormData;
-
-  const headers = authHeaders();
-  if (json && body !== undefined && !isFormData) {
-    headers['Content-Type'] = 'application/json';
+  let payload;
+  if (isForm) {
+    payload = body;  // FormData, browser sets Content-Type
+  } else if (body !== undefined) {
+    finalHeaders['Content-Type'] = 'application/json';
+    payload = JSON.stringify(body);
   }
 
-  const fetchBody = body === undefined
-    ? undefined
-    : isFormData
-      ? body
-      : (json ? JSON.stringify(body) : body);
+  // CSRF para métodos que mutan
+  if (['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) {
+    const csrf = getCsrfCookie();
+    if (csrf) finalHeaders['X-CSRF-Token'] = csrf;
+  }
 
-  const res = await fetch(path, {
-    method,
-    headers,
-    body: fetchBody,
-    credentials: 'include',
-  });
+  const res = await fetch(path, { method, headers: finalHeaders, body: payload, credentials: 'include' });
+
+  // 204 No Content
+  if (res.status === 204) return { ok: true };
 
   let data = null;
-  const ct = res.headers.get('content-type') || '';
-  if (ct.includes('application/json')) {
-    try { data = await res.json(); }
-    catch { data = await res.text(); }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    data = await res.json();
   } else {
-    data = await res.text();
+    data = { ok: res.ok, error: await res.text().catch(() => 'unknown_error') };
   }
-  return { ok: res.ok, status: res.status, data };
+
+  if (!res.ok || (data && data.ok === false)) {
+    const code = (data && data.error) || `http_${res.status}`;
+    const message = (data && (data.message || data.error_human)) || res.statusText;
+    throw new ApiError(message, { status: res.status, code, details: data });
+  }
+  return data;
 }
 
-export async function api(path, { method = 'GET', body, json = true } = {}) {
-  const first = await doFetch(path, { method, body, json });
+export const api = {
+  get:    (path, opts)        => request('GET', path, opts),
+  post:   (path, body, opts)  => request('POST', path, { ...opts, body }),
+  patch:  (path, body, opts)  => request('PATCH', path, { ...opts, body }),
+  put:    (path, body, opts)  => request('PUT', path, { ...opts, body }),
+  delete: (path, opts)        => request('DELETE', path, opts),
+  upload: (path, formData)    => request('POST', path, { body: formData, isForm: true }),
 
-  // Si el access token venció (15 min), intentamos un refresh silencioso y
-  // reintentamos UNA vez. Así la sesión no se corta mientras se usa el panel.
-  // FormData no se puede reenviar de forma confiable después de consumido en
-  // algunos browsers, pero fetch con el mismo objeto funciona en los modernos.
-  const isAuthPath = path.startsWith('/api/auth/');
-  if (first.status === 401 && !isAuthPath && getAccessToken()) {
-    const r = await refreshSession();
-    if (r.ok) {
-      setAccessToken(r.data.data.access_token);
-      return doFetch(path, { method, body, json });
-    }
-    setAccessToken(null);
-  }
-  return first;
-}
+  // Auth helpers
+  async login(email, password) {
+    const data = await request('POST', '/api/auth/login', { body: { email, password } });
+    if (data?.data?.access_token) setToken(data.data.access_token);
+    return data;
+  },
+  async logout() {
+    try { await request('POST', '/api/auth/logout', { body: {} }); } catch { /* ignore */ }
+    setToken(null);
+  },
+  async me() {
+    return request('GET', '/api/auth/me');
+  },
+};
+
+export { ApiError };

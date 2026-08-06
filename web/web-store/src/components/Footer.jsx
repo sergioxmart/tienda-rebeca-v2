@@ -13,7 +13,9 @@ export default function Footer() {
         <div>
           <h4>{site.site_name}</h4>
           <p style={{ fontSize: 13, margin: 0 }}>
-            {site.contact_address_lines?.length > 0 ? site.contact_address_lines.join(', ') : 'Bogotá, Colombia'}
+            {site.contact_address_lines?.length > 0
+              ? site.contact_address_lines.join(', ')
+              : (site.contact_address || 'Bogotá, Colombia')}
           </p>
         </div>
         {categories.length > 0 && (

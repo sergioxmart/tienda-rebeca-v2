@@ -21,6 +21,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [bg, setBg] = useState('#0F2A47');  // default azul TechStore
+  const [storeName, setStoreName] = useState('TechStore');
 
   useEffect(() => {
     (async () => {
@@ -30,6 +31,12 @@ export default function Login() {
         const c = data?.config;
         if (c && typeof c.admin_login_bg === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(c.admin_login_bg)) {
           setBg(c.admin_login_bg);
+        }
+        // También usamos el site_name para el título de la pantalla
+        // y como document.title (pestaña del browser).
+        if (c && typeof c.site_name === 'string' && c.site_name.trim()) {
+          setStoreName(c.site_name);
+          document.title = `${c.site_name} · Admin`;
         }
       } catch { /* fallback al default */ }
     })();
@@ -61,7 +68,7 @@ export default function Login() {
   return (
     <div className="login-shell" style={{ background: bg }}>
       <form className="login-card" onSubmit={handleSubmit}>
-        <h1>TechStore · Admin</h1>
+        <h1>{storeName} · Admin</h1>
         {error && <div className="alert alert-error">{error}</div>}
         <div className="form-group">
           <label htmlFor="email">Correo</label>

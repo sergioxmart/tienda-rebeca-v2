@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+server/public/
+web-store/dist/
+web-admin/dist/
+
+# local data
+data/
+uploads/
+!uploads/.gitkeep
+!data/.gitkeep
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.tmp/
+
+# typescript
+*.tsbuildinfo
+
+# pm2
+.pm2/
+logs/

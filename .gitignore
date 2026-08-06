@@ -1,0 +1,50 @@
+# === dependencies ===
+node_modules/
+.pnp/
+.pnp.js
+
+# === build output ===
+server/public/
+web-store/dist/
+web-admin/dist/
+core/server/public/
+
+# === local data / uploads / certs (secretos) ===
+data/
+uploads/
+!uploads/.gitkeep
+!data/.gitkeep
+certs/
+
+# === env (NUNCA commitear) ===
+.env
+.env.local
+.env.*.local
+
+# === logs ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+.pm2/
+
+# === editor / OS ===
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.tmp/
+
+# === typescript ===
+*.tsbuildinfo
+
+# === worktrees locales (no se commitean) ===
+.worktrees/
+
+# === mockups (no son código de la app) ===
+mockup/
+Mock up*/

@@ -1,0 +1,27 @@
+{
+  "name": "techstore-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lógica de negocio multi-cliente. Se deploya con web/ o se consume por mTLS desde server de Sergio.",
+  "main": "lib/index.js",
+  "exports": {
+    "./lib/*": "./lib/*",
+    "./middleware/*": "./middleware/*",
+    "./webhook/*": "./webhook/*",
+    "./scripts/*": "./scripts/*"
+  },
+  "scripts": {
+    "check": "node --check lib/auth.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie": "^0.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.5"
+  }
+}

@@ -5,7 +5,7 @@
 //
 // El upload usa multer con memoryStorage (de core/lib/uploads.js): el
 // archivo se valida (MIME, tamaño) y se escribe a
-// `uploads/<yyyy>/<mm>/<uuid>.<ext>` con `writeUploadFile`. La URL
+// `uploads/media/<yyyy>/<mm>/<uuid>.<ext>` con `writeUploadFile`. La URL
 // resultante es lo que se guarda en product_media.url.
 //
 // Endpoints:

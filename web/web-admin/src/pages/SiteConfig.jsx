@@ -7,9 +7,8 @@
 //   DELETE /api/admin/site-config/logo
 
 import React, { useEffect, useRef, useState } from 'react';
-import { api, ApiError } from '../api.js';
+import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
-import Empty from '../components/Empty.jsx';
 
 const KNOWN_KEYS = [
   { key: 'site_name',          label: 'Nombre de la tienda',     type: 'text',     placeholder: 'TechStore Colombia' },
@@ -23,8 +22,14 @@ const KNOWN_KEYS = [
   { key: 'wompi_public_key',   label: 'Wompi (public key)',      type: 'text',     placeholder: 'pub_test_...' },
   { key: 'epayco_public_key',  label: 'ePayco (public key)',     type: 'text',     placeholder: '...' },
   { key: 'free_shipping_min',  label: 'Envío gratis desde (COP)', type: 'number', placeholder: '150000' },
-  { key: 'admin_login_bg',     label: 'Color de fondo del login (hex)', type: 'text', placeholder: '#0F2A47' },
+  { key: 'admin_login_bg',     label: 'Color de fondo del login', type: 'color', placeholder: '#0F2A47' },
 ];
+
+const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function pickerColor(value) {
+  return HEX_COLOR_RE.test(value || '') ? value : '#0F2A47';
+}
 
 export default function SiteConfig() {
   const toast = useToast();
@@ -33,6 +38,7 @@ export default function SiteConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoVersion, setLogoVersion] = useState(() => Date.now());
 
   useEffect(() => {
     (async () => {
@@ -65,8 +71,9 @@ export default function SiteConfig() {
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Solo se permiten imágenes');
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/avif']);
+    if (!allowedTypes.has(file.type)) {
+      toast.error('Usa una imagen PNG, JPG, WebP o AVIF');
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
@@ -79,6 +86,7 @@ export default function SiteConfig() {
       fd.append('file', file);
       const data = await api.upload('/api/admin/site-config/logo', fd);
       setConfig((cur) => ({ ...cur, logo_url: data.logo_url }));
+      setLogoVersion(Date.now());
       toast.success('Logo actualizado');
     } catch (err) {
       toast.error('No se pudo subir el logo', err.message);
@@ -100,6 +108,10 @@ export default function SiteConfig() {
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
+
+  const logoSrc = config.logo_url
+    ? `${config.logo_url}${config.logo_url.includes('?') ? '&' : '?'}v=${logoVersion}`
+    : null;
 
   return (
     <div>
@@ -132,13 +144,13 @@ export default function SiteConfig() {
             background: '#F3F4F6',
             overflow: 'hidden',
           }}>
-            {config.logo_url
-              ? <img src={config.logo_url} alt="logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            {logoSrc
+              ? <img src={logoSrc} alt="Logo de la tienda" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
               : <span style={{ color: 'var(--color-muted)', fontSize: 12 }}>Sin logo</span>
             }
           </div>
           <div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
+            <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg,.webp,.avif,image/png,image/jpeg,image/webp,image/avif" style={{ display: 'none' }} onChange={handleLogoUpload} />
             <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={uploadingLogo}>
               {uploadingLogo ? <span className="spinner" /> : (config.logo_url ? 'Cambiar logo' : 'Subir logo')}
             </button>
@@ -148,7 +160,7 @@ export default function SiteConfig() {
               </button>
             )}
             <div className="help" style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 8 }}>
-              PNG, JPG o SVG. Máximo 3 MB. Recomendado: 400×120 o similar.
+              PNG, JPG, WebP o AVIF. Máximo 3 MB. Recomendado: 400×120 o similar.
             </div>
           </div>
         </div>
@@ -160,18 +172,51 @@ export default function SiteConfig() {
         borderRadius: 'var(--radius)',
         padding: 20,
       }}>
-        {KNOWN_KEYS.map((field) => (
-          <div className="form-group" key={field.key}>
-            <label>{field.label}</label>
-            <input
-              className="input"
-              type={field.type}
-              placeholder={field.placeholder}
-              value={config[field.key] ?? ''}
-              onChange={(e) => setKey(field.key, e.target.value)}
-            />
-          </div>
-        ))}
+        {KNOWN_KEYS.map((field) => {
+          if (field.type === 'color') {
+            const value = String(config[field.key] || '');
+            return (
+              <div className="form-group" key={field.key}>
+                <label htmlFor={field.key}>{field.label}</label>
+                <div className="color-field">
+                  <input
+                    id={field.key}
+                    className="color-picker"
+                    type="color"
+                    value={pickerColor(value)}
+                    aria-label={`Elegir ${field.label.toLowerCase()}`}
+                    onChange={(e) => setKey(field.key, e.target.value.toUpperCase())}
+                  />
+                  <input
+                    className="input color-hex-input"
+                    type="text"
+                    inputMode="text"
+                    placeholder={field.placeholder}
+                    value={value}
+                    onChange={(e) => setKey(field.key, e.target.value.toUpperCase())}
+                    aria-describedby={`${field.key}-help`}
+                  />
+                  <span className="color-preview" style={{ background: pickerColor(value) }} aria-hidden="true" />
+                </div>
+                <div id={`${field.key}-help`} className="help">Elige un color o escribe un valor hexadecimal como #0F2A47.</div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="form-group" key={field.key}>
+              <label htmlFor={field.key}>{field.label}</label>
+              <input
+                id={field.key}
+                className="input"
+                type={field.type}
+                placeholder={field.placeholder}
+                value={config[field.key] ?? ''}
+                onChange={(e) => setKey(field.key, e.target.value)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );

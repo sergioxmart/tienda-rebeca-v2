@@ -72,7 +72,7 @@ El "Core remoto" (modo dividido con mTLS) es un plan documentado en
 | Migraciones SQL | 9 migrations de TechStore (forward-only, idempotente) | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 | Tienda pública | SPA Vite + React (catálogo, carrito, checkout) | [`web/web-store/`](../web/web-store/) | [api.md](./api.md) |
 | Panel admin | SPA Vite + React. CRUDs + kanban pedidos | [`web/web-admin/`](../web/web-admin/) | [api.md](./api.md) |
-| Uploads | Directorio de archivos subidos. Lo resuelve `env.UPLOADS_DIR` | `uploads/` (gitignored) | [conventions.md](./conventions.md) |
+| Uploads | Directorio de archivos subidos. Lo resuelve `env.UPLOADS_DIR`; las URLs públicas pasan por `/media` | `uploads/` (gitignored) | [conventions.md](./conventions.md) |
 | Webhook de deploy | `web/webhook/server.mjs` cablea el receptor genérico a TechStore | [`web/webhook/`](../web/webhook/) | (placeholder hasta prod) |
 | PM2 | Config de procesos (placeholder hasta prod) | [`web/ecosystem.config.cjs`](../web/ecosystem.config.cjs) | (placeholder hasta prod) |
 

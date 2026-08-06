@@ -30,12 +30,22 @@ export async function handleMedia(req, res) {
   const rel = pathname.slice('/media/'.length);
   if (!rel || rel.includes('..')) return notFound(res);
 
-  const fullPath = normalize(join(env.UPLOADS_DIR, rel));
-  if (!fullPath.startsWith(env.UPLOADS_DIR)) return notFound(res);
+  // La ruta histórica `/media/aaaa/mm/archivo` corresponde a media en la
+  // raíz de uploads, mientras que los uploads actuales de galería viven en
+  // `uploads/media/...`. Los logos usan `/media/site/...`.
+  const candidates = rel.startsWith('site/')
+    ? [join(env.UPLOADS_DIR, rel)]
+    : rel.startsWith('media/')
+      ? [join(env.UPLOADS_DIR, rel)]
+      : [join(env.UPLOADS_DIR, 'media', rel), join(env.UPLOADS_DIR, rel)];
+  const fullPath = candidates
+    .map((candidate) => normalize(candidate))
+    .find((candidate) => candidate.startsWith(`${env.UPLOADS_DIR}/`) && existsSync(candidate));
 
-  if (!existsSync(fullPath)) return notFound(res);
+  if (!fullPath) return notFound(res);
   return serveFile(fullPath, req, res, {
     contentTypes: CONTENT_TYPES,
+    cacheControl: rel.startsWith('site/') ? 'no-cache' : undefined,
     alwaysAcceptRanges: true,  // videos piden range
   });
 }

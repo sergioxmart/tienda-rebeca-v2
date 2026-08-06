@@ -22,6 +22,7 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [bg, setBg] = useState('#0F2A47');  // default azul TechStore
   const [storeName, setStoreName] = useState('TechStore');
+  const [logoUrl, setLogoUrl] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -38,6 +39,7 @@ export default function Login() {
           setStoreName(c.site_name);
           document.title = `${c.site_name} · Admin`;
         }
+        if (c && typeof c.logo_url === 'string' && c.logo_url) setLogoUrl(c.logo_url);
       } catch { /* fallback al default */ }
     })();
   }, []);
@@ -58,7 +60,7 @@ export default function Login() {
       if (err instanceof ApiError) {
         setError(err.message || 'No se pudo iniciar sesión.');
       } else {
-        setError('Error de red. Intentá de nuevo.');
+        setError('Error de red. Intenta de nuevo.');
       }
     } finally {
       setLoading(false);
@@ -68,6 +70,7 @@ export default function Login() {
   return (
     <div className="login-shell" style={{ background: bg }}>
       <form className="login-card" onSubmit={handleSubmit}>
+        {logoUrl && <img className="login-logo" src={logoUrl} alt={`Logo de ${storeName}`} />}
         <h1>{storeName} · Admin</h1>
         {error && <div className="alert alert-error">{error}</div>}
         <div className="form-group">

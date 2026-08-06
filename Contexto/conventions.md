@@ -139,7 +139,9 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 - Rate limit: en memoria con lockout progresivo (5/15min, 10/1h,
   20/24h). Por agregar a TechStore cuando se necesite.
 - Uploads: `multer` con `memoryStorage`, validar MIME y tamaño,
-  escribir a `uploads/<yyyy>/<mm>/<uuid>.<ext>`.
+  escribir a `uploads/<subdir>/<yyyy>/<mm>/<uuid>.<ext>` y servir siempre
+  las URLs públicas mediante `/media` (por ejemplo, el logo en
+  `uploads/site/...` se expone como `/media/site/...`).
 - Migrations SQL idempotentes aplicadas en boot con tabla
   `_migrations`.
 - Webhook: HMAC SHA-256 con `timingSafeEqual` y subdominio dedicado

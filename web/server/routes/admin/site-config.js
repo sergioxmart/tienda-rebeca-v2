@@ -8,8 +8,8 @@
 //   PATCH /api/admin/site-config         → actualiza un subset
 //                                          body: { key: value, ... }
 //   POST  /api/admin/site-config/logo    → upload del logo (multipart)
-//                                          guarda en uploads/site/logo.<ext>
-//                                          y setea site_config.logo_url
+//                                          guarda en uploads/site/<yyyy>/<mm>/logo.<ext>
+//                                          y setea site_config.logo_url en /media/site/...
 //   DELETE /api/admin/site-config/logo   → borra el logo (archivo + key)
 //
 // El PATCH es por key, no por path. Esto permite mandar varios keys
@@ -21,6 +21,12 @@ import { json } from '../../lib/json.js';
 import { upload, writeUploadFile, deleteUploadFile } from '../../lib/uploads.js';
 import { protect, recordAudit } from './_helpers.js';
 
+function normalizeLogoUrl(value) {
+  return typeof value === 'string' && value.startsWith('/site/')
+    ? `/media/site/${value.slice('/site/'.length)}`
+    : value;
+}
+
 // --- Handlers -------------------------------------------------------------
 
 export async function getSiteConfig(req, res) {
@@ -29,7 +35,7 @@ export async function getSiteConfig(req, res) {
   );
   // Devolvemos como objeto { key: value } en vez de array, más cómodo para el cliente.
   const out = {};
-  for (const r of rows) out[r.key] = r.value;
+  for (const r of rows) out[r.key] = r.key === 'logo_url' ? normalizeLogoUrl(r.value) : r.value;
   return json(res, 200, { ok: true, config: out });
 }
 
@@ -44,6 +50,10 @@ export async function updateSiteConfig(req, res) {
     if (typeof k !== 'string' || !k.trim()) {
       return json(res, 400, { ok: false, error: 'invalid_key', key: k });
     }
+  }
+  if (p.admin_login_bg !== undefined &&
+      (typeof p.admin_login_bg !== 'string' || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(p.admin_login_bg))) {
+    return json(res, 400, { ok: false, error: 'invalid_login_background_color' });
   }
 
   // UPSERT atómico de cada key. ON CONFLICT (key) DO UPDATE.

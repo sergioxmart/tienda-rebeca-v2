@@ -132,6 +132,8 @@ no tiene `section`, devuelve 403.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/site-config` | — | `site_config` |
 | PATCH | `/api/admin/site-config` | `{ key: value, ... }` (objeto JSON con los keys a actualizar) | `site_config` |
+| POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
+| DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
 
 ### Pedidos (admin)
 

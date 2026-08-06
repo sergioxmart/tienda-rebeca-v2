@@ -18,7 +18,7 @@ import { pool } from './lib/db.js';
 import { runMigrations } from './scripts/migrate.js';
 import { createStaticHandler } from './lib/static.js';
 import { securityHeaders } from './middleware/security-headers.js';
-import { handlePublic } from './routes/public.js';
+import { handlePublic } from './routes/public/index.js';
 import { handleAdmin } from './routes/admin/index.js';
 import { handleAuth } from './routes/auth.js';
 import { handleMedia } from './routes/media.js';

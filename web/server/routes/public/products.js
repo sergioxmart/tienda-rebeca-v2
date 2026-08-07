@@ -129,7 +129,7 @@ export async function listProducts(req, res) {
   if (products.length > 0) {
     const ids = products.map(p => p.id);
     const { rows: media } = await query(
-      `SELECT product_id, kind, url, alt_text, display_order
+      `SELECT product_id, variant_id, kind, url, alt_text, display_order
          FROM product_media
         WHERE product_id = ANY($1) AND deleted_at IS NULL
         ORDER BY product_id, display_order, id`,
@@ -142,6 +142,8 @@ export async function listProducts(req, res) {
     }
     for (const p of products) {
       p.media = mediaByProduct.get(p.id) ?? [];
+      // Si no existe una imagen general, usamos la primera imagen de
+      // variante para que las tarjetas y sugerencias nunca queden vacías.
       p.image_url = p.media.find((item) => item.kind === 'image')?.url || null;
       p.thumb_url = p.image_url;
     }

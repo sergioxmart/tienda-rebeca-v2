@@ -130,7 +130,8 @@ stock y (opcionalmente) su precio override.
 
 - `price` NULL = usa `products.base_price`.
 - `compare_at` es para tachar ("antes X, ahora Y").
-- `stock >= 0` (CHECK). Decremento en checkout transaccional.
+- `stock >= 0` (CHECK). El saldo se actualiza desde Inventario y se descuenta
+  en checkout de forma transaccional.
 - `description` permite una descripción específica para cada variante.
 - **Invariante (enforced por app)**: la combinación de valores de
   atributos debe ser única dentro del mismo `product_id`. Ver
@@ -148,6 +149,13 @@ por atributo aplicable**.
   variante y compara. Si dos del mismo `product_id` coinciden → error.
   No se hace en SQL porque la comparación depende del conjunto de
   atributos aplicables (no de los presentes).
+
+### `inventory_movements` (`014_inventory_movements.sql`)
+
+Libro mayor hijo de `product_variants`. Cada movimiento es una entrada o
+salida positiva y conserva `stock_before` y `stock_after`; el saldo vigente
+continúa viviendo en `product_variants.stock` para que catálogo y checkout
+puedan consultarlo rápidamente.
 
 ### `auth_users` + `auth_refresh_tokens` + `auth_totp_backup_codes` (`005_admin_auth.sql`)
 

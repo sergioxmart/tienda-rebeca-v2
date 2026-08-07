@@ -171,7 +171,7 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 │  │  └─ scripts/           # migrate.js, setup-db.js, create-admin.js
 │  ├─ web-store/            # Vite + React tienda pública
 │  ├─ web-admin/            # Vite + React admin
-│  ├─ migrations/           # 001-012 schema de TechStore
+│  ├─ migrations/           # 001-014 schema de TechStore
 │  └─ webhook/             # server.mjs (cableado a TechStore) + deploy.sh
 │
 ├─ uploads/                # Archivos subidos (gitignored, en la RAÍZ del repo)

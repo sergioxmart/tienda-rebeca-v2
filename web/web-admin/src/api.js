@@ -16,6 +16,12 @@
 
 const TOKEN_KEY = 'techstore.admin.token';
 const CSRF_COOKIE = 'csrf_token';
+let unauthorizedHandler = null;
+let unauthorizedHandled = false;
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler;
+}
 
 export function getToken() {
   try { return sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
@@ -24,6 +30,7 @@ export function setToken(token) {
   try {
     if (token) sessionStorage.setItem(TOKEN_KEY, token);
     else sessionStorage.removeItem(TOKEN_KEY);
+    if (token) unauthorizedHandled = false;
   } catch { /* ignore */ }
 }
 
@@ -74,6 +81,11 @@ async function request(method, path, { body, isForm, headers } = {}) {
   }
 
   if (!res.ok || (data && data.ok === false)) {
+    if (res.status === 401 && path.startsWith('/api/admin/') && !unauthorizedHandled) {
+      unauthorizedHandled = true;
+      setToken(null);
+      unauthorizedHandler?.();
+    }
     const code = (data && data.error) || `http_${res.status}`;
     const message = (data && (data.message || data.error_human || (Array.isArray(data.errors) ? data.errors.join(', ') : null))) || res.statusText;
     throw new ApiError(message, { status: res.status, code, details: data });

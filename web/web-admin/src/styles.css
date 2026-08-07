@@ -536,6 +536,27 @@ p { margin: 0 0 12px; }
 .variant-media-item img, .variant-video-tile { display: block; width: 100%; height: 84px; object-fit: cover; border-radius: 5px; background: #E5E7EB; }
 .variant-video-tile { display: grid; place-items: center; color: var(--color-primary); font-size: 12px; }
 .variant-media-item .btn { width: 100%; margin-top: 6px; }
+.inventory-intro { max-width: 760px; margin: -6px 0 18px; color: var(--color-muted); }
+.inventory-filters .input[type="number"] { width: 110px; }
+.inventory-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .75fr); gap: 18px; align-items: start; }
+.inventory-table tbody tr { cursor: pointer; }
+.inventory-stock { text-align: right; font-size: 18px; font-weight: 800; color: var(--color-primary); }
+.inventory-stock.is-low { color: var(--color-warning); }
+.inventory-stock.is-empty { color: var(--color-danger); }
+.inventory-detail { min-height: 280px; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); }
+.inventory-detail-empty { display: grid; min-height: 240px; place-items: center; color: var(--color-muted); font-size: 13px; text-align: center; }
+.inventory-detail-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+.inventory-detail-head h2 { margin: 4px 0; font-size: 20px; }
+.inventory-detail-head p { margin: 0; color: var(--color-muted); font-size: 12px; }
+.inventory-detail-head > strong { color: var(--color-primary); font-size: 36px; line-height: 1; }
+.inventory-history h3 { margin: 18px 0 10px; font-size: 14px; }
+.inventory-movement { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: 12px; }
+.inventory-movement small { display: block; margin-top: 3px; color: var(--color-muted); }
+.inventory-movement b { font-size: 14px; }
+.movement-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.movement-dot.in { background: var(--color-success); }
+.movement-dot.out { background: var(--color-danger); }
+.inventory-loading { display: grid; min-height: 260px; place-items: center; }
 
 @media (max-width: 860px) {
   .app-shell { grid-template-columns: 220px 1fr; }
@@ -572,4 +593,7 @@ p { margin: 0 0 12px; }
   .variant-media-heading, .variant-video-add { align-items: stretch; flex-direction: column; }
   .editor-card { padding: 16px; }
   .editor-section-heading { flex-direction: column; gap: 5px; }
+  .inventory-layout { grid-template-columns: 1fr; }
+  .inventory-filters { align-items: stretch; flex-direction: column; }
+  .inventory-filters .input, .inventory-filters .select, .inventory-filters .input[type="number"] { width: 100%; max-width: none; }
 }

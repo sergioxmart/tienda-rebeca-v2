@@ -121,7 +121,6 @@ export default function Products() {
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio base</th>
-              <th>Stock</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -135,7 +134,6 @@ export default function Products() {
                 </td>
                 <td>{p.category_name || p.category_id}</td>
                 <td>{formatCOP(p.base_price)}</td>
-                <td>{p.total_stock ?? '—'}</td>
                 <td>
                   {p.active
                     ? <span className="badge active">Activo</span>

@@ -40,10 +40,10 @@ export default function ProductPage() {
   const attributes = useMemo(() => {
     if (!product) return [];
     return (product.attributes || []).map((a) => ({
-      id: a.id,
-      name: a.name,
-      slug: a.slug,
-      type: a.type,
+      id: a.attribute_id,
+      name: a.attribute_name,
+      slug: a.attribute_slug,
+      type: a.attribute_type,
       values: a.values || [],
     }));
   }, [product]);
@@ -63,14 +63,20 @@ export default function ProductPage() {
   }, [product, selected]);
 
   // Precio y stock efectivos
-  const effectivePrice = matchedVariant?.price ?? product?.base_price;
-  const effectiveStock = matchedVariant?.stock ?? product?.total_stock ?? 0;
+  // Antes de que el cliente elija, usamos la primera variante activa como
+  // referencia visual. No marcamos sus atributos como seleccionados: solo
+  // definimos la imagen, descripción y precio iniciales de la página.
+  const defaultVariant = product?.variants?.[0] || null;
+  const displayVariant = matchedVariant || defaultVariant;
+  const effectivePrice = displayVariant?.price ?? product?.base_price;
+  const effectiveCompare = displayVariant?.compare_at ?? product?.compare_at;
+  const effectiveStock = matchedVariant?.stock ?? defaultVariant?.stock ?? product?.total_stock ?? 0;
   const isAllSelected = attributes.length > 0 && Object.keys(selected).length === attributes.length;
   const canAdd = (attributes.length === 0 || isAllSelected) && effectiveStock > 0;
-  const activeMedia = matchedVariant?.media?.length ? matchedVariant.media : (product?.media || []);
+  const activeMedia = displayVariant?.media?.length ? displayVariant.media : (product?.media || []);
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
   const image = galleryImages[0]?.url || product?.image_url || product?.thumb_url;
-  const variantDescription = matchedVariant?.description || product?.description;
+  const variantDescription = displayVariant?.description || product?.description;
 
   const handleAdd = () => {
     if (!canAdd || !product) return;
@@ -129,7 +135,7 @@ export default function ProductPage() {
           )}
           <h1>{product.name}</h1>
           <div className="price-main" style={{ marginBottom: 16 }}>
-            <Price value={effectivePrice} compare={matchedVariant?.compare_at ?? product.compare_at} />
+            <Price value={effectivePrice} compare={effectiveCompare} />
           </div>
 
           {attributes.length > 0 && (

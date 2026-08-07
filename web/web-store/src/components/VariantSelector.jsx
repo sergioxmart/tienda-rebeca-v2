@@ -14,6 +14,11 @@
 import React, { useMemo } from 'react';
 
 export default function VariantSelector({ attributes, variants, selected, onChange }) {
+  const inStockVariants = useMemo(
+    () => variants.filter((variant) => Number(variant.stock) > 0),
+    [variants],
+  );
+
   // Calcular disponibilidad: para cada (attr_id, attr_value_id), ¿hay al menos
   // una variant que matchee la selección actual si fijamos ese valor?
   const availability = useMemo(() => {
@@ -23,7 +28,7 @@ export default function VariantSelector({ attributes, variants, selected, onChan
       for (const val of attr.values) {
         // ¿alguna variant tiene este valor en este atributo Y matchea los
         // otros atributos ya seleccionados?
-        const matches = variants.some((v) => {
+        const matches = inStockVariants.some((v) => {
           const hasThis = (v.attribute_values || []).some(
             (x) => x.attribute_id === attr.id && x.attribute_value_id === val.id
           );
@@ -45,7 +50,7 @@ export default function VariantSelector({ attributes, variants, selected, onChan
       }
     }
     return map;
-  }, [attributes, variants, selected]);
+  }, [attributes, inStockVariants, selected]);
 
   const setValue = (attrId, valueId) => {
     onChange({ ...selected, [attrId]: valueId });
@@ -54,14 +59,14 @@ export default function VariantSelector({ attributes, variants, selected, onChan
   return (
     <div>
       {attributes.map((attr) => (
-        <div className="attribute-group" key={attr.id}>
+        <div className="attribute-group" key={`attribute-${attr.id}`}>
           <span className="label">{attr.name}</span>
           {attr.values.map((v) => {
             const isSelected = selected[attr.id] === v.id;
             const isAvailable = availability[attr.id]?.[v.id] ?? true;
             return (
               <button
-                key={v.id}
+                key={`value-${attr.id}-${v.id}`}
                 type="button"
                 className={`swatch ${isSelected ? 'selected' : ''} ${!isAvailable ? 'disabled' : ''}`}
                 onClick={() => isAvailable && setValue(attr.id, v.id)}

@@ -14,6 +14,7 @@ import { tryHandleCategories } from './categories.js';
 import { tryHandleProducts } from './products.js';
 import { tryHandleVariants } from './variants.js';
 import { tryHandleProductMedia } from './product-media.js';
+import { tryHandleInventory } from './inventory.js';
 import { tryHandleSiteConfig } from './site-config.js';
 import { tryHandleUsers } from './users.js';
 import { tryHandlePageModules } from './page-modules.js';
@@ -28,6 +29,7 @@ const subRouters = [
   tryHandleProducts,
   tryHandleVariants,
   tryHandleProductMedia,
+  tryHandleInventory,
   tryHandleSiteConfig,
   tryHandleUsers,
   tryHandlePageModules,

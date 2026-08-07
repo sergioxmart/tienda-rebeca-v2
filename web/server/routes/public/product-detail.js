@@ -79,11 +79,16 @@ export async function getProductBySlug(req, res, slug) {
   );
   for (const attr of pa) {
     const { rows: values } = await query(
-      `SELECT id, value, hex, display_order
-         FROM attribute_values
-        WHERE attribute_id = $1 AND active = TRUE
-        ORDER BY display_order, value`,
-      [attr.attribute_id],
+      `SELECT DISTINCT av.id, av.value, av.hex, av.display_order
+         FROM attribute_values av
+         JOIN variant_attribute_values vav ON vav.attribute_value_id = av.id
+         JOIN product_variants pv ON pv.id = vav.variant_id
+        WHERE av.attribute_id = $1
+          AND av.active = TRUE
+          AND pv.product_id = $2
+          AND pv.active = TRUE
+        ORDER BY av.display_order, av.value`,
+      [attr.attribute_id, product.id],
     );
     attr.values = values;
   }

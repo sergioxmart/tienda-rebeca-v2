@@ -15,6 +15,7 @@ import SiteConfig from './pages/SiteConfig.jsx';
 import Users from './pages/Users.jsx';
 import PageBuilder from './pages/PageBuilder.jsx';
 import Themes from './pages/Themes.jsx';
+import Inventory from './pages/Inventory.jsx';
 
 function RequireAuth({ children }) {
   const { status } = useAuth();
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/products" element={<Products />} />
         <Route path="/products/new" element={<ProductForm />} />
         <Route path="/products/:id" element={<ProductForm />} />
+        <Route path="/inventory" element={<Inventory />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/attributes" element={<Attributes />} />
         <Route path="/media" element={<Media />} />

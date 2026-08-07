@@ -16,6 +16,7 @@ export const SECTION_PERMS = {
   products:         { write: ['admin'],                                  read: ['admin', 'operator', 'viewer'] },
   variants:         { write: ['admin'],                                  read: ['admin', 'operator', 'viewer'] },
   media:            { write: ['admin'],                                  read: ['admin', 'operator', 'viewer'] },
+  inventory:        { write: ['admin', 'operator'],                      read: ['admin', 'operator', 'viewer'] },
 
   // Operación: admin y operator escriben
   orders:   { write: ['admin', 'operator'], read: ['admin', 'operator', 'viewer'] },

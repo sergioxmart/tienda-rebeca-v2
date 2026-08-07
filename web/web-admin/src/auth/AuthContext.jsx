@@ -11,13 +11,25 @@
 //   pestaña Network del browser). Si hay token, intentamos /me.
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { api, ApiError, getToken } from '../api.js';
+import { useNavigate } from 'react-router-dom';
+import { api, ApiError, getToken, setToken, setUnauthorizedHandler } from '../api.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState('loading');
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setToken(null);
+      setUser(null);
+      setStatus('guest');
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +53,7 @@ export function AuthProvider({ children }) {
           // Token expirado o inválido → limpiar y guest.
           // api.js no tiene logout acá, pero seteamos status y el
           // siguiente render ya no muestra nada protegido.
-          try { sessionStorage.removeItem('techstore.admin.token'); } catch { /* ignore */ }
+          setToken(null);
           setStatus('guest');
         } else {
           // Error de red u otro: tratar como guest pero log.

@@ -121,6 +121,18 @@ no tiene `section`, devuelve 403.
 | DELETE | `/api/admin/variants/:id` | — | `variants` |
 | PATCH | `/api/admin/variants/:id/stock` | `{ stock, reason? }` | `variants` (ajuste rápido de stock, queda en audit log) |
 
+### Inventario
+
+El inventario es hijo del catálogo: solo trabaja con variantes que ya
+existen. Las entradas y salidas actualizan el saldo de la variante dentro
+de una transacción y crean un movimiento auditable.
+
+| Método | Path | Body / Query | Section |
+| ------ | ---- | ------------ | ------- |
+| GET | `/api/admin/inventory/variants` | `?product_id=&q=&low_stock=` | `inventory` |
+| GET | `/api/admin/inventory/variants/:id` | — (incluye movimientos recientes) | `inventory` |
+| POST | `/api/admin/inventory/movements` | `{ variant_id, movement_type: "in"\|"out", quantity, reason? }` | `inventory` |
+
 ### Media
 
 | Método | Path | Body | Section |

@@ -10,6 +10,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/', label: 'Resumen', icon: 'dashboard' },
       { to: '/products', label: 'Productos', icon: 'box' },
+      { to: '/inventory', label: 'Inventario', icon: 'inventory' },
       { to: '/categories', label: 'Categorías', icon: 'folder' },
       { to: '/attributes', label: 'Atributos', icon: 'tag' },
       { to: '/media', label: 'Imágenes', icon: 'image' },
@@ -33,6 +34,7 @@ function Icon({ name }) {
   const paths = {
     dashboard: 'M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z',
     box: 'm12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5M12 12v9M4 7.5 12 12',
+    inventory: 'M5 5h14v14H5V5Zm3 3h8M8 12h8M8 16h5',
     folder: 'M3 6.5h7l2 2h9v9.5H3V6.5Zm0 0V5h6l2 2',
     tag: 'm20 13-7 7-9-9V4h7l9 9ZM7.5 8.5h.01',
     image: 'M4 5h16v14H4V5Zm1 12 4-4 3 3 2-2 5 5M15.5 9a1.5 1.5 0 1 0 0-.01',

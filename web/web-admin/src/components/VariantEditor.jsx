@@ -6,7 +6,7 @@
 //   - Crear variante nueva (modal).
 //   - Editar variante existente (modal con mismos campos).
 //   - Borrar con confirmación.
-//   - Ajuste rápido de stock (input directo en la fila).
+//   - La existencia se consulta en Inventario; este editor no la modifica.
 //
 // Backend: ver web/server/routes/admin/variants.js. La invariante de
 // "no dos variantes con la misma combinación" la enforces el server
@@ -31,7 +31,6 @@ function ChevronIcon({ direction }) {
 const EMPTY = {
   sku: '',
   price: '',
-  stock: 0,
   active: true,
   description: '',
   attribute_values: [],  // [{ attribute_id, attribute_value_id }]
@@ -43,7 +42,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
   const [editing, setEditing] = useState(null);    // variant en edición o { ...EMPTY } para nueva
   const [deleting, setDeleting] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [stockBusy, setStockBusy] = useState(null);  // id de variante mientras se ajusta stock
   const [selectedId, setSelectedId] = useState(null);
   const [moving, setMoving] = useState(false);
   const [media, setMedia] = useState([]);
@@ -91,7 +89,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
     id: v.id,
     sku: v.sku || '',
     price: v.price ?? '',
-    stock: v.stock,
     active: v.active,
     description: v.description || '',
     attribute_values: attributes.map((a) => {
@@ -113,7 +110,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         await api.patch(`/api/admin/variants/${editing.id}`, {
           sku: editing.sku || null,
           price: editing.price === '' ? null : Number(editing.price),
-          stock: Number(editing.stock),
           active: !!editing.active,
           description: editing.description || '',
         });
@@ -130,7 +126,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         await api.post(`/api/admin/products/${productId}/variants`, {
           sku: editing.sku || null,
           price: editing.price === '' ? null : Number(editing.price),
-          stock: Number(editing.stock),
           active: !!editing.active,
           description: editing.description || '',
           attribute_values: avs,
@@ -158,19 +153,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
       await reload();
     } catch (err) {
       toast.error('No se pudo eliminar', err.message);
-    }
-  };
-
-  const handleStockChange = async (variant, newStock) => {
-    setStockBusy(variant.id);
-    try {
-      await api.patch(`/api/admin/variants/${variant.id}/stock`, { stock: Number(newStock) });
-      toast.success('Stock actualizado');
-      await reload();
-    } catch (err) {
-      toast.error('No se pudo actualizar el stock', err.message);
-    } finally {
-      setStockBusy(null);
     }
   };
 
@@ -256,7 +238,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
   return (
     <>
       <div className="page-header" style={{ marginTop: 0 }}>
-        <h2>Variantes</h2>
+        <div><h2>Variantes</h2><p className="form-hint">Las cantidades se gestionan por separado en <a href="/inventory">Inventario</a>.</p></div>
         <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva variante</button>
       </div>
 
@@ -278,7 +260,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
             <tr>
               <th>SKU</th>
               <th>Combinación</th>
-              <th>Stock</th>
               <th>Precio</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
@@ -294,17 +275,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
                       {x.attribute_name}: {x.value}
                     </span>
                   ))}
-                </td>
-                <td>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    style={{ width: 80, padding: '4px 6px' }}
-                    defaultValue={v.stock}
-                    onBlur={(e) => { if (Number(e.target.value) !== v.stock) handleStockChange(v, e.target.value); }}
-                    disabled={stockBusy === v.id}
-                  />
                 </td>
                 <td>{formatCOP(v.price)}</td>
                 <td>
@@ -352,11 +322,6 @@ export default function VariantEditor({ productId, variants, attributes, onChang
               </div>
             </div>
             <div className="form-row">
-              <div className="form-group">
-                <label>Stock</label>
-                <input className="input" type="number" min={0} required
-                       value={editing.stock} onChange={(e) => setEditing({ ...editing, stock: e.target.value })} />
-              </div>
               <div className="form-group">
                 <label>Estado</label>
                 <select className="select" value={String(editing.active)}

@@ -13,10 +13,14 @@ export function formatCOP(n) {
 }
 
 export default function Price({ value, compare, className }) {
+  const numericValue = Number(value);
+  const numericCompare = Number(compare);
+  const hasValue = value !== null && value !== undefined && value !== '';
+  const hasCompare = hasValue && Number.isFinite(numericValue) && Number.isFinite(numericCompare) && numericCompare > numericValue;
   return (
     <span className={className}>
       {formatCOP(value)}
-      {compare !== null && compare !== undefined && compare > value && (
+      {hasCompare && (
         <span className="price-compare">{formatCOP(compare)}</span>
       )}
     </span>

@@ -58,6 +58,12 @@ export default function Login() {
     })();
   }, []);
 
+  useEffect(() => {
+    if (!location.state?.sessionExpired) return;
+    setNotice('Tu sesión expiró. Inicia sesión nuevamente para continuar.');
+    navigate('/login', { replace: true, state: null });
+  }, [location.state, navigate]);
+
   const shellStyle = useMemo(() => {
     if (bgMode === 'image' && bgImage) {
       return {

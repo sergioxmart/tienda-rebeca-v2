@@ -57,6 +57,7 @@ NNN_descripcion_corta.sql
 | 018 | `018_preserve_order_history_on_product_delete.sql` | Conserva snapshots de ventas al eliminar productos |
 | 019 | `019_builder_drafts.sql` | Estado borrador aislado del Builder |
 | 020 | `020_media_attribute_categories.sql` | Categorías para multimedia y atributos |
+| 021 | `021_admin_theme_colors.sql` | Defaults de colores del panel administrativo |
 
 ## Lo que falta decidir
 

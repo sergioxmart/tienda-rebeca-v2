@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { applyAdminTheme } from '../adminTheme.js';
 
 const SIDEBAR_STORAGE_KEY = 'techstore.admin.sidebar.groups.v1';
 
@@ -83,13 +84,16 @@ export default function Layout() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/public/site-config')
+    fetch('/api/public/site-config?admin_theme=1', { cache: 'no-store' })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
-        if (active && data?.config) setSite({
-          site_name: data.config.site_name || 'TechStore',
-          logo_url: data.config.logo_url || null,
-        });
+        if (active && data?.config) {
+          applyAdminTheme(data.config);
+          setSite({
+            site_name: data.config.site_name || 'TechStore',
+            logo_url: data.config.logo_url || null,
+          });
+        }
       })
       .catch(() => {});
     return () => { active = false; };

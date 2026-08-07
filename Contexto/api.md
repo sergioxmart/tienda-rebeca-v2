@@ -159,7 +159,7 @@ de una transacción y crean un movimiento auditable.
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/site-config` | — | `site_config` |
-| PATCH | `/api/admin/site-config` | `{ key: value, ... }` (objeto JSON con los keys a actualizar) | `site_config` |
+| PATCH | `/api/admin/site-config` | `{ key: value, ... }` (incluye `admin_sidebar_bg`, `admin_active_color`, `admin_main_bg`, `admin_surface_bg`, `admin_text_color`) | `site_config` |
 | POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
 | POST | `/api/admin/site-config/login-background` | `multipart/form-data` con `file` | Sube o reemplaza la imagen de fondo del login. |

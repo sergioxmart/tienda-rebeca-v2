@@ -9,6 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
+import { ADMIN_THEME_DEFAULTS, ADMIN_THEME_FIELDS, applyAdminTheme } from '../adminTheme.js';
 
 const KNOWN_KEYS = [
   { key: 'site_name',          label: 'Nombre de la tienda',     type: 'text',     placeholder: 'TechStore Colombia' },
@@ -47,7 +48,7 @@ export default function SiteConfig() {
   const toast = useToast();
   const fileRef = useRef(null);
   const bgFileRef = useRef(null);
-  const [config, setConfig] = useState({});
+  const [config, setConfig] = useState({ ...ADMIN_THEME_DEFAULTS });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -59,7 +60,11 @@ export default function SiteConfig() {
       try {
         const data = await api.get('/api/admin/site-config');
         const cfg = data.config || data;
-        setConfig(typeof cfg === 'object' && !Array.isArray(cfg) ? cfg : {});
+        const next = typeof cfg === 'object' && !Array.isArray(cfg)
+          ? { ...ADMIN_THEME_DEFAULTS, ...cfg }
+          : { ...ADMIN_THEME_DEFAULTS };
+        setConfig(next);
+        applyAdminTheme(next);
       } catch (err) {
         toast.error('No se pudo cargar la configuración', err.message);
       } finally {
@@ -68,7 +73,26 @@ export default function SiteConfig() {
     })();
   }, [toast]);
 
-  const setKey = (k, v) => setConfig((cur) => ({ ...cur, [k]: v }));
+  const setKey = (k, v) => setConfig((cur) => {
+    const next = { ...cur, [k]: v };
+    if (ADMIN_THEME_DEFAULTS[k]) applyAdminTheme(next);
+    return next;
+  });
+
+  const restoreAdminColors = async () => {
+    const next = { ...config, ...ADMIN_THEME_DEFAULTS };
+    setConfig(next);
+    applyAdminTheme(next);
+    setSaving(true);
+    try {
+      await api.patch('/api/admin/site-config', ADMIN_THEME_DEFAULTS);
+      toast.success('Valores por defecto restaurados');
+    } catch (err) {
+      toast.error('No se pudieron restaurar los colores', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -176,6 +200,28 @@ export default function SiteConfig() {
       <p style={{ color: 'var(--color-muted)' }}>
         Datos de contacto, redes sociales, branding y claves públicas de pago. Las claves secretas van en variables de entorno, no acá.
       </p>
+
+      <div className="config-card">
+        <div className="config-card-heading">
+          <div><h3>Paleta del panel de administración</h3><p>Personaliza los colores de 5174. Los cambios se reflejan inmediatamente en esta pantalla.</p></div>
+          <span className="config-card-icon">◈</span>
+        </div>
+        <div className="admin-theme-color-grid">
+          {ADMIN_THEME_FIELDS.map((field) => (
+            <ColorField
+              key={field.key}
+              id={field.key}
+              label={field.label}
+              value={String(config[field.key] || ADMIN_THEME_DEFAULTS[field.key])}
+              onChange={(value) => setKey(field.key, value)}
+            />
+          ))}
+        </div>
+        <div className="admin-theme-actions">
+          <button className="btn" type="button" onClick={restoreAdminColors} disabled={saving}>Restaurar valores por defecto</button>
+          <span className="help">Restablece la paleta estándar azul, naranja, gris y blanco.</span>
+        </div>
+      </div>
 
       <div className="config-card">
         <div className="config-card-heading"><div><h3>Fondo del login</h3><p>Personaliza la pantalla de acceso con un color, un degradado o una imagen.</p></div><span className="config-card-icon">✦</span></div>

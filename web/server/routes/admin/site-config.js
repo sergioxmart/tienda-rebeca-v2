@@ -28,6 +28,15 @@ function normalizeMediaUrl(value) {
     : value;
 }
 
+const ADMIN_COLOR_KEYS = [
+  'admin_sidebar_bg',
+  'admin_active_color',
+  'admin_main_bg',
+  'admin_surface_bg',
+  'admin_text_color',
+];
+const ADMIN_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
 // --- Handlers -------------------------------------------------------------
 
 export async function getSiteConfig(req, res) {
@@ -54,6 +63,11 @@ export async function updateSiteConfig(req, res) {
   for (const k of keys) {
     if (typeof k !== 'string' || !k.trim()) {
       return json(res, 400, { ok: false, error: 'invalid_key', key: k });
+    }
+  }
+  for (const key of ADMIN_COLOR_KEYS) {
+    if (p[key] !== undefined && (typeof p[key] !== 'string' || !ADMIN_COLOR_RE.test(p[key]))) {
+      return json(res, 400, { ok: false, error: 'invalid_admin_color', key });
     }
   }
   if (p.admin_login_bg !== undefined &&

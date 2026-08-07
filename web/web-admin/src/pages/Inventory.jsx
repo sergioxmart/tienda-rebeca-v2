@@ -1,7 +1,7 @@
 // Inventario: el producto y la variante se crean en Productos; aquí solo se
 // consultan sus saldos y se registran entradas/salidas trazables.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
@@ -12,6 +12,16 @@ import Empty from '../components/Empty.jsx';
 function formatDate(value) {
   if (!value) return '—';
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}
+
+function initials(value) {
+  return String(value || '?')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 }
 
 export default function Inventory() {
@@ -97,11 +107,23 @@ export default function Inventory() {
 
   const selectedRow = variants.find((item) => item.variant_id === selectedId);
   const canWrite = user?.role === 'admin' || user?.role === 'operator';
+  const summary = useMemo(() => {
+    const totalUnits = variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+    return {
+      variants: variants.length,
+      totalUnits,
+      available: variants.filter((variant) => Number(variant.stock) > 0).length,
+      low: variants.filter((variant) => Number(variant.stock) > 0 && Number(variant.stock) <= 5).length,
+      empty: variants.filter((variant) => Number(variant.stock) <= 0).length,
+    };
+  }, [variants]);
+
+  const hasFilters = productId || q || lowStock !== '';
 
   return (
     <div>
       <div className="page-header">
-        <div><span className="eyebrow">Operación</span><h1>Inventario</h1></div>
+        <div><span className="eyebrow">Operación · existencias</span><h1>Inventario</h1><p className="page-subtitle">Controla entradas, salidas y saldos por variante.</p></div>
         <div className="inventory-actions">
           {canWrite && <>
             <button className="btn btn-sm" disabled={!selectedId} onClick={() => openMovement('out')}>− Salida</button>
@@ -109,35 +131,53 @@ export default function Inventory() {
           </>}
         </div>
       </div>
-      <p className="inventory-intro">Gestiona las unidades de variantes que ya existen en Productos. Cada movimiento queda registrado con su saldo anterior y posterior.</p>
 
-      <div className="toolbar inventory-filters">
-        <input className="input search" placeholder="Buscar producto o SKU…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="select" value={productId} onChange={(e) => setProductId(e.target.value)}>
-          <option value="">Todos los productos</option>
-          {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
-        </select>
-        <input className="input" type="number" min={0} placeholder="Stock ≤" value={lowStock} onChange={(e) => setLowStock(e.target.value)} />
-      </div>
+      <section className="inventory-overview" aria-label="Resumen del inventario">
+        <div className="inventory-stat-card"><span className="inventory-stat-icon navy">▦</span><div><small>Variantes en vista</small><strong>{summary.variants}</strong></div></div>
+        <div className="inventory-stat-card"><span className="inventory-stat-icon teal">＋</span><div><small>Unidades actuales</small><strong>{summary.totalUnits}</strong></div></div>
+        <div className="inventory-stat-card"><span className="inventory-stat-icon orange">!</span><div><small>Stock bajo</small><strong>{summary.low}</strong></div></div>
+        <div className="inventory-stat-card"><span className="inventory-stat-icon red">×</span><div><small>Agotadas</small><strong>{summary.empty}</strong></div></div>
+      </section>
+
+      <section className="inventory-filter-card">
+        <div className="inventory-filter-heading"><div><strong>Filtrar inventario</strong><span>Busca una variante o revisa productos con pocas unidades.</span></div>{hasFilters && <button className="btn btn-sm" onClick={() => { setProductId(''); setQ(''); setLowStock(''); }}>Limpiar filtros</button>}</div>
+        <div className="inventory-filters">
+          <label className="inventory-filter-field"><span>Buscar</span><input className="input search" placeholder="Producto o SKU…" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+          <label className="inventory-filter-field"><span>Producto</span><select className="select" value={productId} onChange={(e) => setProductId(e.target.value)}>
+            <option value="">Todos los productos</option>
+            {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+          </select></label>
+          <label className="inventory-filter-field inventory-filter-stock"><span>Stock máximo</span><input className="input" type="number" min={0} placeholder="Ej. 5" value={lowStock} onChange={(e) => setLowStock(e.target.value)} /></label>
+        </div>
+      </section>
 
       <div className="inventory-layout">
         <div>
           {loading ? <div className="inventory-loading"><span className="spinner" /></div> : variants.length === 0 ? <Empty title="Sin variantes" description="Crea primero las variantes desde Productos para poder asignarles inventario." /> : (
-            <table className="data-table inventory-table">
-              <thead><tr><th>Producto</th><th>Variante</th><th>SKU</th><th style={{ textAlign: 'right' }}>Stock actual</th></tr></thead>
-              <tbody>{variants.map((variant) => <tr key={variant.variant_id} className={selectedId === variant.variant_id ? 'row-selected' : ''} onClick={() => selectVariant(variant.variant_id)}>
-                <td><strong>{variant.product_name}</strong></td>
-                <td>{variant.combination || 'Variante general'}</td>
-                <td><code>{variant.sku || '—'}</code></td>
-                <td className={`inventory-stock ${variant.stock === 0 ? 'is-empty' : variant.stock <= 5 ? 'is-low' : ''}`}>{variant.stock}</td>
-              </tr>)}</tbody>
-            </table>
+            <section className="inventory-table-card">
+              <div className="inventory-table-heading"><div><strong>Variantes</strong><span>Selecciona una fila para ver el historial y registrar movimientos.</span></div><span className="inventory-count">{variants.length} resultados</span></div>
+              <div className="inventory-table-wrap"><table className="data-table inventory-table">
+                <thead><tr><th>Producto</th><th>Variante</th><th>SKU</th><th style={{ textAlign: 'right' }}>Stock actual</th><th aria-label="Abrir detalle" /></tr></thead>
+                <tbody>{variants.map((variant) => {
+                  const stock = Number(variant.stock || 0);
+                  const stockLabel = stock <= 0 ? 'Agotado' : stock <= 5 ? 'Stock bajo' : 'Disponible';
+                  return <tr key={variant.variant_id} className={selectedId === variant.variant_id ? 'row-selected' : ''} onClick={() => selectVariant(variant.variant_id)}>
+                    <td><div className="inventory-product-cell"><span className="inventory-avatar">{initials(variant.product_name)}</span><div><strong>{variant.product_name}</strong><small>Producto #{variant.product_id}</small></div></div></td>
+                    <td><span className="inventory-combination">{variant.combination || 'Variante general'}</span></td>
+                    <td><code>{variant.sku || '—'}</code></td>
+                    <td><div className="inventory-stock-cell"><strong className={`inventory-stock ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : ''}`}>{stock}</strong><span className={`inventory-status ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : 'is-ok'}`}>{stockLabel}</span></div></td>
+                    <td className="inventory-row-arrow">›</td>
+                  </tr>;
+                })}</tbody>
+              </table></div>
+            </section>
           )}
         </div>
 
         <aside className="inventory-detail">
-          {!selectedDetail ? <div className="inventory-detail-empty">Selecciona una variante para consultar su historial.</div> : <>
-            <div className="inventory-detail-head"><div><span className="eyebrow">Variante seleccionada</span><h2>{selectedDetail.variant.product_name}</h2><p>{selectedDetail.variant.sku || 'Sin SKU'} · {selectedRow?.combination || 'Variante general'}</p></div><strong>{selectedDetail.variant.stock}</strong></div>
+          {!selectedDetail ? <div className="inventory-detail-empty"><span className="inventory-detail-empty-icon">↗</span><strong>Selecciona una variante</strong><span>Consulta el historial de movimientos y gestiona sus unidades.</span></div> : <>
+            <div className="inventory-detail-head"><div><span className="eyebrow">Detalle de variante</span><h2>{selectedDetail.variant.product_name}</h2><p>{selectedDetail.variant.sku || 'Sin SKU'} · {selectedRow?.combination || 'Variante general'}</p></div><div className="inventory-stock-hero"><strong>{selectedDetail.variant.stock}</strong><span>unidades</span></div></div>
+            <div className="inventory-detail-toolbar"><span className={`inventory-status ${Number(selectedDetail.variant.stock) <= 0 ? 'is-empty' : Number(selectedDetail.variant.stock) <= 5 ? 'is-low' : 'is-ok'}`}>{Number(selectedDetail.variant.stock) <= 0 ? 'Agotado' : Number(selectedDetail.variant.stock) <= 5 ? 'Stock bajo' : 'Disponible'}</span><span>SKU: {selectedDetail.variant.sku || '—'}</span></div>
             <div className="inventory-history"><h3>Movimientos recientes</h3>
               {selectedDetail.movements.length === 0 ? <p className="form-hint">Todavía no hay movimientos.</p> : selectedDetail.movements.map((movement) => <div className="inventory-movement" key={movement.id}><span className={`movement-dot ${movement.movement_type}`} /> <div><strong>{movement.movement_type === 'in' ? 'Entrada' : 'Salida'} · {movement.quantity} unidades</strong><small>{formatDate(movement.created_at)}{movement.reason ? ` · ${movement.reason}` : ''}</small></div><b>{movement.stock_after}</b></div>)}
             </div>

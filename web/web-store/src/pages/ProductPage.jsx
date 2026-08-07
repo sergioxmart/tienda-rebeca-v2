@@ -23,6 +23,8 @@ export default function ProductPage() {
   const [selected, setSelected] = useState({});  // { attribute_id: attribute_value_id }
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+  const [activeImageId, setActiveImageId] = useState(null);
+  const [zoom, setZoom] = useState({ visible: false, x: 0, y: 0, left: 0, top: 0 });
 
   useEffect(() => {
     setLoading(true);
@@ -66,17 +68,40 @@ export default function ProductPage() {
   // Antes de que el cliente elija, usamos la primera variante activa como
   // referencia visual. No marcamos sus atributos como seleccionados: solo
   // definimos la imagen, descripción y precio iniciales de la página.
-  const defaultVariant = product?.variants?.[0] || null;
+  const defaultVariant = product?.variants?.find((variant) => Number(variant.stock) > 0)
+    || product?.variants?.[0]
+    || null;
   const displayVariant = matchedVariant || defaultVariant;
-  const effectivePrice = displayVariant?.price ?? product?.base_price;
-  const effectiveCompare = displayVariant?.compare_at ?? product?.compare_at;
+  const effectivePrice = displayVariant && Number(displayVariant.price) > 0
+    ? displayVariant.price
+    : product?.base_price;
+  const effectiveCompare = displayVariant && Number(displayVariant.compare_at) > 0
+    ? displayVariant.compare_at
+    : product?.compare_at;
   const effectiveStock = matchedVariant?.stock ?? defaultVariant?.stock ?? product?.total_stock ?? 0;
   const isAllSelected = attributes.length > 0 && Object.keys(selected).length === attributes.length;
   const canAdd = (attributes.length === 0 || isAllSelected) && effectiveStock > 0;
   const activeMedia = displayVariant?.media?.length ? displayVariant.media : (product?.media || []);
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
-  const image = galleryImages[0]?.url || product?.image_url || product?.thumb_url;
+  const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
+  const image = selectedGalleryImage?.url || product?.image_url || product?.thumb_url;
   const variantDescription = displayVariant?.description || product?.description;
+
+  useEffect(() => {
+    setActiveImageId(null);
+    setZoom((current) => ({ ...current, visible: false }));
+  }, [displayVariant?.id, product?.id]);
+
+  const handleGalleryMove = (event) => {
+    if (!image) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    const size = 184;
+    const left = Math.min(Math.max(10, event.clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
+    const top = Math.min(Math.max(10, event.clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
+    setZoom({ visible: true, x, y, left, top });
+  };
 
   const handleAdd = () => {
     if (!canAdd || !product) return;
@@ -120,9 +145,37 @@ export default function ProductPage() {
 
       <div className="product-page">
         <div className="product-gallery">
-          <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+          <div
+            className="gallery-frame"
+            onMouseMove={handleGalleryMove}
+            onMouseLeave={() => setZoom((current) => ({ ...current, visible: false }))}
+          >
+            <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+            {zoom.visible && image && (
+              <div
+                className="gallery-zoom"
+                aria-hidden="true"
+                style={{
+                  left: `${zoom.left}px`,
+                  top: `${zoom.top}px`,
+                  backgroundImage: `url(${image})`,
+                  backgroundPosition: `${zoom.x}% ${zoom.y}%`,
+                }}
+              />
+            )}
+          </div>
           {galleryImages.length > 1 && <div className="gallery-strip">
-            {galleryImages.map((item) => <img key={item.id} src={item.url} alt={item.alt_text || product.name} />)}
+            {galleryImages.map((item) => (
+              <button
+                type="button"
+                className={`gallery-thumb ${selectedGalleryImage?.id === item.id ? 'is-active' : ''}`}
+                key={item.id}
+                onClick={() => setActiveImageId(item.id)}
+                aria-label={`Ver foto ${item.alt_text || product.name}`}
+              >
+                <img src={item.url} alt={item.alt_text || product.name} />
+              </button>
+            ))}
           </div>}
           {activeMedia.some((item) => item.kind === 'video_embed') && <div className="gallery-video-links">
             {activeMedia.filter((item) => item.kind === 'video_embed').map((item) => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">▶ Ver video de esta variante</a>)}

@@ -31,6 +31,7 @@ function ChevronIcon({ direction }) {
 const EMPTY = {
   sku: '',
   price: '',
+  compare_at: '',
   active: true,
   description: '',
   attribute_values: [],  // [{ attribute_id, attribute_value_id }]
@@ -89,6 +90,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
     id: v.id,
     sku: v.sku || '',
     price: v.price ?? '',
+    compare_at: v.compare_at ?? '',
     active: v.active,
     description: v.description || '',
     attribute_values: attributes.map((a) => {
@@ -110,6 +112,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         await api.patch(`/api/admin/variants/${editing.id}`, {
           sku: editing.sku || null,
           price: editing.price === '' ? null : Number(editing.price),
+          compare_at: editing.compare_at === '' ? null : Number(editing.compare_at),
           active: !!editing.active,
           description: editing.description || '',
         });
@@ -126,6 +129,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         await api.post(`/api/admin/products/${productId}/variants`, {
           sku: editing.sku || null,
           price: editing.price === '' ? null : Number(editing.price),
+          compare_at: editing.compare_at === '' ? null : Number(editing.compare_at),
           active: !!editing.active,
           description: editing.description || '',
           attribute_values: avs,
@@ -260,7 +264,8 @@ export default function VariantEditor({ productId, variants, attributes, onChang
             <tr>
               <th>SKU</th>
               <th>Combinación</th>
-              <th>Precio</th>
+              <th>Precio base</th>
+              <th>Comparativo</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -277,6 +282,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
                   ))}
                 </td>
                 <td>{formatCOP(v.price)}</td>
+                <td>{formatCOP(v.compare_at)}</td>
                 <td>
                   {v.active
                     ? <span className="badge active">Activa</span>
@@ -316,9 +322,17 @@ export default function VariantEditor({ productId, variants, attributes, onChang
                        value={editing.sku} onChange={(e) => setEditing({ ...editing, sku: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Precio <span style={{ color: 'var(--color-muted)' }}>(opcional, usa base del producto)</span></label>
+                <label>Precio base <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
                 <input className="input" type="number" min={0}
                        value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Precio comparativo <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
+                <input className="input" type="number" min={0}
+                       value={editing.compare_at} onChange={(e) => setEditing({ ...editing, compare_at: e.target.value })} />
+                <p className="form-hint">Se muestra tachado cuando es mayor que el precio base.</p>
               </div>
             </div>
             <div className="form-row">

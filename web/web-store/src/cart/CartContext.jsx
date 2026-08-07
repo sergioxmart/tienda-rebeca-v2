@@ -32,19 +32,36 @@ export function CartProvider({ children }) {
   const addItem = useCallback((newItem) => {
     setItems((cur) => {
       const existing = cur.find((i) => i.variant_id === newItem.variant_id);
+      const requested = Math.max(1, Number(newItem.qty) || 1);
+      const stock = Number(newItem.stock);
+      const hasStockLimit = Number.isFinite(stock) && stock >= 0;
       if (existing) {
+        const nextQty = hasStockLimit
+          ? Math.min(stock, existing.qty + requested)
+          : existing.qty + requested;
+        if (nextQty <= existing.qty) return cur;
         return cur.map((i) =>
-          i.variant_id === newItem.variant_id ? { ...i, qty: i.qty + (newItem.qty || 1) } : i
+          i.variant_id === newItem.variant_id ? { ...i, ...newItem, qty: nextQty } : i
         );
       }
-      return [...cur, { ...newItem, qty: newItem.qty || 1 }];
+      if (hasStockLimit && stock < requested) {
+        if (stock <= 0) return cur;
+        return [...cur, { ...newItem, qty: stock }];
+      }
+      return [...cur, { ...newItem, qty: requested }];
     });
   }, []);
 
   const updateQty = useCallback((variantId, qty) => {
     setItems((cur) => {
       if (qty <= 0) return cur.filter((i) => i.variant_id !== variantId);
-      return cur.map((i) => i.variant_id === variantId ? { ...i, qty: Number(qty) || 1 } : i);
+      return cur.map((i) => {
+        if (i.variant_id !== variantId) return i;
+        const requested = Number(qty) || 1;
+        const stock = Number(i.stock);
+        const safeQty = Number.isFinite(stock) && stock >= 0 ? Math.min(requested, stock) : requested;
+        return safeQty <= 0 ? null : { ...i, qty: safeQty };
+      }).filter(Boolean);
     });
   }, []);
 

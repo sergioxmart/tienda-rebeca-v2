@@ -16,7 +16,7 @@ import Empty from '../components/Empty.jsx';
 export default function ProductPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,7 +24,7 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [activeImageId, setActiveImageId] = useState(null);
-  const [zoom, setZoom] = useState({ visible: false, x: 0, y: 0, left: 0, top: 0 });
+  const [zoom, setZoom] = useState({ visible: false, imageLeft: 0, imageTop: 0, left: 0, top: 0 });
 
   useEffect(() => {
     setLoading(true);
@@ -78,9 +78,19 @@ export default function ProductPage() {
   const effectiveCompare = displayVariant && Number(displayVariant.compare_at) > 0
     ? displayVariant.compare_at
     : product?.compare_at;
-  const effectiveStock = matchedVariant?.stock ?? defaultVariant?.stock ?? product?.total_stock ?? 0;
   const isAllSelected = attributes.length > 0 && Object.keys(selected).length === attributes.length;
-  const canAdd = (attributes.length === 0 || isAllSelected) && effectiveStock > 0;
+  const hasSelectedVariant = attributes.length === 0 || (isAllSelected && !!matchedVariant);
+  const selectedVariantId = matchedVariant?.id ?? (attributes.length === 0 ? product?.id : null);
+  const rawSelectedStock = hasSelectedVariant
+    ? (matchedVariant?.stock ?? (attributes.length === 0 ? defaultVariant?.stock ?? product?.total_stock : 0))
+    : null;
+  const selectedStock = rawSelectedStock === null ? null : Number(rawSelectedStock || 0);
+  const cartQty = selectedVariantId === null
+    ? 0
+    : Number(items.find((item) => Number(item.variant_id) === Number(selectedVariantId))?.qty || 0);
+  const remainingStock = selectedStock === null ? 0 : Math.max(0, selectedStock - cartQty);
+  const maxQty = Math.min(99, remainingStock);
+  const canAdd = hasSelectedVariant && remainingStock > 0 && qty <= maxQty;
   const activeMedia = displayVariant?.media?.length ? displayVariant.media : (product?.media || []);
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
   const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
@@ -95,12 +105,32 @@ export default function ProductPage() {
   const handleGalleryMove = (event) => {
     if (!image) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 100;
-    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    const clamp = (value) => Math.max(0, Math.min(1, value));
+    const x = clamp((event.clientX - rect.left) / rect.width);
+    const y = clamp((event.clientY - rect.top) / rect.height);
+    const zoomScale = 2.5;
+    // La imagen interna mide 250% del recuadro. El offset centra el punto del
+    // cursor dentro del zoom y se limita en los bordes para no dejar espacios.
+    const imageOffset = (point) => Math.max(100 - (zoomScale * 100), Math.min(0, 50 - (point * zoomScale * 100)));
     const size = 184;
     const left = Math.min(Math.max(10, event.clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
     const top = Math.min(Math.max(10, event.clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
-    setZoom({ visible: true, x, y, left, top });
+    setZoom({
+      visible: true,
+      imageLeft: imageOffset(x),
+      imageTop: imageOffset(y),
+      left,
+      top,
+    });
+  };
+
+  useEffect(() => {
+    setQty((current) => Math.min(Math.max(Number(current) || 1, 1), Math.max(1, maxQty)));
+  }, [maxQty]);
+
+  const handleSelectionChange = (nextSelected) => {
+    setSelected(nextSelected);
+    setQty(1);
   };
 
   const handleAdd = () => {
@@ -118,6 +148,7 @@ export default function ProductPage() {
       unit_price: Number(effectivePrice),
       image_url: image || null,
       qty,
+      stock: selectedStock,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
@@ -158,10 +189,15 @@ export default function ProductPage() {
                 style={{
                   left: `${zoom.left}px`,
                   top: `${zoom.top}px`,
-                  backgroundImage: `url(${image})`,
-                  backgroundPosition: `${zoom.x}% ${zoom.y}%`,
                 }}
-              />
+              >
+                <img
+                  className="gallery-zoom-image"
+                  src={image}
+                  alt=""
+                  style={{ left: `${zoom.imageLeft}%`, top: `${zoom.imageTop}%` }}
+                />
+              </div>
             )}
           </div>
           {galleryImages.length > 1 && <div className="gallery-strip">
@@ -196,20 +232,21 @@ export default function ProductPage() {
               attributes={attributes}
               variants={product.variants || []}
               selected={selected}
-              onChange={setSelected}
+              onChange={handleSelectionChange}
             />
           )}
 
-          <div style={{ marginBottom: 16, color: effectiveStock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-            {effectiveStock > 0
-              ? `✓ ${effectiveStock} en stock`
-              : '✗ Sin stock'}
-          </div>
+          {hasSelectedVariant && (
+            <div className="stock-status-line" style={{ color: selectedStock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+              <span>{selectedStock > 0 ? `✓ ${selectedStock} en stock` : '✗ Sin stock'}</span>
+              {cartQty > 0 && selectedStock > 0 && <small>{cartQty} en tu carrito · {remainingStock} disponibles para agregar</small>}
+            </div>
+          )}
 
-          {effectiveStock > 0 && (
+          {hasSelectedVariant && remainingStock > 0 && (
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
               <span style={{ fontSize: 14 }}>Cantidad:</span>
-              <QuantitySelector value={qty} onChange={setQty} max={Math.min(99, effectiveStock)} />
+              <QuantitySelector value={qty} onChange={setQty} max={maxQty} />
             </div>
           )}
 

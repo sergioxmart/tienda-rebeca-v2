@@ -54,7 +54,7 @@ export default function ProductPage() {
   // Encontrar la variant que matchea la selección actual
   const matchedVariant = useMemo(() => {
     if (!product?.variants?.length) return null;
-    const sel = Object.entries(selected);
+    const sel = Object.entries(selected).filter(([, valueId]) => valueId !== '' && valueId !== null && valueId !== undefined);
     if (sel.length === 0) return null;
     return product.variants.find((v) => {
       const avs = v.attribute_values || [];
@@ -72,6 +72,9 @@ export default function ProductPage() {
   const defaultVariant = product?.variants?.find((variant) => Number(variant.stock) > 0)
     || product?.variants?.[0]
     || null;
+  // La variante exacta depende del estado `selected`; al cambiar cualquier
+  // atributo este valor cambia y fuerza la actualización de precio, stock,
+  // descripción y multimedia en el mismo render.
   const displayVariant = matchedVariant || defaultVariant;
   const effectivePrice = displayVariant && Number(displayVariant.price) > 0
     ? displayVariant.price
@@ -79,6 +82,9 @@ export default function ProductPage() {
   const effectiveCompare = displayVariant && Number(displayVariant.compare_at) > 0
     ? displayVariant.compare_at
     : product?.compare_at;
+  const discountPercent = Number(effectiveCompare) > Number(effectivePrice) && Number(effectiveCompare) > 0
+    ? Math.round(((Number(effectiveCompare) - Number(effectivePrice)) / Number(effectiveCompare)) * 100)
+    : 0;
   const requiredAttributes = attributes.filter((attribute) => attribute.isRequired);
   const isAllSelected = requiredAttributes.every((attribute) => selected[attribute.id]);
   const hasSelectedVariant = attributes.length === 0 || (isAllSelected && !!matchedVariant);
@@ -226,7 +232,10 @@ export default function ProductPage() {
           )}
           <h1>{product.name}</h1>
           <div className="price-main" style={{ marginBottom: 16 }}>
-            <Price value={effectivePrice} compare={effectiveCompare} />
+            <div className="price-display-row">
+              <Price value={effectivePrice} compare={effectiveCompare} />
+              {discountPercent > 0 && <span className="discount-badge">-{discountPercent}%</span>}
+            </div>
           </div>
 
           {attributes.length > 0 && (

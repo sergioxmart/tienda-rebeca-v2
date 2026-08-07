@@ -107,7 +107,7 @@ export default function Inventory() {
 
   const selectedRow = variants.find((item) => item.variant_id === selectedId);
   const canWrite = user?.role === 'admin' || user?.role === 'operator';
-  const [collapsedProducts, setCollapsedProducts] = useState(() => new Set());
+  const [expandedProducts, setExpandedProducts] = useState(() => new Set());
   const groupedVariants = useMemo(() => {
     const groups = new Map();
     for (const variant of variants) {
@@ -135,7 +135,7 @@ export default function Inventory() {
   }, [variants]);
 
   const toggleProduct = (productId) => {
-    setCollapsedProducts((current) => {
+    setExpandedProducts((current) => {
       const next = new Set(current);
       if (next.has(productId)) next.delete(productId);
       else next.add(productId);
@@ -184,15 +184,15 @@ export default function Inventory() {
               <div className="inventory-table-wrap"><table className="data-table inventory-table">
                 <thead><tr><th>Producto</th><th>Variante</th><th>SKU</th><th style={{ textAlign: 'right' }}>Stock actual</th><th aria-label="Abrir detalle" /></tr></thead>
                 <tbody>{groupedVariants.map((group) => {
-                  const collapsed = collapsedProducts.has(group.product_id);
+                  const expanded = expandedProducts.has(group.product_id);
                   const productStock = group.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
                   return <React.Fragment key={group.product_id}>
                     <tr className="inventory-group-row" onClick={() => toggleProduct(group.product_id)}>
-                      <td colSpan={3}><div className="inventory-group-cell"><span className="inventory-group-chevron">{collapsed ? '▸' : '▾'}</span><span className="inventory-avatar">{initials(group.product_name)}</span><div><strong>{group.product_name}</strong><small>Producto #{group.product_id} · {group.variants.length} variante{group.variants.length === 1 ? '' : 's'}</small></div></div></td>
+                      <td colSpan={3}><div className="inventory-group-cell"><span className="inventory-group-chevron">{expanded ? '▾' : '▸'}</span><span className="inventory-avatar">{initials(group.product_name)}</span><div><strong>{group.product_name}</strong><small>Producto #{group.product_id} · {group.variants.length} variante{group.variants.length === 1 ? '' : 's'}</small></div></div></td>
                       <td><div className="inventory-group-total"><strong>{productStock}</strong><small>unidades</small></div></td>
                       <td />
                     </tr>
-                    {!collapsed && group.variants.map((variant) => {
+                    {expanded && group.variants.map((variant) => {
                       const stock = Number(variant.stock || 0);
                       const stockLabel = stock <= 0 ? 'Agotado' : stock <= 5 ? 'Stock bajo' : 'Disponible';
                       return <tr key={variant.variant_id} className={`inventory-variant-row ${selectedId === variant.variant_id ? 'row-selected' : ''}`} onClick={() => selectVariant(variant.variant_id)}>

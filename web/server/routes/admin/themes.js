@@ -205,6 +205,7 @@ function previewFromTheme(theme) {
       active: module.active !== false,
       settings: module.settings || {},
     })),
+    site_config_subset: theme.site_config_subset || {},
     site_config_keys: Object.keys(theme.site_config_subset || {}),
   };
 }

@@ -1,7 +1,7 @@
 // Layout del admin autenticado: sidebar + header + outlet de React Router.
 
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 const SIDEBAR_STORAGE_KEY = 'techstore.admin.sidebar.groups.v1';
@@ -56,6 +56,7 @@ function Icon({ name }) {
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [site, setSite] = useState({ site_name: 'TechStore', logo_url: null });
   const [openGroups, setOpenGroups] = useState(() => {
     const defaults = Object.fromEntries(NAV_GROUPS.map((group) => [group.label, ['Operación', 'Sitio Web'].includes(group.label)]));
@@ -64,10 +65,21 @@ export default function Layout() {
       return saved && typeof saved === 'object' ? { ...defaults, ...saved } : defaults;
     } catch { return defaults; }
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     try { localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(openGroups)); } catch { /* ignore */ }
   }, [openGroups]);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+    document.body.classList.remove('sidebar-is-open');
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-is-open', sidebarOpen);
+    return () => document.body.classList.remove('sidebar-is-open');
+  }, [sidebarOpen]);
 
   useEffect(() => {
     let active = true;
@@ -90,7 +102,7 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="brand-mark">
             {site.logo_url ? <img src={site.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : String(site.site_name || 'TechStore').slice(0, 1).toUpperCase()}
@@ -113,7 +125,7 @@ export default function Layout() {
                 <span className={`nav-group-chevron ${openGroups[group.label] ? 'is-open' : ''}`}>⌄</span>
               </button>
               {openGroups[group.label] && <div className="nav-group-items">{group.items.map((item) => (
-                <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => (isActive ? 'active' : undefined)}>
+                <NavLink key={item.to} to={item.to} end={item.to === '/'} onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? 'active' : undefined)}>
                   <Icon name={item.icon} /><span>{item.label}</span>
                 </NavLink>
               ))}</div>}
@@ -128,8 +140,9 @@ export default function Layout() {
           <button className="sidebar-logout" onClick={handleLogout}><span aria-hidden="true">↪</span> Cerrar sesión</button>
         </div>
       </aside>
+      {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setSidebarOpen(false)} />}
       <header className="header">
-        <div className="header-context"><span className="header-kicker">TechStore</span><span>Panel de administración</span></div>
+        <div className="header-context"><button className="mobile-sidebar-toggle" type="button" aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}><span /><span /><span /></button><span className="header-kicker">TechStore</span><span>Panel de administración</span></div>
         <div className="user">
           <span className="role-pill">{user?.role || 'admin'}</span>
         </div>

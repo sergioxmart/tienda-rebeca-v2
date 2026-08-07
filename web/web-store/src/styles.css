@@ -152,6 +152,10 @@ p { margin: 0 0 12px; }
 .hero-device::before { content: ''; position: absolute; top: 12px; width: 50px; height: 14px; border-radius: 99px; background: rgba(0,0,0,0.54); }
 .hero-device::after { content: ''; position: absolute; right: 15px; top: 52px; width: 27px; height: 46px; border-radius: 8px; background: rgba(10, 25, 40, 0.55); box-shadow: 0 54px 0 -3px rgba(10,25,40,0.55); }
 .hero-device span { color: rgba(255,255,255,0.85); font-size: 40px; font-weight: 900; letter-spacing: -0.1em; transform: rotate(-11deg); }
+.hero-device-product { width: min(320px, 82%); height: min(360px, 88%); aspect-ratio: auto; align-items: center; padding: 24px; border: 1px solid rgba(255,255,255,0.24); border-radius: 38% 22% 38% 22%; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.26), rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.02)); box-shadow: 22px 30px 46px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.08); transform: rotate(4deg); }
+.hero-device-product::before { inset: 12px; width: auto; height: auto; border: 1px dashed rgba(255,255,255,0.22); border-radius: inherit; background: transparent; }
+.hero-device-product::after { display: none; }
+.hero-device-product img { position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 22px 18px rgba(0,0,0,0.24)); transform: rotate(-4deg); }
 .hero-orbit { position: absolute; border: 1px solid rgba(255,255,255,0.22); border-radius: 50%; transform: rotate(-25deg); }
 .hero-orbit-one { width: 360px; height: 170px; }
 .hero-orbit-two { width: 250px; height: 420px; transform: rotate(42deg); }
@@ -340,6 +344,7 @@ p { margin: 0 0 12px; }
   .hero-proof { margin-top: 30px; gap: 18px; }
   .hero-visual { min-height: 260px; margin-top: -2px; }
   .hero-device { width: 150px; border-width: 5px; border-radius: 27px; padding-bottom: 35px; }
+  .hero-device-product { width: min(270px, 82%); height: 270px; padding: 18px; border-width: 1px; border-radius: 30% 18% 30% 18%; }
   .hero-device span { font-size: 28px; }
   .hero-floating-card-top { top: 15px; right: 2px; }
   .hero-floating-card-bottom { bottom: 14px; left: 3px; }

@@ -16,7 +16,7 @@
 //   - web/server/routes/admin/page-modules.js (seed inicial opcional)
 //   - aca en MODULE_SCHEMAS (label, icon, settings[])
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
@@ -134,48 +134,88 @@ function defaultSettingsForType(type) {
   return out;
 }
 
-function ModulePreview({ module }) {
-  const settings = module?.settings || {};
-  const type = module?.type;
-  if (type === 'hero') return (
-    <section className="builder-preview-hero" style={settings.image_url ? { backgroundImage: `linear-gradient(120deg, rgba(15,42,71,.92), rgba(15,42,71,.5)), url(${settings.image_url})` } : undefined}>
-      <small>{settings.eyebrow || 'Tecnología para tu día a día'}</small>
-      <h2>{settings.title || 'Título del hero'}</h2>
-      <p>{settings.subtitle || 'Escribe un mensaje claro para presentar tu tienda.'}</p>
-      <button className="btn btn-accent btn-sm" type="button">{settings.cta_text || 'Ver catálogo'}</button>
-    </section>
-  );
-  if (type === 'banner') return <div className="builder-preview-banner" style={settings.image_url ? { backgroundImage: `url(${settings.image_url})` } : undefined}><strong>{settings.alt || 'Banner promocional'}</strong></div>;
-  if (type === 'categories' || type === 'categories_grid') return <section className="builder-preview-section"><h3>{settings.title || 'Categorías'}</h3><div className="builder-preview-chips"><span>Accesorios</span><span>Celulares</span><span>Ofertas</span></div></section>;
-  if (type === 'featured_products' || type === 'recent_products') return <section className="builder-preview-section"><h3>{settings.title || 'Productos'}</h3><div className="builder-preview-products"><span>Producto destacado</span><span>Producto destacado</span><span>Producto destacado</span></div></section>;
-  return <div className="builder-preview-section"><strong>{type || 'Módulo'}</strong><p>Vista previa no disponible para este tipo.</p></div>;
+function getStorePreviewUrl() {
+  const configured = import.meta.env.VITE_STORE_PREVIEW_URL;
+  if (configured) return `${configured.replace(/\/$/, '')}/?builder_preview=1`;
+  const url = new URL(window.location.origin);
+  if (url.port === '5174' || !url.port) url.port = '5173';
+  url.search = '?builder_preview=1';
+  return url.toString();
 }
 
-function BuilderPreview({ modules, navSettings }) {
+function LiveStorePreview({ modules, navSettings, title = 'Vista previa real de la tienda' }) {
+  const frameRef = useRef(null);
+  const payload = { modules: modules || [], site_config_subset: navSettings || {} };
+
+  const sendDraft = () => {
+    frameRef.current?.contentWindow?.postMessage({ type: 'techstore-builder-preview', draft: payload }, '*');
+  };
+
+  useEffect(() => {
+    const handleReady = (event) => {
+      if (event.source === frameRef.current?.contentWindow && event.data?.type === 'techstore-builder-preview-ready') sendDraft();
+    };
+    window.addEventListener('message', handleReady);
+    sendDraft();
+    return () => window.removeEventListener('message', handleReady);
+  }, [modules, navSettings]);
+
   return (
-    <div className="builder-live-preview">
-      {navSettings?.navbar_enabled !== false && <div className="builder-preview-navbar"><strong>TechStore</strong><span>Tienda</span><span>Catálogo</span><span className="builder-preview-navbar-search">⌕ Buscar</span><span>🛒</span></div>}
-      {(modules || []).filter((module) => module.active !== false).map((module, index) => <ModulePreview key={module.id || `${module.type}-${index}`} module={module} />)}
-      {(modules || []).length === 0 && <div className="empty"><h3>Sin módulos en el borrador</h3></div>}
+    <div className="builder-real-preview">
+      <div className="builder-real-preview-heading"><strong>{title}</strong><span>Renderiza la misma tienda y los mismos datos del catálogo.</span></div>
+      <iframe ref={frameRef} title={title} src={getStorePreviewUrl()} onLoad={sendDraft} />
     </div>
   );
 }
 
-function BuilderModuleRow({ icon, label, description, active, onMoveUp, onMoveDown, onToggle, onConfigure, onDelete, disableUp, disableDown, disableDelete }) {
+function BuilderModuleRow({ icon, label, description, active, onMoveUp, onMoveDown, onToggle, onConfigure, onDelete, disableUp, disableDown, disableDelete, details }) {
   return (
     <div className={`builder-module-row ${active ? '' : 'is-inactive'}`}>
-      <div className="builder-module-order">
-        <button className="btn btn-sm" type="button" onClick={onMoveUp} disabled={disableUp} title="Subir">↑</button>
-        <button className="btn btn-sm" type="button" onClick={onMoveDown} disabled={disableDown} title="Bajar">↓</button>
+      <div className="builder-module-row-main">
+        <div className="builder-module-order">
+          <button className="btn btn-sm" type="button" onClick={onMoveUp} disabled={disableUp} title="Subir">↑</button>
+          <button className="btn btn-sm" type="button" onClick={onMoveDown} disabled={disableDown} title="Bajar">↓</button>
+        </div>
+        <div className="builder-module-icon" aria-hidden="true">{icon}</div>
+        <div className="builder-module-copy"><strong>{label}</strong><span>{description}</span></div>
+        <span className={`badge ${active ? 'active' : 'inactive'}`}>{active ? 'Activo' : 'Inactivo'}</span>
+        <div className="table-actions builder-module-actions">
+          <button className="btn btn-sm" type="button" onClick={onToggle}>{active ? 'Desactivar' : 'Activar'}</button>
+          <button className="btn btn-sm" type="button" onClick={onConfigure}>Configurar</button>
+          <button className="btn btn-sm btn-danger" type="button" onClick={onDelete} disabled={disableDelete} title={disableDelete ? 'El Navbar es parte estructural de la tienda' : 'Eliminar'}>×</button>
+        </div>
       </div>
-      <div className="builder-module-icon" aria-hidden="true">{icon}</div>
-      <div className="builder-module-copy"><strong>{label}</strong><span>{description}</span></div>
-      <span className={`badge ${active ? 'active' : 'inactive'}`}>{active ? 'Activo' : 'Inactivo'}</span>
-      <div className="table-actions builder-module-actions">
-        <button className="btn btn-sm" type="button" onClick={onToggle}>{active ? 'Desactivar' : 'Activar'}</button>
-        <button className="btn btn-sm" type="button" onClick={onConfigure}>Configurar</button>
-        <button className="btn btn-sm btn-danger" type="button" onClick={onDelete} disabled={disableDelete} title={disableDelete ? 'El Navbar es parte estructural de la tienda' : 'Eliminar'}>×</button>
+      {details}
+    </div>
+  );
+}
+
+function NavbarSettings({ navSettings, navSaving, setNavValue, updateNavLink, addNavLink, removeNavLink, saveNavSettings }) {
+  return (
+    <div className="builder-module-details builder-navbar-settings">
+      <div className="builder-navbar-settings-heading">
+        <div><span className="builder-kicker">Configuración del módulo</span><h3>Nav Bar de la tienda</h3><p>Estos cambios se guardan en el borrador y solo llegan a 5173 al publicar.</p></div>
+        <button className="btn btn-primary btn-sm" type="button" onClick={saveNavSettings} disabled={navSaving}>{navSaving ? <span className="spinner" /> : 'Guardar Navbar'}</button>
       </div>
+      <div className="form-row">
+        <div className="form-group"><label>Mensaje superior</label><input className="input" value={navSettings.navbar_announcement} onChange={(e) => setNavValue('navbar_announcement', e.target.value)} placeholder="Envíos a toda Colombia · Compra fácil y segura" /></div>
+        <div className="form-group"><label>Mostrar categorías automáticas</label><select className="select" value={String(navSettings.navbar_show_categories)} onChange={(e) => setNavValue('navbar_show_categories', e.target.value === 'true')}><option value="true">Sí, usar categorías del catálogo</option><option value="false">No</option></select></div>
+      </div>
+      <div className="builder-toggle-row">
+        <label><input type="checkbox" checked={navSettings.navbar_enabled !== false} onChange={(e) => setNavValue('navbar_enabled', e.target.checked)} /> Navbar activo</label>
+        <label><input type="checkbox" checked={navSettings.navbar_show_announcement} onChange={(e) => setNavValue('navbar_show_announcement', e.target.checked)} /> Mostrar mensaje superior</label>
+        <label><input type="checkbox" checked={navSettings.navbar_show_search} onChange={(e) => setNavValue('navbar_show_search', e.target.checked)} /> Mostrar buscador</label>
+        <label><input type="checkbox" checked={navSettings.navbar_show_cart} onChange={(e) => setNavValue('navbar_show_cart', e.target.checked)} /> Mostrar carrito</label>
+      </div>
+      <div className="builder-links-heading"><div><h3>Enlaces personalizados</h3><p>Usa rutas como <code>/categoria</code> o URLs externas.</p></div><button className="btn btn-sm" type="button" onClick={addNavLink}>+ Agregar enlace</button></div>
+      {navSettings.navbar_links.length > 0 && <div className="builder-links-list">
+        {navSettings.navbar_links.map((link, index) => <div className="builder-link-row" key={`${index}-${link.label}`}>
+          <input className="input" value={link.label} placeholder="Texto del enlace" onChange={(e) => updateNavLink(index, 'label', e.target.value)} />
+          <input className="input" value={link.href} placeholder="/categoria/ofertas o https://..." onChange={(e) => updateNavLink(index, 'href', e.target.value)} />
+          <label className="builder-featured-toggle"><input type="checkbox" checked={link.featured} onChange={(e) => updateNavLink(index, 'featured', e.target.checked)} /> Destacado</label>
+          <button className="btn btn-sm btn-danger" type="button" onClick={() => removeNavLink(index)} aria-label={`Eliminar enlace ${link.label || index + 1}`}>×</button>
+        </div>)}
+      </div>}
     </div>
   );
 }
@@ -195,6 +235,7 @@ export default function PageBuilder() {
   const [hasDraft, setHasDraft] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [modalTab, setModalTab] = useState('edit');
+  const [navbarExpanded, setNavbarExpanded] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -336,6 +377,8 @@ export default function PageBuilder() {
     await persistDraft(modules, nextNav);
   };
 
+  const configureNavbar = () => setNavbarExpanded((expanded) => !expanded);
+
   const handleDelete = async () => {
     const nextModules = modules.filter((module) => module.id !== deleting.id);
     if (await persistDraft(nextModules, navSettings)) {
@@ -385,37 +428,6 @@ export default function PageBuilder() {
         </div>
       </div>
 
-      <section className="builder-global-card" id="builder-navbar-config">
-        <div className="builder-card-heading">
-          <div><span className="builder-kicker">Apariencia global</span><h2>Navbar de la tienda</h2><p>Personaliza la barra que aparece en todas las páginas de 5173.</p></div>
-          <button className="btn btn-primary" onClick={saveNavSettings} disabled={navSaving}>{navSaving ? <span className="spinner" /> : 'Guardar navbar'}</button>
-        </div>
-        <div className="builder-nav-preview">
-          <div className="builder-preview-logo"><span>TS</span> {navSettings.navbar_links.find((link) => link.label)?.label || 'TechStore'}</div>
-          <div className="builder-preview-search">⌕ ¿Qué estás buscando?</div>
-          <div className="builder-preview-actions">{navSettings.navbar_show_search ? 'Buscar' : 'Sin búsqueda'} · {navSettings.navbar_show_cart ? 'Carrito' : 'Sin carrito'}</div>
-        </div>
-        <div className="form-row builder-global-fields">
-          <div className="form-group"><label>Mensaje superior</label><input className="input" value={navSettings.navbar_announcement} onChange={(e) => setNavValue('navbar_announcement', e.target.value)} placeholder="Envíos a toda Colombia · Compra fácil y segura" /></div>
-          <div className="form-group"><label>Mostrar categorías automáticas</label><select className="select" value={String(navSettings.navbar_show_categories)} onChange={(e) => setNavValue('navbar_show_categories', e.target.value === 'true')}><option value="true">Sí, usar categorías del catálogo</option><option value="false">No</option></select></div>
-        </div>
-        <div className="builder-toggle-row">
-          <label><input type="checkbox" checked={navSettings.navbar_enabled !== false} onChange={(e) => setNavValue('navbar_enabled', e.target.checked)} /> Navbar activo</label>
-          <label><input type="checkbox" checked={navSettings.navbar_show_announcement} onChange={(e) => setNavValue('navbar_show_announcement', e.target.checked)} /> Mostrar mensaje superior</label>
-          <label><input type="checkbox" checked={navSettings.navbar_show_search} onChange={(e) => setNavValue('navbar_show_search', e.target.checked)} /> Mostrar buscador</label>
-          <label><input type="checkbox" checked={navSettings.navbar_show_cart} onChange={(e) => setNavValue('navbar_show_cart', e.target.checked)} /> Mostrar carrito</label>
-        </div>
-        <div className="builder-links-heading"><div><h3>Enlaces personalizados</h3><p>Si agregas enlaces, aparecerán antes que las categorías automáticas. Usa rutas como <code>/categoria</code> o URLs externas.</p></div><button className="btn btn-sm" onClick={addNavLink}>+ Agregar enlace</button></div>
-        {navSettings.navbar_links.length > 0 && <div className="builder-links-list">
-          {navSettings.navbar_links.map((link, index) => <div className="builder-link-row" key={`${index}-${link.label}`}>
-            <input className="input" value={link.label} placeholder="Texto del enlace" onChange={(e) => updateNavLink(index, 'label', e.target.value)} />
-            <input className="input" value={link.href} placeholder="/categoria/ofertas o https://..." onChange={(e) => updateNavLink(index, 'href', e.target.value)} />
-            <label className="builder-featured-toggle"><input type="checkbox" checked={link.featured} onChange={(e) => updateNavLink(index, 'featured', e.target.checked)} /> Destacado</label>
-            <button className="btn btn-sm btn-danger" onClick={() => removeNavLink(index)} aria-label={`Eliminar enlace ${link.label || index + 1}`}>×</button>
-          </div>)}
-        </div>}
-      </section>
-
       <div className="builder-module-list">
         <BuilderModuleRow
           icon="🧭"
@@ -425,41 +437,42 @@ export default function PageBuilder() {
           onMoveUp={() => {}}
           onMoveDown={() => {}}
           onToggle={toggleNavbar}
-          onConfigure={() => document.getElementById('builder-navbar-config')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          onConfigure={configureNavbar}
           onDelete={() => {}}
           disableUp
           disableDown
           disableDelete
+          details={navbarExpanded && <NavbarSettings
+            navSettings={navSettings}
+            navSaving={navSaving}
+            setNavValue={setNavValue}
+            updateNavLink={updateNavLink}
+            addNavLink={addNavLink}
+            removeNavLink={removeNavLink}
+            saveNavSettings={saveNavSettings}
+          />}
         />
+        {modules.map((m, idx) => {
+          const sch = MODULE_SCHEMAS[m.type];
+          const label = sch?.label || m.type;
+          const icon = sch?.icon || '📦';
+          return <BuilderModuleRow
+            key={m.id}
+            icon={icon}
+            label={label}
+            description={sch?.description || `Tipo: ${m.type}`}
+            active={m.active !== false}
+            onMoveUp={() => move(idx, -1)}
+            onMoveDown={() => move(idx, 1)}
+            onToggle={() => toggleActive(m)}
+            onConfigure={() => openEdit(m)}
+            onDelete={() => setDeleting(m)}
+            disableUp={idx === 0}
+            disableDown={idx === modules.length - 1}
+          />;
+        })}
+        {modules.length === 0 && <Empty title="Sin módulos" description="La home no muestra nada. Crea el primero." action={<button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>} />}
       </div>
-
-      {modules.length === 0 ? (
-        <Empty title="Sin módulos" description="La home no muestra nada. Crea el primero." action={
-          <button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>
-        } />
-      ) : (
-        <div className="builder-module-list">
-          {modules.map((m, idx) => {
-            const sch = MODULE_SCHEMAS[m.type];
-            const label = sch?.label || m.type;
-            const icon = sch?.icon || '📦';
-            return <BuilderModuleRow
-              key={m.id}
-              icon={icon}
-              label={label}
-              description={sch?.description || `Tipo: ${m.type}`}
-              active={m.active !== false}
-              onMoveUp={() => move(idx, -1)}
-              onMoveDown={() => move(idx, 1)}
-              onToggle={() => toggleActive(m)}
-              onConfigure={() => openEdit(m)}
-              onDelete={() => setDeleting(m)}
-              disableUp={idx === 0}
-              disableDown={idx === modules.length - 1}
-            />;
-          })}
-        </div>
-      )}
 
       <p style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 16 }}>
         Tip: el store público lee los módulos activos en orden desde <code>/api/public/page-modules</code>.
@@ -532,7 +545,7 @@ export default function PageBuilder() {
                 )}
               </div>
             ))}
-          </form> : <BuilderPreview modules={[editing]} navSettings={navSettings} />}
+          </form> : <LiveStorePreview modules={[editing]} navSettings={navSettings} title="Vista previa real del módulo" />}
           </>
         )}
       </Modal>
@@ -544,7 +557,7 @@ export default function PageBuilder() {
         title="Vista previa del borrador"
         footer={<button className="btn" onClick={() => setPreviewOpen(false)}>Cerrar</button>}
       >
-        <BuilderPreview modules={modules} navSettings={navSettings} />
+        <LiveStorePreview modules={modules} navSettings={navSettings} />
       </Modal>
 
       <Confirm

@@ -5,10 +5,12 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useBuilderPreview } from '../preview/BuilderPreviewContext.jsx';
 
 const SiteContext = createContext(null);
 
 export function SiteProvider({ children }) {
+  const preview = useBuilderPreview();
   const [site, setSite] = useState(null);
   const [categories, setCategories] = useState([]);
 
@@ -24,8 +26,12 @@ export function SiteProvider({ children }) {
     })();
   }, []);
 
+  const visibleSite = preview.active && preview.draft?.site_config_subset
+    ? { ...site, ...preview.draft.site_config_subset }
+    : site;
+
   return (
-    <SiteContext.Provider value={{ site, categories }}>
+    <SiteContext.Provider value={{ site: visibleSite, categories }}>
       {children}
     </SiteContext.Provider>
   );

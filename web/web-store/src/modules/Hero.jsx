@@ -35,7 +35,10 @@ export default function Hero({ settings = {} }) {
     return () => { cancelled = true; };
   }, [product_slug, visual_mode]);
 
-  const productImage = product?.media?.find((media) => media.kind === 'image')?.url;
+  const productImage = product?.image_url
+    || product?.thumb_url
+    || product?.media?.find((media) => media.kind === 'image')?.url
+    || product?.variants?.flatMap((variant) => variant.media || []).find((media) => media.kind === 'image')?.url;
   const visualImage = visual_mode === 'image' ? visual_image_url : productImage;
   const style = image_url
     ? { backgroundImage: `linear-gradient(rgba(15,42,71,0.55), rgba(15,42,71,0.7)), url(${image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -60,7 +63,7 @@ export default function Hero({ settings = {} }) {
       </div>
       <div className={`hero-visual ${visual_mode === 'product' ? 'hero-visual-product' : ''}`} aria-label={product ? `Producto destacado: ${product.name}` : undefined}>
         {visualImage
-          ? <div className="hero-product-stage"><img src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
+          ? <div className="hero-device hero-device-product"><img src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
           : <><div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" /><div className="hero-device"><span>TS</span></div></>}
         <div className="hero-floating-card hero-floating-card-top"><span className="floating-dot" />{product ? product.name : 'Selección TechStore'}</div>
         {product

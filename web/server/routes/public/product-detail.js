@@ -125,7 +125,12 @@ export async function getProductBySlug(req, res, slug) {
     mediaByVariant.get(item.variant_id).push(item);
   }
   for (const variant of variants) variant.media = mediaByVariant.get(variant.id) ?? [];
-  product.image_url = product.media.find((item) => item.kind === 'image')?.url || null;
+  // Un producto puede tener su foto principal directamente vinculada al
+  // producto o únicamente a una de sus variantes. El Hero necesita una
+  // imagen inicial en ambos casos.
+  product.image_url = product.media.find((item) => item.kind === 'image')?.url
+    || variants.flatMap((variant) => variant.media || []).find((item) => item.kind === 'image')?.url
+    || null;
   product.thumb_url = product.image_url;
 
   res.setHeader('Cache-Control', 'no-store');

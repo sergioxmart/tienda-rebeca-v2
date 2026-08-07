@@ -201,6 +201,12 @@ administrador confirma la publicación.
 | PATCH | `/api/admin/orders/:id` | `{ status?, notes? }` (cambiar status mueve el pedido en el kanban) | `orders` |
 | POST | `/api/admin/orders/:id/refund` | `{ amount?, reason? }` (amount=null = total) | `orders` |
 
+### Ventas (admin)
+
+| Método | Path | Body / Query | Section |
+| ------ | ---- | ------------ | ------- |
+| GET | `/api/admin/sales` | `?from=YYYY-MM-DD&to=YYYY-MM-DD` opcionales | `sales` |
+
 ### Pagos (admin)
 
 | Método | Path | Body | Section |

@@ -9,12 +9,13 @@ function formatCOP(value) {
 export default function Sales() {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
     api.get('/api/admin/sales')
       .then((data) => { if (active) setSales(data.data || data.sales || []); })
-      .catch(() => {})
+      .catch((err) => { if (active) setError(err.message || 'No se pudieron cargar las ventas.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -22,7 +23,9 @@ export default function Sales() {
   return (
     <div>
       <div className="page-header"><div><h1>Ventas</h1><p className="form-hint">Historial de ventas registradas.</p></div></div>
-      {loading ? <div className="center"><span className="spinner" /></div> : sales.length === 0 ? (
+      {loading ? <div className="center"><span className="spinner" /></div> : error ? (
+        <div className="alert alert-error" role="alert">{error}</div>
+      ) : sales.length === 0 ? (
         <Empty title="Sin ventas" description="Las ventas registradas aparecerán aquí." />
       ) : (
         <div className="table-wrap"><table className="data-table">

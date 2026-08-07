@@ -528,6 +528,7 @@ export default function PageBuilder() {
         open={!!editing}
         onClose={() => !saving && setEditing(null)}
         size="lg"
+        layerClassName={editing?.type === 'hero' ? 'hero-modal-layer' : undefined}
         title={editing?.mode === 'new' ? 'Nuevo módulo' : `Editar módulo · ${editing?.type}`}
         footer={
           <>

@@ -141,7 +141,8 @@ de una transacción y crean un movimiento auditable.
 | POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id }` | `media` |
 | POST | `/api/admin/media/:id/attach` | `{ product_id, variant_id }` | `media` (reutiliza un archivo existente en una variante) |
 | PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order? }` | `media` |
-| DELETE | `/api/admin/media/:id` | — | `media` (soft-delete) |
+| DELETE | `/api/admin/media/:id` | — | `media` (borrado definitivo del registro y archivo físico) |
+| DELETE | `/api/admin/media/:id/variants/:variantId` | — | `media` (desvincula de una variante, conserva el archivo) |
 | POST | `/api/admin/media/cleanup` | — | `media` (borra huérfanas >30d) |
 
 ### Site config
@@ -154,6 +155,18 @@ de una transacción y crean un movimiento auditable.
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
 | POST | `/api/admin/site-config/login-background` | `multipart/form-data` con `file` | Sube o reemplaza la imagen de fondo del login. |
 | DELETE | `/api/admin/site-config/login-background` | — | Elimina la imagen de fondo del login. |
+
+### Temas
+
+| Método | Path | Body | Section |
+| ------ | ---- | ---- | ------- |
+| GET | `/api/admin/themes` | — | `site_config` |
+| POST | `/api/admin/themes` | `{ name, description? }` | `site_config` |
+| GET | `/api/admin/themes/:id/export` | — | `site_config` |
+| GET | `/api/admin/themes/current/export` | — | `site_config` (descarga el snapshot del estado aplicado actualmente) |
+| POST | `/api/admin/themes/import` | `multipart/form-data` con `file` | `site_config` |
+| POST | `/api/admin/themes/:id/apply` | — | `site_config` |
+| DELETE | `/api/admin/themes/:id` | — | `site_config` |
 
 ### Pedidos (admin)
 

@@ -11,7 +11,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
-import Confirm from '../components/Confirm.jsx';
 import Modal from '../components/Modal.jsx';
 import VariantEditor from '../components/VariantEditor.jsx';
 import MoneyInput from '../components/MoneyInput.jsx';
@@ -54,6 +53,7 @@ export default function ProductForm() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
   const [loadError, setLoadError] = useState('');
   const [selectedAttributeId, setSelectedAttributeId] = useState(null);
   const [movingAttribute, setMovingAttribute] = useState(false);
@@ -149,13 +149,17 @@ export default function ProductForm() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/api/admin/products/${productId}`);
+      await api.delete(`/api/admin/products/${productId}`, {
+        body: totalProductStock > 0 ? { confirm_text: deleteText } : {},
+      });
       toast.success('Producto eliminado');
       navigate('/products', { replace: true });
     } catch (err) {
       toast.error('No se pudo eliminar', err.message);
     }
   };
+
+  const totalProductStock = variants.reduce((total, variant) => total + Math.max(0, Number(variant.stock) || 0), 0);
 
   // --- Atributos ---------------------------------------------------------
   const productAttributeIds = productAttributes.map((item) => item.attribute_id);
@@ -245,7 +249,7 @@ export default function ProductForm() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn" onClick={() => navigate('/products')}>← Volver</button>
           {productId && (
-            <button className="btn btn-danger" onClick={() => setDeleting(true)}>Eliminar</button>
+            <button className="btn btn-danger" onClick={() => { setDeleteText(''); setDeleting(true); }}>Eliminar</button>
           )}
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? <span className="spinner" /> : 'Guardar'}
@@ -381,15 +385,44 @@ export default function ProductForm() {
         </>
       )}
 
-      <Confirm
+      <Modal
         open={deleting}
-        title="¿Eliminar producto?"
-        message="Se borrarán también todas las variantes asociadas. Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
-        danger
-        onCancel={() => setDeleting(false)}
-        onConfirm={handleDelete}
-      />
+        onClose={() => setDeleting(false)}
+        title={totalProductStock > 0 ? 'Confirmación crítica' : '¿Eliminar producto?'}
+        footer={(
+          <>
+            <button className="btn" onClick={() => setDeleting(false)}>Cancelar</button>
+            <button
+              className="btn btn-danger"
+              onClick={handleDelete}
+              disabled={saving || (totalProductStock > 0 && deleteText !== 'ELIMINAR')}
+            >
+              Eliminar producto
+            </button>
+          </>
+        )}
+      >
+        {totalProductStock > 0 ? (
+          <>
+            <div className="alert alert-error" role="alert">
+              El producto tiene stock disponible. Si continúa, se eliminará el stock actual y las fotos asociadas al producto. El registro histórico de ventas no se verá afectado
+            </div>
+            <p>Stock actual: <strong>{totalProductStock}</strong> unidades.</p>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Escribe <strong>ELIMINAR</strong> en mayúsculas para confirmar</label>
+              <input
+                className="input"
+                autoFocus
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="ELIMINAR"
+              />
+            </div>
+          </>
+        ) : (
+          <p style={{ margin: 0 }}>Se borrarán también todas las variantes asociadas y sus fotos. Esta acción no se puede deshacer.</p>
+        )}
+      </Modal>
     </div>
   );
 }

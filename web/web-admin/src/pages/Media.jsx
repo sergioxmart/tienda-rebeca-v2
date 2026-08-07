@@ -1,11 +1,11 @@
 // Galería de imágenes (product_media). Lista todas las imágenes, permite
-// subir nuevas, editar alt text, y eliminar (soft-delete en el server).
+// subir nuevas, editar alt text, y eliminar definitivamente.
 //
 // Endpoints:
 //   GET    /api/admin/media
 //   POST   /api/admin/media            multipart/form-data: file, product_id?, alt?
-//   PATCH  /api/admin/media/:id        { alt?, display_order?, product_id? }
-//   DELETE /api/admin/media/:id        (soft delete)
+//   PATCH  /api/admin/media/:id        { alt_text?, display_order? }
+//   DELETE /api/admin/media/:id        (borrado definitivo)
 //   POST   /api/admin/media/cleanup    { older_than_days?: number }
 //
 // Lo mostramos como grid de cards, no tabla — más visual.
@@ -74,12 +74,12 @@ export default function Media() {
 
   const openAlt = (m) => {
     setEditingAlt(m);
-    setAltText(m.alt || '');
+    setAltText(m.alt_text || '');
   };
 
   const saveAlt = async () => {
     try {
-      await api.patch(`/api/admin/media/${editingAlt.id}`, { alt: altText });
+      await api.patch(`/api/admin/media/${editingAlt.id}`, { alt_text: altText });
       toast.success('Alt text guardado');
       setEditingAlt(null);
       await load();
@@ -142,7 +142,7 @@ export default function Media() {
               }} />
               <div style={{ padding: 8, fontSize: 12 }}>
                 <div style={{ color: 'var(--color-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {m.alt || <em>sin alt</em>}
+                  {m.alt_text || <em>sin alt</em>}
                 </div>
                 <div className="table-actions" style={{ marginTop: 6 }}>
                   <button className="btn btn-sm" onClick={() => openAlt(m)}>Alt</button>
@@ -180,7 +180,7 @@ export default function Media() {
       <Confirm
         open={!!deleting}
         title="¿Eliminar imagen?"
-        message="Se hace soft-delete. El job de limpieza la borra definitivamente después de 30 días."
+        message="Se eliminará definitivamente el registro y el archivo físico. Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
         danger
         onCancel={() => setDeleting(null)}

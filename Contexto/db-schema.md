@@ -121,8 +121,9 @@ Galería de fotos y embeds de video. Misma lógica que usamos
 para media: `kind ∈ {image, video_embed}`, `variant_id` conserva asociaciones
 anteriores y `product_media_variants` permite reutilizar la misma pieza en
 varias combinaciones, soft-delete con
-`deleted_at`, huérfanas (>30 días sin `product_id`) se limpian con
-un cron (no en SQL).
+`deleted_at` se conserva para compatibilidad con registros heredados; las
+eliminaciones actuales desde la biblioteca son definitivas y las huérfanas
+antiguas se limpian con un cron (no en SQL).
 
 ### `product_variants` (`004_variants.sql`, `013_variant_media_colors.sql`)
 
@@ -187,7 +188,10 @@ cada token expira en 10 minutos y se puede consumir una sola vez.
 
 Pedidos. **Snapshot en cada línea**: `product_name`, `variant_sku`,
 `unit_price`, `line_total` se guardan al momento de la compra. Si
-después se edita el producto o cambia el precio, el pedido NO se altera.
+después se edita o elimina el producto, el pedido NO se altera. Desde
+`018_preserve_order_history_on_product_delete.sql`, `variant_id` puede quedar
+`NULL` al borrar el catálogo, porque el snapshot histórico no depende de que
+la variante siga existiendo.
 
 Status del pedido (kanban admin): `pending` → `paid` → `processing` →
 `shipped` → `delivered`. Más `cancelled` y `refunded`.

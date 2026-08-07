@@ -11,6 +11,7 @@
 //   DELETE /api/admin/themes/:id              → borrar
 //   POST   /api/admin/themes/:id/apply        → aplicar (reemplaza modules + subset de site_config)
 //   GET    /api/admin/themes/:id/export       → descargar zip con theme.json
+//   GET    /api/admin/themes/current/export   → descargar el estado aplicado ahora
 //   POST   /api/admin/themes/import           → multipart zip → crea theme nuevo
 //
 // El zip contiene solo `theme.json`. No embebemos imágenes — esas son
@@ -157,14 +158,9 @@ export async function applyTheme(req, res, id) {
   return json(res, 200, { ok: true });
 }
 
-export async function exportTheme(req, res, id) {
-  const { rows } = await query(`SELECT name, data FROM themes WHERE id = $1`, [id]);
-  if (rows.length === 0) return notFound(res);
-
-  const theme = rows[0].data;
-  theme.name = rows[0].name;  // el name "oficial" es el de la DB, no el del JSON interno
-  const filename = rows[0].name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase() + `.theme.zip`;
-
+async function sendThemeZip(req, res, name, data, id = 'current') {
+  const theme = { ...data, name };
+  const filename = name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase() + `.theme.zip`;
   // Bufferizamos el zip entero en memoria antes de mandarlo. Es más
   // simple que pelearse con archiver + streams + response nativa de
   // node:http, y los themes son chiquitos (KB).
@@ -184,7 +180,18 @@ export async function exportTheme(req, res, id) {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.setHeader('Content-Length', String(buf.length));
   res.end(buf);
-  log.info('theme exported', { id, name: rows[0].name, by: req.user?.email });
+  log.info('theme exported', { id, name, by: req.user?.email });
+}
+
+export async function exportTheme(req, res, id) {
+  const { rows } = await query(`SELECT name, data FROM themes WHERE id = $1`, [id]);
+  if (rows.length === 0) return notFound(res);
+  return sendThemeZip(req, res, rows[0].name, rows[0].data, id);
+}
+
+export async function exportCurrentTheme(req, res) {
+  const data = await snapshotCurrent();
+  return sendThemeZip(req, res, 'Tema actual', data);
 }
 
 export async function importTheme(req, res) {
@@ -237,6 +244,7 @@ export async function importTheme(req, res) {
 const routes = [
   { method: 'GET',    pattern: /^\/api\/admin\/themes\/?$/,                    handler: listThemes,        section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/themes\/?$/,                    handler: createThemeFromCurrent, section: 'site_config' },
+  { method: 'GET',    pattern: /^\/api\/admin\/themes\/current\/export\/?$/, handler: exportCurrentTheme, section: 'site_config' },
   { method: 'GET',    pattern: /^\/api\/admin\/themes\/(\d+)\/?$/,             handler: getTheme,          section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/themes\/(\d+)\/?$/,             handler: deleteTheme,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/themes\/(\d+)\/apply\/?$/,      handler: applyTheme,        section: 'site_config' },

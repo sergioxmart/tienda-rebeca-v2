@@ -272,9 +272,9 @@ export default function VariantEditor({ productId, variants, attributes, onChang
 
   const removeMedia = async (item) => {
     try {
-      await api.delete(`/api/admin/media/${item.id}`);
+      await api.delete(`/api/admin/media/${item.id}/variants/${editing.id}`);
       setMedia((cur) => cur.filter((mediaItem) => mediaItem.id !== item.id));
-    } catch (err) { toast.error('No se pudo eliminar el archivo', err.message); }
+    } catch (err) { toast.error('No se pudo desvincular la multimedia', err.message); }
   };
 
   const attachLibraryMedia = async (item) => {
@@ -483,7 +483,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
               {mediaLoading ? <p className="form-hint">Cargando multimedia…</p> : media.length === 0 ? <p className="form-hint">Aún no hay imágenes ni videos para esta variante.</p> : <div className="variant-media-grid">
                 {media.map((item) => <div className="variant-media-item" key={item.id}>
                   {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <div className="variant-video-tile">▶ Video</div>}
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => removeMedia(item)}>Eliminar</button>
+                  <button type="button" className="btn btn-sm btn-danger" onClick={() => removeMedia(item)}>Desvincular</button>
                 </div>)}
               </div>}
             </div>}

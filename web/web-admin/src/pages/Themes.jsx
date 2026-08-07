@@ -101,6 +101,29 @@ export default function Themes() {
     }
   };
 
+  const handleExportCurrent = async () => {
+    try {
+      const token = getToken();
+      const res = await fetch('/api/admin/themes/current/export', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'techstore-tema-actual.theme.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Tema actual exportado');
+    } catch (err) {
+      toast.error('No se pudo exportar el tema actual', err.message);
+    }
+  };
+
   const handleImport = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -135,6 +158,7 @@ export default function Themes() {
           <button className="btn" onClick={() => fileRef.current?.click()} disabled={importing}>
             {importing ? <span className="spinner" /> : '↑ Importar zip'}
           </button>
+          <button className="btn" onClick={handleExportCurrent}>↓ Exportar actual</button>
           <button className="btn btn-primary" onClick={() => setCreating({ ...EMPTY_NEW })}>+ Nuevo tema</button>
         </div>
       </div>

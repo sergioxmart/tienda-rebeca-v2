@@ -13,12 +13,12 @@
 //   POST   /api/admin/media                     → upload (multipart)
 //   PATCH  /api/admin/media/:id                 → edita alt_text/display_order
 //   POST   /api/admin/media/:id/attach          → reutiliza un archivo en una variante
-//   DELETE /api/admin/media/:id                 → soft-delete (deleted_at=NOW())
+//   DELETE /api/admin/media/:id                 → borrado definitivo
+//   DELETE /api/admin/media/:id/variants/:id    → desvincula de una variante
 //   POST   /api/admin/media/cleanup             → borra huérfanas >30d
 //
-// Soft-delete: cuando se borra una foto, se setea deleted_at=NOW() y se
-// borra el archivo del disco. Si el product_id es NULL (huérfana) y
-// deleted_at < NOW() - 30d, el cleanup las borra definitivamente.
+// El borrado desde la biblioteca es definitivo. El editor de variantes usa
+// la ruta de desvinculación y nunca elimina el archivo central.
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -216,11 +216,41 @@ export async function updateMedia(req, res, id) {
   return json(res, 200, { ok: true, media: rows[0] });
 }
 
+export async function detachMediaFromVariant(req, res, mediaId, variantId) {
+  const { rows: media } = await query(
+    'SELECT id, variant_id FROM product_media WHERE id = $1 AND deleted_at IS NULL',
+    [mediaId],
+  );
+  if (media.length === 0) return notFound(res);
+
+  const relation = await query(
+    'DELETE FROM product_media_variants WHERE media_id = $1 AND variant_id = $2',
+    [mediaId, variantId],
+  );
+  let detached = relation.rowCount > 0;
+  if (media[0].variant_id === Number(variantId)) {
+    const result = await query(
+      'UPDATE product_media SET variant_id = NULL WHERE id = $1 AND variant_id = $2',
+      [mediaId, variantId],
+    );
+    detached = detached || result.rowCount > 0;
+  }
+  if (!detached) return notFound(res);
+
+  await recordAudit(req.user?.id, 'media.detach_variant', req.ip, { mediaId, variantId });
+  return json(res, 200, { ok: true });
+}
+
 export async function deleteMedia(req, res, id) {
   const { rows: existing } = await query('SELECT id, url FROM product_media WHERE id = $1 AND deleted_at IS NULL', [id]);
   if (existing.length === 0) return notFound(res);
 
-  await query('UPDATE product_media SET deleted_at = NOW() WHERE id = $1', [id]);
+  await query('DELETE FROM product_media WHERE id = $1', [id]);
+  const { rows: references } = await query(
+    'SELECT id FROM product_media WHERE url = $1 AND deleted_at IS NULL LIMIT 1',
+    [existing[0].url],
+  );
+  if (references.length === 0) await deleteUploadFile(existing[0].url);
   await recordAudit(req.user?.id, 'media.delete', req.ip, { id });
   return json(res, 200, { ok: true });
 }
@@ -248,6 +278,7 @@ const routes = [
   { method: 'GET',    pattern: /^\/api\/admin\/media\/?$/,                  handler: listMedia,     section: 'media' },
   { method: 'POST',   pattern: /^\/api\/admin\/media\/?$/,                  handler: uploadMedia,   section: 'media' },
   { method: 'POST',   pattern: /^\/api\/admin\/media\/(\d+)\/attach\/?$/, handler: attachMedia,  section: 'media' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/media\/(\d+)\/variants\/(\d+)\/?$/, handler: detachMediaFromVariant, section: 'media' },
   { method: 'PATCH',  pattern: /^\/api\/admin\/media\/(\d+)\/?$/,           handler: updateMedia,   section: 'media' },
   { method: 'DELETE', pattern: /^\/api\/admin\/media\/(\d+)\/?$/,           handler: deleteMedia,   section: 'media' },
   { method: 'POST',   pattern: /^\/api\/admin\/media\/cleanup\/?$/,         handler: cleanupOrphans, section: 'media' },

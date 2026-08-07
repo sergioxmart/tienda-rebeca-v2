@@ -10,17 +10,17 @@
 //   GET    /api/admin/products/:id                      → detalle + atributos
 //   POST   /api/admin/products                          → crea
 //   PATCH  /api/admin/products/:id                      → edita
-//   DELETE /api/admin/products/:id                      → borra (cascade a variants + media)
+//   DELETE /api/admin/products/:id                      → borra (con confirmación si hay stock)
 //   POST   /api/admin/products/:id/attributes           → vincula attribute
 //   DELETE /api/admin/products/:id/attributes/:attrId   → desvincula attribute
 //
-// Borrar un producto cascadea a variants y product_attributes (FK ON
-// DELETE CASCADE). Product_media queda con product_id=NULL (SET NULL) y
-// queda como huérfana (limpieza > 30d vía job).
+// Borrar un producto elimina sus variantes y product_attributes, junto con
+// las asociaciones y archivos de media pertenecientes a ese producto.
 
 import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
+import { deleteUploadFile } from '../../lib/uploads.js';
 import { protect, recordAudit, slugify, validators, validate, notFound, conflict } from './_helpers.js';
 
 // --- Handlers (products CRUD) --------------------------------------------
@@ -182,9 +182,64 @@ export async function deleteProduct(req, res, id) {
   const { rows: existing } = await query('SELECT id FROM products WHERE id = $1', [id]);
   if (existing.length === 0) return notFound(res);
 
-  // CASCADE borra variants y product_attributes. product_media queda
-  // huérfana (product_id=NULL, deleted_at=NULL) y se limpia en el job.
-  await query('DELETE FROM products WHERE id = $1', [id]);
+  const { rows: stockRows } = await query(
+    `SELECT COALESCE(SUM(stock), 0)::integer AS total_stock
+       FROM product_variants
+      WHERE product_id = $1`,
+    [id],
+  );
+  const totalStock = Number(stockRows[0]?.total_stock || 0);
+  if (totalStock > 0 && req.body?.confirm_text !== 'ELIMINAR') {
+    return conflict(res, 'stock_confirmation_required', {
+      stock: totalStock,
+      message: 'El producto tiene stock disponible. Si continúa, se eliminará el stock actual y las fotos asociadas al producto. El registro histórico de ventas no se verá afectado',
+    });
+  }
+
+  // Capturamos y eliminamos las asociaciones de media antes del producto.
+  // Las fotos relacionadas a variantes también se borran; las ventas viven
+  // en sus propias filas históricas y no se tocan aquí.
+  const deletedMedia = await tx(async (client) => {
+    const { rows: media } = await client.query(
+      `SELECT pm.id, pm.url
+         FROM product_media pm
+        WHERE pm.product_id = $1
+           OR pm.variant_id IN (SELECT id FROM product_variants WHERE product_id = $1)
+           OR EXISTS (
+                SELECT 1
+                  FROM product_media_variants pmv
+                  JOIN product_variants pv ON pv.id = pmv.variant_id
+                 WHERE pmv.media_id = pm.id AND pv.product_id = $1
+              )`,
+      [id],
+    );
+    await client.query(
+      `DELETE FROM product_media pm
+        WHERE pm.product_id = $1
+           OR pm.variant_id IN (SELECT id FROM product_variants WHERE product_id = $1)
+           OR EXISTS (
+                SELECT 1
+                  FROM product_media_variants pmv
+                  JOIN product_variants pv ON pv.id = pmv.variant_id
+                 WHERE pmv.media_id = pm.id AND pv.product_id = $1
+              )`,
+      [id],
+    );
+    await client.query('DELETE FROM products WHERE id = $1', [id]);
+    return media;
+  });
+
+  for (const media of deletedMedia) {
+    const { rows: references } = await query(
+      'SELECT id FROM product_media WHERE url = $1 AND deleted_at IS NULL LIMIT 1',
+      [media.url],
+    );
+    if (references.length === 0) {
+      try { await deleteUploadFile(media.url); }
+      catch (err) { log.warn('could not delete product media file', { url: media.url, msg: err.message }); }
+    }
+  }
+
   await recordAudit(req.user?.id, 'product.delete', req.ip, { id });
   log.info('product deleted', { id, by: req.user?.email });
   return json(res, 200, { ok: true });

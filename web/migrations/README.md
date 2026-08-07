@@ -54,6 +54,7 @@ NNN_descripcion_corta.sql
 | 015 | `015_prices_without_decimals.sql` | Importes monetarios en COP sin escala decimal |
 | 016 | `016_media_variant_links.sql` | Asociaciones reutilizables de multimedia con variantes |
 | 017 | `017_fix_product_attributes_trigger.sql` | Elimina trigger incompatible con `product_attributes` |
+| 018 | `018_preserve_order_history_on_product_delete.sql` | Conserva snapshots de ventas al eliminar productos |
 
 ## Lo que falta decidir
 

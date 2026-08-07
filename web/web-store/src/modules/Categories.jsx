@@ -9,9 +9,9 @@ export default function Categories({ settings = {} }) {
   const { categories } = useSite();
   if (!Array.isArray(categories) || categories.length === 0) return null;
   return (
-    <section style={{ marginBottom: 32 }}>
-      <h2>{title}</h2>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+    <section className="store-section category-strip-section">
+      <div className="section-heading"><div><span className="section-kicker">Encuentra lo que buscas</span><h2>{title}</h2></div></div>
+      <div className="category-strip">
         {categories.map((c) => (
           <Link key={c.id} to={`/categoria/${c.slug}`} className="chip">
             {c.name}

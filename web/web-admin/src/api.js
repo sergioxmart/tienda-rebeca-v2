@@ -90,11 +90,24 @@ export const api = {
   upload: (path, formData)    => request('POST', path, { body: formData, isForm: true }),
 
   // Auth helpers
-  async login(email, password) {
-    const data = await request('POST', '/api/auth/login', { body: { email, password } });
+  async login(email, password, totpCode) {
+    const body = { email, password };
+    if (totpCode) body.totp_code = totpCode;
+    const data = await request('POST', '/api/auth/login', { body });
     if (data?.data?.access_token) setToken(data.data.access_token);
     return data;
   },
+  firstTwoFactorSetup: (setupToken) => request('POST', '/api/auth/2fa/first-setup', { body: { setup_token: setupToken } }),
+  async firstTwoFactorEnable(setupToken, totpCode) {
+    const data = await request('POST', '/api/auth/2fa/first-enable', {
+      body: { setup_token: setupToken, totp_code: totpCode },
+    });
+    if (data?.data?.access_token) setToken(data.data.access_token);
+    return data;
+  },
+  recoverStart: (email) => request('POST', '/api/auth/password-recovery/start', { body: { email } }),
+  recoverVerify: (recoveryToken, totpCode) => request('POST', '/api/auth/password-recovery/verify', { body: { recovery_token: recoveryToken, totp_code: totpCode } }),
+  recoverComplete: (passwordToken, newPassword) => request('POST', '/api/auth/password-recovery/complete', { body: { password_token: passwordToken, new_password: newPassword } }),
   async logout() {
     try { await request('POST', '/api/auth/logout', { body: {} }); } catch { /* ignore */ }
     setToken(null);

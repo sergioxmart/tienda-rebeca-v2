@@ -9,14 +9,16 @@
 //   POST   /api/admin/users                    → crear (body: { email, password, name?, role? })
 //   PATCH  /api/admin/users/:id                → editar (body: { name?, role?, active? })
 //   POST   /api/admin/users/:id/reset-password → reset (body: { new_password })
+//   POST   /api/admin/users/:id/reset-2fa      → elimina 2FA y backup codes
+//   POST   /api/admin/users/:id/2fa/setup      → solo user #1, para sí mismo
 //   DELETE /api/admin/users/:id                → soft-delete (active=false, no se borra de DB)
 //
 // Notas:
 //   - Solo admin puede escribir (SECCIÓN users.write: ['admin']).
 //   - El user no puede desactivarse a sí mismo (defensa en profundidad).
 //   - El password se hashea con bcrypt (factor 10 de core/lib/auth.js).
-//   - 2FA NO se toca desde acá. El user la activa/desactiva por su cuenta
-//     desde /api/auth/2fa/*.
+//   - Los admins pueden resetear el 2FA; el user #1 inicia su setup desde
+//     esta pestaña.
 
 import { query } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
@@ -24,6 +26,7 @@ import { json } from '../../lib/json.js';
 import { hashPassword } from '../../../../core/lib/auth.js';
 import { isValidEmail } from '../../../../core/lib/email.js';
 import { protect, recordAudit, validators, validate, notFound, conflict } from './_helpers.js';
+import { BOOTSTRAP_USER_ID, createTwoFactorSetup, resetTwoFactor } from '../auth.js';
 
 // --- Handlers -------------------------------------------------------------
 
@@ -132,6 +135,40 @@ export async function resetUserPassword(req, res, id) {
   return json(res, 200, { ok: true });
 }
 
+export async function setupBootstrapTwoFactor(req, res, id) {
+  const userId = Number(id);
+  if (userId !== BOOTSTRAP_USER_ID || Number(req.user?.id) !== BOOTSTRAP_USER_ID) {
+    return json(res, 403, { ok: false, error: 'two_factor_setup_not_available' });
+  }
+  const { rows } = await query(
+    `SELECT id, email, totp_enabled FROM auth_users WHERE id = $1 AND active = TRUE`,
+    [userId],
+  );
+  const user = rows[0];
+  if (!user) return notFound(res);
+  if (user.totp_enabled) return json(res, 400, { ok: false, error: 'two_factor_already_enabled' });
+
+  const setup = await createTwoFactorSetup(user.id, user.email);
+  await recordAudit(req.user?.id, 'user.two_factor_setup_begin', req.ip, { id: user.id });
+  return json(res, 200, { ok: true, data: setup });
+}
+
+export async function resetUserTwoFactor(req, res, id) {
+  const userId = Number(id);
+  const { rows } = await query(`SELECT id FROM auth_users WHERE id = $1`, [userId]);
+  if (!rows[0]) return notFound(res);
+
+  await resetTwoFactor(userId);
+  await query(
+    `UPDATE auth_refresh_tokens SET revoked_at = NOW()
+      WHERE user_id = $1 AND revoked_at IS NULL`,
+    [userId],
+  );
+  await recordAudit(req.user?.id, 'user.two_factor_reset', req.ip, { id: userId });
+  log.info('user two factor reset', { id: userId, by: req.user?.email });
+  return json(res, 200, { ok: true });
+}
+
 export async function deleteUser(req, res, id) {
   if (Number(req.user?.id) === Number(id)) {
     return json(res, 400, { ok: false, error: 'cannot_delete_self' });
@@ -159,6 +196,8 @@ const routes = [
   { method: 'POST',   pattern: /^\/api\/admin\/users\/?$/,                     handler: createUser,       section: 'users' },
   { method: 'PATCH',  pattern: /^\/api\/admin\/users\/(\d+)\/?$/,              handler: updateUser,       section: 'users' },
   { method: 'POST',   pattern: /^\/api\/admin\/users\/(\d+)\/reset-password\/?$/, handler: resetUserPassword, section: 'users' },
+  { method: 'POST',   pattern: /^\/api\/admin\/users\/(\d+)\/reset-2fa\/?$/,       handler: resetUserTwoFactor, section: 'users' },
+  { method: 'POST',   pattern: /^\/api\/admin\/users\/(\d+)\/2fa\/setup\/?$/,       handler: setupBootstrapTwoFactor, section: 'users' },
   { method: 'DELETE', pattern: /^\/api\/admin\/users\/(\d+)\/?$/,              handler: deleteUser,       section: 'users' },
 ];
 

@@ -109,7 +109,10 @@ export default function Catalog() {
 
   return (
     <div>
-      <h1>{categoryObj ? categoryObj.name : 'Todos los productos'}</h1>
+      <div className="catalog-heading">
+        <div><span className="section-kicker">Catálogo TechStore</span><h1>{categoryObj ? categoryObj.name : 'Todos los productos'}</h1></div>
+        <span className="catalog-heading-note">Encuentra accesorios pensados para acompañarte</span>
+      </div>
 
       <div className="filter-bar">
         <div className="row" style={{ marginBottom: 12 }}>
@@ -184,7 +187,7 @@ export default function Catalog() {
       {loading ? (
         <div className="center"><span className="spinner" /></div>
       ) : data.products.length === 0 ? (
-        <Empty title="Sin resultados" description="Probá quitar algunos filtros." />
+        <Empty title="Sin resultados" description="Prueba quitar algunos filtros." />
       ) : (
         <>
           <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>

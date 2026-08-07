@@ -98,7 +98,7 @@ atributos (color, modelo de celular compatible, etc.).
 │  │  └─ scripts/        # migrate.js, setup-db.js, create-admin.js
 │  ├─ web-store/         # SPA Vite + React tienda pública
 │  ├─ web-admin/         # SPA Vite + React panel admin
-│  ├─ migrations/        # 001-009 schema
+│  ├─ migrations/        # 001-012 schema
 │  └─ webhook/           # receptor de deploy (futuro)
 ├─ uploads/              # archivos subidos (gitignored)
 ├─ data/                 # solo local (gitignored)

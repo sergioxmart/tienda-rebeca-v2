@@ -101,7 +101,10 @@ Output esperado (primera vez):
 [techstore:info] applying migration 007_payments.sql
 [techstore:info] applying migration 008_site_config.sql
 [techstore:info] applying migration 009_auth_admin_extras.sql
-[techstore:info] migrations done {"applied":9,"total":9}
+[techstore:info] applying migration 010_page_modules.sql
+[techstore:info] applying migration 011_themes.sql
+[techstore:info] applying migration 012_password_recovery.sql
+[techstore:info] migrations done {"applied":12,"total":12}
 ```
 
 Verificar que las tablas se crearon:

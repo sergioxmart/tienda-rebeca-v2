@@ -15,7 +15,7 @@ const PRIVATE_KEYS = new Set([
   // 'admin_internal_*',
 ]);
 
-function normalizeLogoUrl(value) {
+function normalizeMediaUrl(value) {
   return typeof value === 'string' && value.startsWith('/site/')
     ? `/media/site/${value.slice('/site/'.length)}`
     : value;
@@ -28,7 +28,9 @@ export async function getSiteConfig(req, res) {
   const out = {};
   for (const r of rows) {
     if (PRIVATE_KEYS.has(r.key)) continue;
-    out[r.key] = r.key === 'logo_url' ? normalizeLogoUrl(r.value) : r.value;
+    out[r.key] = ['logo_url', 'admin_login_bg_image_url'].includes(r.key)
+      ? normalizeMediaUrl(r.value)
+      : r.value;
   }
   res.setHeader('Cache-Control', 'public, max-age=60');  // 1 min, más conservador
   return json(res, 200, { ok: true, config: out });

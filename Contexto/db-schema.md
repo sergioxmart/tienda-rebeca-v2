@@ -149,7 +149,9 @@ por atributo aplicable**.
 ### `auth_users` + `auth_refresh_tokens` + `auth_totp_backup_codes` (`005_admin_auth.sql`)
 
 Login admin con bcrypt + JWT + refresh + 2FA TOTP, patrón
-compartido con otros proyectos del estilo.
+compartido con otros proyectos del estilo. Salvo el usuario bootstrap
+`id=1`, una cuenta sin 2FA no puede recibir sesión: debe enrolarse en su
+primer ingreso. El usuario `id=1` lo activa desde Usuarios.
 - bcrypt para passwords.
 - JWT 15 min en memoria del cliente.
 - Refresh token 7 días en cookie httpOnly (server guarda solo el hash).
@@ -161,6 +163,13 @@ Roles: `admin` (todo), `operator` (operación diaria), `viewer` (lectura).
 Los mismos del proyecto (`admin` / `operator` / `viewer`); la
 lógica común de `SECTION_PERMS` vive en
 `web/server/routes/admin/_section_perms.js`.
+
+### `auth_password_recovery_tokens` (`012_password_recovery.sql`)
+
+Tokens opacos y temporales para el asistente de recuperación: primero se
+valida el correo, luego TOTP o un código de respaldo, y finalmente se
+permite definir la nueva contraseña. Solo se guarda el hash del token;
+cada token expira en 10 minutos y se puede consumir una sola vez.
 
 ### `orders` + `order_items` (`006_orders.sql`)
 

@@ -22,7 +22,6 @@ const KNOWN_KEYS = [
   { key: 'wompi_public_key',   label: 'Wompi (public key)',      type: 'text',     placeholder: 'pub_test_...' },
   { key: 'epayco_public_key',  label: 'ePayco (public key)',     type: 'text',     placeholder: '...' },
   { key: 'free_shipping_min',  label: 'Envío gratis desde (COP)', type: 'number', placeholder: '150000' },
-  { key: 'admin_login_bg',     label: 'Color de fondo del login', type: 'color', placeholder: '#0F2A47' },
 ];
 
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -31,13 +30,28 @@ function pickerColor(value) {
   return HEX_COLOR_RE.test(value || '') ? value : '#0F2A47';
 }
 
+function ColorField({ id, label, value, onChange }) {
+  return (
+    <div className="form-group">
+      <label htmlFor={id}>{label}</label>
+      <div className="color-field">
+        <input id={id} className="color-picker" type="color" value={pickerColor(value)} onChange={(e) => onChange(e.target.value.toUpperCase())} aria-label={`Elegir ${label.toLowerCase()}`} />
+        <input className="input color-hex-input" type="text" inputMode="text" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} placeholder="#0F2A47" />
+        <span className="color-preview" style={{ background: pickerColor(value) }} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
 export default function SiteConfig() {
   const toast = useToast();
   const fileRef = useRef(null);
+  const bgFileRef = useRef(null);
   const [config, setConfig] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
   const [logoVersion, setLogoVersion] = useState(() => Date.now());
 
   useEffect(() => {
@@ -107,6 +121,43 @@ export default function SiteConfig() {
     }
   };
 
+  const handleBackgroundUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/avif']);
+    if (!allowedTypes.has(file.type)) {
+      toast.error('Usa una imagen PNG, JPG, WebP o AVIF');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('La imagen de fondo no puede pesar más de 8 MB');
+      return;
+    }
+    setUploadingBackground(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const data = await api.upload('/api/admin/site-config/login-background', fd);
+      setConfig((cur) => ({ ...cur, admin_login_bg_image_url: data.image_url, admin_login_bg_mode: 'image' }));
+      toast.success('Fondo actualizado');
+    } catch (err) {
+      toast.error('No se pudo subir el fondo', err.message);
+    } finally {
+      setUploadingBackground(false);
+      if (bgFileRef.current) bgFileRef.current.value = '';
+    }
+  };
+
+  const handleBackgroundDelete = async () => {
+    try {
+      await api.delete('/api/admin/site-config/login-background');
+      setConfig((cur) => ({ ...cur, admin_login_bg_image_url: null, admin_login_bg_mode: 'solid' }));
+      toast.success('Imagen de fondo eliminada');
+    } catch (err) {
+      toast.error('No se pudo eliminar el fondo', err.message);
+    }
+  };
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
   const logoSrc = config.logo_url
@@ -126,14 +177,30 @@ export default function SiteConfig() {
         Datos de contacto, redes sociales, branding y claves públicas de pago. Las claves secretas van en variables de entorno, no acá.
       </p>
 
+      <div className="config-card">
+        <div className="config-card-heading"><div><h3>Fondo del login</h3><p>Personaliza la pantalla de acceso con un color, un degradado o una imagen.</p></div><span className="config-card-icon">✦</span></div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="admin_login_bg_mode">Tipo de fondo</label>
+            <select id="admin_login_bg_mode" className="select" value={config.admin_login_bg_mode || 'solid'} onChange={(e) => setKey('admin_login_bg_mode', e.target.value)}>
+              <option value="solid">Color sólido</option>
+              <option value="gradient">Degradado</option>
+              <option value="image">Imagen con capa de color</option>
+            </select>
+          </div>
+          <ColorField id="admin_login_bg" label="Color principal" value={String(config.admin_login_bg || '#0F2A47')} onChange={(value) => setKey('admin_login_bg', value)} />
+        </div>
+        {config.admin_login_bg_mode === 'gradient' && <ColorField id="admin_login_bg_secondary" label="Color secundario" value={String(config.admin_login_bg_secondary || '#FF6B35')} onChange={(value) => setKey('admin_login_bg_secondary', value)} />}
+        <div className="background-upload-row">
+          <input ref={bgFileRef} type="file" accept=".png,.jpg,.jpeg,.webp,.avif,image/png,image/jpeg,image/webp,image/avif" style={{ display: 'none' }} onChange={handleBackgroundUpload} />
+          <button className="btn" type="button" onClick={() => bgFileRef.current?.click()} disabled={uploadingBackground}>{uploadingBackground ? <span className="spinner" /> : 'Subir imagen de fondo'}</button>
+          {config.admin_login_bg_image_url && <button className="btn btn-danger" type="button" onClick={handleBackgroundDelete}>Quitar imagen</button>}
+          {config.admin_login_bg_image_url && <span className="help">Imagen cargada. Se usa cuando el tipo es “Imagen con capa de color”.</span>}
+        </div>
+      </div>
+
       {/* Logo */}
-      <div style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius)',
-        padding: 20,
-        marginBottom: 16,
-      }}>
+      <div className="config-card">
         <h3 style={{ marginTop: 0 }}>Logo</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div style={{
@@ -166,43 +233,8 @@ export default function SiteConfig() {
         </div>
       </div>
 
-      <div style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius)',
-        padding: 20,
-      }}>
+      <div className="config-card">
         {KNOWN_KEYS.map((field) => {
-          if (field.type === 'color') {
-            const value = String(config[field.key] || '');
-            return (
-              <div className="form-group" key={field.key}>
-                <label htmlFor={field.key}>{field.label}</label>
-                <div className="color-field">
-                  <input
-                    id={field.key}
-                    className="color-picker"
-                    type="color"
-                    value={pickerColor(value)}
-                    aria-label={`Elegir ${field.label.toLowerCase()}`}
-                    onChange={(e) => setKey(field.key, e.target.value.toUpperCase())}
-                  />
-                  <input
-                    className="input color-hex-input"
-                    type="text"
-                    inputMode="text"
-                    placeholder={field.placeholder}
-                    value={value}
-                    onChange={(e) => setKey(field.key, e.target.value.toUpperCase())}
-                    aria-describedby={`${field.key}-help`}
-                  />
-                  <span className="color-preview" style={{ background: pickerColor(value) }} aria-hidden="true" />
-                </div>
-                <div id={`${field.key}-help`} className="help">Elige un color o escribe un valor hexadecimal como #0F2A47.</div>
-              </div>
-            );
-          }
-
           return (
             <div className="form-group" key={field.key}>
               <label htmlFor={field.key}>{field.label}</label>

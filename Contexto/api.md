@@ -42,12 +42,17 @@ no tiene `section`, devuelve 403.
 | Método | Path | Body | Notas |
 | ------ | ---- | ---- | ----- |
 | POST | `/api/auth/login` | `{ email, password, totp_code? }` | Devuelve JWT + setea refresh cookie. Si el user tiene 2FA, `totp_code` es obligatorio. |
+| POST | `/api/auth/password-recovery/start` | `{ email }` | Valida el correo y devuelve un token temporal para la etapa 2FA. |
+| POST | `/api/auth/password-recovery/verify` | `{ recovery_token, totp_code }` | Valida TOTP o un código de respaldo de un solo uso y devuelve un token temporal para cambiar la clave. |
+| POST | `/api/auth/password-recovery/complete` | `{ password_token, new_password }` | Cambia la contraseña y revoca sesiones activas. |
 | POST | `/api/auth/logout` | — | Revoca el refresh token actual. |
 | POST | `/api/auth/refresh` | — | Lee el refresh cookie, devuelve nuevo JWT. |
 | GET  | `/api/auth/me` | — | Devuelve el user logueado. Útil para que el panel sepa quién es y qué rol tiene. |
 | POST | `/api/auth/2fa/setup` | — | Genera secret TOTP + códigos de respaldo. Devuelve URI otpauth para QR. |
 | POST | `/api/auth/2fa/enable` | `{ totp_code }` | Activa 2FA después de verificar un código con el secret. |
 | POST | `/api/auth/2fa/disable` | `{ password }` | Desactiva 2FA (requiere password). |
+| POST | `/api/auth/2fa/first-setup` | `{ setup_token }` | Prepara el QR del enrolamiento obligatorio tras validar el password del primer ingreso. |
+| POST | `/api/auth/2fa/first-enable` | `{ setup_token, totp_code }` | Confirma el enrolamiento y crea la sesión. |
 
 ## `/api/public/*` (catálogo)
 
@@ -134,6 +139,8 @@ no tiene `section`, devuelve 403.
 | PATCH | `/api/admin/site-config` | `{ key: value, ... }` (objeto JSON con los keys a actualizar) | `site_config` |
 | POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
+| POST | `/api/admin/site-config/login-background` | `multipart/form-data` con `file` | Sube o reemplaza la imagen de fondo del login. |
+| DELETE | `/api/admin/site-config/login-background` | — | Elimina la imagen de fondo del login. |
 
 ### Pedidos (admin)
 
@@ -160,6 +167,8 @@ no tiene `section`, devuelve 403.
 | POST | `/api/admin/users` | `{ email, password, name?, role? }` | `users` |
 | PATCH | `/api/admin/users/:id` | `{ name?, role?, active? }` | `users` |
 | POST | `/api/admin/users/:id/reset-password` | `{ new_password }` | `users` |
+| POST | `/api/admin/users/:id/reset-2fa` | — | Elimina el 2FA, el secreto y los códigos de respaldo; el siguiente login vuelve a exigir configuración. |
+| POST | `/api/admin/users/:id/2fa/setup` | — | Solo para el usuario `id=1` y ejecutado por él mismo desde Usuarios. Devuelve QR y códigos de respaldo. |
 | DELETE | `/api/admin/users/:id` | — | `users` |
 
 ## `/api/webhooks/*` (entrantes)

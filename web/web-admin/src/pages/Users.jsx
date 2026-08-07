@@ -11,7 +11,9 @@
 // Roles: admin, operator, viewer. Solo admin puede crear/eliminar usuarios.
 
 import React, { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { api, ApiError } from '../api.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
@@ -28,6 +30,7 @@ const EMPTY_EDIT   = { email: '', name: '', role: 'operator', active: true };
 
 export default function Users() {
   const toast = useToast();
+  const { user: currentUser } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -35,6 +38,9 @@ export default function Users() {
   const [newPassword, setNewPassword] = useState('');
   const [deleting, setDeleting] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorSaving, setTwoFactorSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -113,6 +119,46 @@ export default function Users() {
     }
   };
 
+  const handleSetupBootstrapTwoFactor = async (u) => {
+    try {
+      const data = await api.post(`/api/admin/users/${u.id}/2fa/setup`, {});
+      setTwoFactorSetup(data.data);
+      setTwoFactorCode('');
+    } catch (err) {
+      toast.error('No se pudo preparar el 2FA', err.message);
+    }
+  };
+
+  const handleEnableBootstrapTwoFactor = async () => {
+    if (!/^\d{6}$/.test(twoFactorCode)) {
+      toast.error('Escribe el código de 6 dígitos');
+      return;
+    }
+    setTwoFactorSaving(true);
+    try {
+      await api.post('/api/auth/2fa/enable', { totp_code: twoFactorCode });
+      toast.success('2FA activado');
+      setTwoFactorSetup(null);
+      setTwoFactorCode('');
+      await load();
+    } catch (err) {
+      toast.error('Código no válido', err.message);
+    } finally {
+      setTwoFactorSaving(false);
+    }
+  };
+
+  const handleResetTwoFactor = async (u) => {
+    if (!window.confirm(`¿Resetear el 2FA de ${u.email}? Tendrá que configurarlo de nuevo en su siguiente ingreso.`)) return;
+    try {
+      await api.post(`/api/admin/users/${u.id}/reset-2fa`, {});
+      toast.success('2FA reseteado');
+      await load();
+    } catch (err) {
+      toast.error('No se pudo resetear el 2FA', err.message);
+    }
+  };
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
   return (
@@ -123,7 +169,7 @@ export default function Users() {
       </div>
 
       {items.length === 0 ? (
-        <Empty title="Sin usuarios" description="Solo vos existís en el sistema." />
+        <Empty title="Sin usuarios" description="Todavía no hay usuarios creados." />
       ) : (
         <table className="data-table">
           <thead>
@@ -132,6 +178,7 @@ export default function Users() {
               <th>Nombre</th>
               <th>Rol</th>
               <th>Estado</th>
+              <th>2FA</th>
               <th>Último login</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -147,12 +194,15 @@ export default function Users() {
                     ? <span className="badge active">Activo</span>
                     : <span className="badge inactive">Inactivo</span>}
                 </td>
+                <td>{u.totp_enabled ? <span className="badge active">Activo</span> : <span className="badge">Pendiente</span>}</td>
                 <td style={{ fontSize: 12, color: 'var(--color-muted)' }}>
                   {u.last_login_at ? new Date(u.last_login_at).toLocaleString('es-CO') : '—'}
                 </td>
                 <td className="table-actions">
                   <button className="btn btn-sm" onClick={() => openEdit(u)}>Editar</button>
                   <button className="btn btn-sm" onClick={() => setResetting(u)}>Reset pass</button>
+                  {u.id === 1 && !u.totp_enabled && Number(currentUser?.id) === 1 && <button className="btn btn-sm btn-accent" onClick={() => handleSetupBootstrapTwoFactor(u)}>Configurar 2FA</button>}
+                  <button className="btn btn-sm" onClick={() => handleResetTwoFactor(u)}>Reset 2FA</button>
                   <button className="btn btn-sm btn-danger" onClick={() => setDeleting(u)}>×</button>
                 </td>
               </tr>
@@ -228,8 +278,30 @@ export default function Users() {
           <label>Nueva contraseña</label>
           <input className="input" type="password" minLength={8} autoFocus
                  value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-          <div className="help">Mínimo 8 caracteres. Comunicá esta contraseña al usuario por un canal seguro.</div>
+          <div className="help">Mínimo 8 caracteres. Comunica esta contraseña al usuario por un canal seguro.</div>
         </div>
+      </Modal>
+
+      <Modal
+        open={!!twoFactorSetup}
+        onClose={() => !twoFactorSaving && setTwoFactorSetup(null)}
+        title="Configurar 2FA del usuario principal"
+        footer={
+          <>
+            <button className="btn" onClick={() => setTwoFactorSetup(null)} disabled={twoFactorSaving}>Cancelar</button>
+            <button className="btn btn-primary" onClick={handleEnableBootstrapTwoFactor} disabled={twoFactorSaving}>{twoFactorSaving ? <span className="spinner" /> : 'Activar 2FA'}</button>
+          </>
+        }
+      >
+        {twoFactorSetup && (
+          <div className="two-factor-setup admin-two-factor-setup">
+            <div className="qr-frame"><QRCodeSVG value={twoFactorSetup.otpauth_uri} size={190} includeMargin /></div>
+            <p>Escanea el código con tu aplicación autenticadora y luego escribe el código actual.</p>
+            <label htmlFor="admin-two-factor-code">Código de 6 dígitos</label>
+            <input id="admin-two-factor-code" className="input code-input" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))} />
+            <div className="backup-codes"><strong>Guarda tus códigos de respaldo</strong><span>{twoFactorSetup.backup_codes.join(' · ')}</span></div>
+          </div>
+        )}
       </Modal>
 
       <Confirm

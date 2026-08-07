@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
       try {
         const data = await api.me();
         if (cancelled) return;
-        setUser(data?.user || data?.data?.user || null);
+        setUser(data?.user || data?.data?.user || data?.data || null);
         setStatus('auth');
       } catch (err) {
         if (cancelled) return;
@@ -53,8 +53,16 @@ export function AuthProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const data = await api.login(email, password);
+  const login = useCallback(async (email, password, totpCode) => {
+    const data = await api.login(email, password, totpCode);
+    const u = data?.user || data?.data?.user || null;
+    setUser(u);
+    setStatus('auth');
+    return u;
+  }, []);
+
+  const completeFirstTwoFactor = useCallback(async (setupToken, code) => {
+    const data = await api.firstTwoFactorEnable(setupToken, code);
     const u = data?.user || data?.data?.user || null;
     setUser(u);
     setStatus('auth');
@@ -67,7 +75,7 @@ export function AuthProvider({ children }) {
     setStatus('guest');
   }, []);
 
-  const value = { status, user, login, logout };
+  const value = { status, user, login, completeFirstTwoFactor, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

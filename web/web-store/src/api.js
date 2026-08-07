@@ -42,7 +42,7 @@ export const api = {
     return r.attributes || [];
   },
   products: async (params = {}) => {
-    const q = new URLSearchParams(params).toString();
+    const q = typeof params === 'string' ? params : new URLSearchParams(params).toString();
     const r = await request(`/api/public/products${q ? '?' + q : ''}`);
     return {
       products: r.products || [],

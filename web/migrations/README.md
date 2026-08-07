@@ -4,15 +4,8 @@
 
 ## Estado actual
 
-**Vacía.** Pendiente de diseñar el schema inicial de TechStore (tienda de
-tecnología: laptops, celulares, accesorios).
-
-Las migraciones que estaban acá eran de Rebeca (boutique de vestidos de
-novia / 15 años / trajes / zapatos) y **no aplican** a este proyecto — el
-modelo de datos es totalmente distinto (variantes por color/spec en vez
-de tallas, stock por SKU en vez de unidades por talle, sin alquiler, sin
-kanban de reservas). Se borraron en el commit de
-`feature/techstore-migrations-reset`.
+El schema inicial de TechStore y sus extensiones actuales ya están en esta
+carpeta. Las migraciones heredadas de Rebeca no aplican a este proyecto.
 
 ## Cómo se corren
 
@@ -52,6 +45,10 @@ NNN_descripcion_corta.sql
 | 006 | `006_orders.sql` | `orders` + `order_items` (con snapshots) |
 | 007 | `007_payments.sql` | `payments` (genérico por provider; ver nota abajo) |
 | 008 | `008_site_config.sql` | `site_config` (key/value JSONB) + seeds |
+| 009 | `009_auth_admin_extras.sql` | Extras de autenticación y auditoría del panel |
+| 010 | `010_page_modules.sql` | Módulos configurables de páginas |
+| 011 | `011_themes.sql` | Temas y configuración visual |
+| 012 | `012_password_recovery.sql` | Tokens temporales, hasheados y de un solo uso para recuperar la contraseña |
 
 ## Lo que falta decidir
 

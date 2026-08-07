@@ -171,7 +171,7 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 │  │  └─ scripts/           # migrate.js, setup-db.js, create-admin.js
 │  ├─ web-store/            # Vite + React tienda pública
 │  ├─ web-admin/            # Vite + React admin
-│  ├─ migrations/           # 001-009 schema de TechStore
+│  ├─ migrations/           # 001-012 schema de TechStore
 │  └─ webhook/             # server.mjs (cableado a TechStore) + deploy.sh
 │
 ├─ uploads/                # Archivos subidos (gitignored, en la RAÍZ del repo)
@@ -281,9 +281,10 @@ bumpearse en el mismo commit que el cambio.
 ## Estado actual del proyecto (a agosto 2026)
 
 - ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ 9 migrations de TechStore (001_categories, 002_attributes,
+- ✅ 12 migrations de TechStore (001_categories, 002_attributes,
   003_products, 004_variants, 005_admin_auth, 006_orders,
-  007_payments, 008_site_config, 009_auth_admin_extras).
+  007_payments, 008_site_config, 009_auth_admin_extras,
+  010_page_modules, 011_themes, 012_password_recovery).
 - ✅ Backend admin completo: 8 routers con RBAC + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.
 - ✅ 25 tests verdes.

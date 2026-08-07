@@ -14,11 +14,11 @@ export default function RecentProducts({ settings = {} }) {
       .catch(() => setItems([]));
   }, [limit]);
 
-  if (items === null) return <section style={{ marginBottom: 32 }}><h2>{title}</h2><div className="center"><span className="spinner" /></div></section>;
+  if (items === null) return <section className="store-section"><h2>{title}</h2><div className="center"><span className="spinner" /></div></section>;
   if (items.length === 0) return null;
   return (
-    <section style={{ marginBottom: 32 }}>
-      <h2>{title}</h2>
+    <section className="store-section">
+      <div className="section-heading"><div><span className="section-kicker">Recién llegados</span><h2>{title}</h2></div><a href="/categoria?sort=newest">Ver todos <span>→</span></a></div>
       <div className="product-grid">
         {items.map((p) => <ProductCard key={p.id} product={p} />)}
       </div>

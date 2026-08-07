@@ -43,13 +43,36 @@ export async function listMedia(req, res) {
 
   const where = ['deleted_at IS NULL'];
   const params = [];
-  if (productId) { params.push(Number(productId)); where.push(`product_id = $${params.length}`); }
   if (variantId) {
     params.push(Number(variantId));
-    where.push(`(product_media.variant_id = $${params.length} OR EXISTS (
+    const variantParam = params.length;
+    const variantScope = `(product_media.variant_id = $${variantParam} OR EXISTS (
       SELECT 1 FROM product_media_variants pmv
-       WHERE pmv.media_id = product_media.id AND pmv.variant_id = $${params.length}
-    ))`);
+       WHERE pmv.media_id = product_media.id AND pmv.variant_id = $${variantParam}
+    ))`;
+    if (productId) {
+      params.push(Number(productId));
+      const productParam = params.length;
+      // Una imagen elegida desde la biblioteca puede tener product_id NULL
+      // (o pertenecer a otro producto). La relación pivote con la variante
+      // es la que determina que debe aparecer en este grid.
+      where.push(`${variantScope} AND (
+        product_media.product_id = $${productParam}
+        OR EXISTS (
+          SELECT 1
+            FROM product_media_variants pmv_product
+            JOIN product_variants linked_variant ON linked_variant.id = pmv_product.variant_id
+           WHERE pmv_product.media_id = product_media.id
+             AND pmv_product.variant_id = $${variantParam}
+             AND linked_variant.product_id = $${productParam}
+        )
+      )`);
+    } else {
+      where.push(variantScope);
+    }
+  } else if (productId) {
+    params.push(Number(productId));
+    where.push(`product_id = $${params.length}`);
   }
   if (kind)      { params.push(kind);                  where.push(`kind = $${params.length}`); }
   if (categoryId) { params.push(Number(categoryId));  where.push(`category_id = $${params.length}`); }

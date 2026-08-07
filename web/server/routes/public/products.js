@@ -142,6 +142,8 @@ export async function listProducts(req, res) {
     }
     for (const p of products) {
       p.media = mediaByProduct.get(p.id) ?? [];
+      p.image_url = p.media.find((item) => item.kind === 'image')?.url || null;
+      p.thumb_url = p.image_url;
     }
   }
 

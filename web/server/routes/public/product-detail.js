@@ -97,6 +97,8 @@ export async function getProductBySlug(req, res, slug) {
     [product.id],
   );
   product.media = media;
+  product.image_url = media.find((item) => item.kind === 'image')?.url || null;
+  product.thumb_url = product.image_url;
 
   res.setHeader('Cache-Control', 'public, max-age=60');
   return json(res, 200, { ok: true, product });

@@ -86,7 +86,7 @@ no tiene `section`, devuelve 403.
 | GET | `/api/admin/attributes` | — | `attributes` |
 | GET | `/api/admin/attributes/:id` | — | `attributes` |
 | POST | `/api/admin/attributes` | `{ slug, name, type?, display_order?, active? }` | `attributes` |
-| PATCH | `/api/admin/attributes/:id` | (subset) | `attributes` |
+| PATCH | `/api/admin/attributes/:id` | `{ name?, slug?, type?, display_order?, active? }` | `attributes` |
 | DELETE | `/api/admin/attributes/:id` | — | `attributes` |
 
 ### Valores de atributos
@@ -116,8 +116,8 @@ no tiene `section`, devuelve 403.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/products/:productId/variants` | — | `variants` |
 | GET | `/api/admin/variants/:id` | — | `variants` |
-| POST | `/api/admin/products/:productId/variants` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values: [{ attribute_id, value }] }` | `variants` |
-| PATCH | `/api/admin/variants/:id` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values? }` | `variants` |
+| POST | `/api/admin/products/:productId/variants` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values: [{ attribute_id, attribute_value_id }] }` | `variants` |
+| PATCH | `/api/admin/variants/:id` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values?: [{ attribute_id, attribute_value_id }] }` | `variants` |
 | DELETE | `/api/admin/variants/:id` | — | `variants` |
 | PATCH | `/api/admin/variants/:id/stock` | `{ stock, reason? }` | `variants` (ajuste rápido de stock, queda en audit log) |
 

@@ -96,7 +96,7 @@ globales y los valores los crea el admin.
 - `attribute_values.hex` guarda opcionalmente el color visual en formato `#RRGGBB`.
 - `attribute_values(attribute_id, value)` es UNIQUE.
 
-### `products` (`003_products.sql`)
+### `products` (`003_products.sql`, `015_prices_without_decimals.sql`)
 
 **Template** del producto. "Funda iPhone transparente" — sin color ni
 modelo. El precio default es `base_price`; cada variante puede override.
@@ -228,8 +228,8 @@ en cada request. Cuando integremos la pasarela, agregamos acá
 
 - **`SERIAL PRIMARY KEY`**: no usamos UUID (mantenemos el patrón
   simple del stack).
-- **`NUMERIC(10,2)` para plata**: alcanza hasta 99.999.999,99 COP
-  (suficiente para casi cualquier pedido de accesorios).
+- **`NUMERIC(10,0)` para plata**: los importes se guardan como pesos COP
+  enteros, sin centavos ni decimales.
 - **Snapshots en `order_items`**: regla del e-commerce. La historia
   del pedido es inmutable aunque cambien precios/nombres.
 - **Media híbrida**: las fotos generales siguen en el template y las

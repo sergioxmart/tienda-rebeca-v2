@@ -24,6 +24,17 @@ function formatCOP(n) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n));
 }
 
+function integerPrice(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(Math.round(parsed)) : '';
+}
+
+function integerInput(value) {
+  if (value === '') return '';
+  return String(value).split(/[.,]/, 1)[0].replace(/\D/g, '');
+}
+
 function ChevronIcon({ direction }) {
   return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
 }
@@ -32,6 +43,7 @@ const EMPTY = {
   sku: '',
   price: '',
   compare_at: '',
+  price_mode: 'product',
   active: true,
   description: '',
   attribute_values: [],  // [{ attribute_id, attribute_value_id }]
@@ -89,8 +101,9 @@ export default function VariantEditor({ productId, variants, attributes, onChang
   const openEdit = (v) => setEditing({
     id: v.id,
     sku: v.sku || '',
-    price: v.price ?? '',
-    compare_at: v.compare_at ?? '',
+    price: integerPrice(v.price),
+    compare_at: integerPrice(v.compare_at),
+    price_mode: Number(v.price) > 0 || Number(v.compare_at) > 0 ? 'variant' : 'product',
     active: v.active,
     description: v.description || '',
     attribute_values: attributes.map((a) => {
@@ -101,18 +114,28 @@ export default function VariantEditor({ productId, variants, attributes, onChang
 
   const handleSave = async (e) => {
     e?.preventDefault();
+    const avs = editing.attribute_values
+      .filter((x) => x.attribute_value_id !== '' && x.attribute_value_id !== null)
+      .map((x) => ({ attribute_id: Number(x.attribute_id), attribute_value_id: Number(x.attribute_value_id) }));
+    const missingAttributes = attributes.filter((attribute) => attribute.is_required !== false
+      && !avs.some((value) => value.attribute_id === Number(attribute.id)));
+    if (missingAttributes.length > 0) {
+      toast.error('Completa la combinación', `Selecciona un valor para: ${missingAttributes.map((attribute) => attribute.name).join(', ')}`);
+      return;
+    }
+    if (avs.some((value) => !Number.isInteger(value.attribute_id) || value.attribute_id < 1
+      || !Number.isInteger(value.attribute_value_id) || value.attribute_value_id < 1)) {
+      toast.error('Combinación inválida', 'Revisa los valores de atributos seleccionados.');
+      return;
+    }
+
     setSaving(true);
     try {
-      // Filtrar los attribute_values que sí tienen valor seleccionado
-      const avs = editing.attribute_values
-        .filter((x) => x.attribute_value_id !== '' && x.attribute_value_id !== null)
-        .map((x) => ({ attribute_id: Number(x.attribute_id), attribute_value_id: Number(x.attribute_value_id) }));
-
       if (editing.id) {
         await api.patch(`/api/admin/variants/${editing.id}`, {
           sku: editing.sku || null,
-          price: editing.price === '' ? null : Number(editing.price),
-          compare_at: editing.compare_at === '' ? null : Number(editing.compare_at),
+          price: editing.price_mode === 'product' || editing.price === '' ? null : Number(editing.price),
+          compare_at: editing.price_mode === 'product' || editing.compare_at === '' ? null : Number(editing.compare_at),
           active: !!editing.active,
           description: editing.description || '',
         });
@@ -126,18 +149,28 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         }
         toast.success('Variante actualizada');
       } else {
-        await api.post(`/api/admin/products/${productId}/variants`, {
+        const data = await api.post(`/api/admin/products/${productId}/variants`, {
           sku: editing.sku || null,
-          price: editing.price === '' ? null : Number(editing.price),
-          compare_at: editing.compare_at === '' ? null : Number(editing.compare_at),
+          price: editing.price_mode === 'product' || editing.price === '' ? null : Number(editing.price),
+          compare_at: editing.price_mode === 'product' || editing.compare_at === '' ? null : Number(editing.compare_at),
           active: !!editing.active,
           description: editing.description || '',
           attribute_values: avs,
         });
         toast.success('Variante creada');
+        await reload();
+        // La variante debe existir antes de asociar multimedia. Mantenemos el
+        // modal abierto y lo convertimos en edición para mostrar el panel.
+        if (data.variant?.id) {
+          setEditing((current) => ({ ...current, id: data.variant.id, attribute_values: avs }));
+        } else {
+          setEditing(null);
+        }
       }
-      setEditing(null);
-      await reload();
+      if (editing.id) {
+        setEditing(null);
+        await reload();
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'duplicate_variant') {
         toast.error('Ya existe una variante con esa combinación de atributos');
@@ -322,16 +355,28 @@ export default function VariantEditor({ productId, variants, attributes, onChang
                        value={editing.sku} onChange={(e) => setEditing({ ...editing, sku: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>Precio base <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
-                <input className="input" type="number" min={0}
-                       value={editing.price} onChange={(e) => setEditing({ ...editing, price: e.target.value })} />
+                <label>Aplicación del precio</label>
+                <select className="select" value={editing.price_mode || 'product'} onChange={(e) => setEditing({
+                  ...editing,
+                  price_mode: e.target.value,
+                  ...(e.target.value === 'product' ? { price: '', compare_at: '' } : {}),
+                })}>
+                  <option value="product">Heredar precio principal del producto</option>
+                  <option value="variant">Usar precio específico de esta variante</option>
+                </select>
+                <p className="form-hint">Solo las variantes con precio específico alteran el precio principal.</p>
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
+                <label>Precio base de la variante <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
+                <input className="input" type="number" min={0} step={1} disabled={editing.price_mode !== 'variant'}
+                       value={editing.price} onChange={(e) => setEditing({ ...editing, price: integerInput(e.target.value) })} />
+              </div>
+              <div className="form-group">
                 <label>Precio comparativo <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
-                <input className="input" type="number" min={0}
-                       value={editing.compare_at} onChange={(e) => setEditing({ ...editing, compare_at: e.target.value })} />
+                <input className="input" type="number" min={0} step={1} disabled={editing.price_mode !== 'variant'}
+                       value={editing.compare_at} onChange={(e) => setEditing({ ...editing, compare_at: integerInput(e.target.value) })} />
                 <p className="form-hint">Se muestra tachado cuando es mayor que el precio base.</p>
               </div>
             </div>
@@ -356,7 +401,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
             {attributes.map((a) => (
               <div className="form-group" key={a.id}>
                 <label>{a.name}</label>
-                <select className="select" required
+                <select className="select" required={a.is_required !== false}
                         value={editing.attribute_values.find((x) => x.attribute_id === a.id)?.attribute_value_id ?? ''}
                         onChange={(e) => setAv(a.id, e.target.value)}>
                         <option value="">— Selecciona —</option>

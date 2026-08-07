@@ -40,11 +40,12 @@ export async function getProductBySlug(req, res, slug) {
     const { rows: vav } = await query(
       `SELECT vav.variant_id, vav.attribute_id, vav.attribute_value_id,
               a.slug AS attribute_slug, a.name AS attribute_name, a.type AS attribute_type,
-              av.value AS value, av.hex
+              av.value AS value, av.hex, av.display_order
          FROM variant_attribute_values vav
          JOIN attributes a       ON a.id = vav.attribute_id
          JOIN attribute_values av ON av.id = vav.attribute_value_id
         WHERE vav.variant_id = ANY($1)
+          AND av.active = TRUE
         ORDER BY a.display_order, a.name, av.display_order, av.value`,
       [variantIds],
     );
@@ -77,22 +78,28 @@ export async function getProductBySlug(req, res, slug) {
       ORDER BY pa.display_order, a.name`,
     [product.id],
   );
-  for (const attr of pa) {
-    const { rows: values } = await query(
-      `SELECT DISTINCT av.id, av.value, av.hex, av.display_order
-         FROM attribute_values av
-         JOIN variant_attribute_values vav ON vav.attribute_value_id = av.id
-         JOIN product_variants pv ON pv.id = vav.variant_id
-        WHERE av.attribute_id = $1
-          AND av.active = TRUE
-          AND pv.product_id = $2
-          AND pv.active = TRUE
-        ORDER BY av.display_order, av.value`,
-      [attr.attribute_id, product.id],
-    );
-    attr.values = values;
+  // Construir los valores desde las variantes activas de ESTE producto.
+  // Nunca consultar aquí todos los attribute_values globales: un valor solo
+  // aparece en la tienda si está asociado a una variante de este producto.
+  const valuesByAttribute = new Map();
+  for (const variant of variants) {
+    for (const item of variant.attribute_values || []) {
+      if (!valuesByAttribute.has(item.attribute_id)) valuesByAttribute.set(item.attribute_id, new Map());
+      valuesByAttribute.get(item.attribute_id).set(item.attribute_value_id, {
+        id: item.attribute_value_id,
+        value: item.value,
+        hex: item.hex,
+        display_order: item.display_order ?? 0,
+      });
+    }
   }
-  product.attributes = pa;
+  product.attributes = pa
+    .map((attr) => ({
+      ...attr,
+      values: [...(valuesByAttribute.get(attr.attribute_id)?.values() || [])]
+        .sort((a, b) => a.display_order - b.display_order || a.value.localeCompare(b.value)),
+    }))
+    .filter((attr) => attr.values.length > 0);
 
   // 4. Media (fotos)
   const { rows: media } = await query(
@@ -113,6 +120,6 @@ export async function getProductBySlug(req, res, slug) {
   product.image_url = product.media.find((item) => item.kind === 'image')?.url || null;
   product.thumb_url = product.image_url;
 
-  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.setHeader('Cache-Control', 'no-store');
   return json(res, 200, { ok: true, product });
 }

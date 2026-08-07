@@ -29,7 +29,6 @@ const ATTR_TYPES = [
   { value: 'color', label: 'Color' },
   { value: 'number', label: 'Número' },
 ];
-
 function ChevronIcon({ direction }) {
   return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
 }

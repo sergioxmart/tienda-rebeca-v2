@@ -29,9 +29,119 @@
 import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
-import { protect, recordAudit, validators, validate, notFound, conflict } from './_helpers.js';
+import { protect, recordAudit, validate, notFound, conflict } from './_helpers.js';
 
 // --- Helpers --------------------------------------------------------------
+
+const VARIANT_FIELDS = new Set([
+  'sku', 'price', 'compare_at', 'stock', 'description', 'active',
+  'display_order', 'attribute_values',
+]);
+const ATTRIBUTE_VALUE_FIELDS = new Set(['attribute_id', 'attribute_value_id', 'value']);
+
+/**
+ * Valida la forma completa del payload sin tocar la base de datos.
+ * Se ejecuta antes de comprobar el producto para que un body mal formado
+ * tenga un early return y nunca llegue a una sentencia INSERT.
+ */
+export function validateVariantPayload(body, { create = false } = {}) {
+  const errors = [];
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return ['el body debe ser un objeto JSON'];
+  }
+
+  for (const key of Object.keys(body)) {
+    if (!VARIANT_FIELDS.has(key)) errors.push(`campo no permitido: ${key}`);
+  }
+  if (body.sku !== undefined && body.sku !== null
+      && (typeof body.sku !== 'string' || body.sku.length > 80)) {
+    errors.push('sku debe ser string de máximo 80 caracteres');
+  }
+  for (const field of ['price', 'compare_at', 'stock', 'display_order']) {
+    if (body[field] === undefined || body[field] === null) continue;
+    if (typeof body[field] !== 'number' || !Number.isInteger(body[field]) || body[field] < 0) {
+      errors.push(`${field} debe ser un entero mayor o igual a 0`);
+    }
+  }
+  if (body.description !== undefined && typeof body.description !== 'string') {
+    errors.push('description debe ser string');
+  } else if (typeof body.description === 'string' && body.description.length > 5000) {
+    errors.push('description demasiado largo (máximo 5000 caracteres)');
+  }
+  if (body.active !== undefined && typeof body.active !== 'boolean') {
+    errors.push('active debe ser boolean');
+  }
+
+  if (create && !Array.isArray(body.attribute_values)) {
+    errors.push('attribute_values debe ser un array');
+  }
+  if (body.attribute_values !== undefined) {
+    if (!Array.isArray(body.attribute_values) || body.attribute_values.length === 0) {
+      errors.push('attribute_values debe contener al menos un valor');
+    } else {
+      body.attribute_values.forEach((item, index) => {
+        const prefix = `attribute_values[${index}]`;
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          errors.push(`${prefix} debe ser un objeto`);
+          return;
+        }
+        for (const key of Object.keys(item)) {
+          if (!ATTRIBUTE_VALUE_FIELDS.has(key)) errors.push(`${prefix}.${key} no está permitido`);
+        }
+        if (typeof item.attribute_id !== 'number' || !Number.isInteger(item.attribute_id) || item.attribute_id < 1) {
+          errors.push(`${prefix}.attribute_id debe ser entero positivo`);
+        }
+        const hasId = item.attribute_value_id !== undefined && item.attribute_value_id !== null;
+        const hasText = item.value !== undefined;
+        if (hasId === hasText) {
+          errors.push(`${prefix} debe incluir exactamente uno de attribute_value_id o value`);
+        } else if (hasId && (typeof item.attribute_value_id !== 'number'
+          || !Number.isInteger(item.attribute_value_id) || item.attribute_value_id < 1)) {
+          errors.push(`${prefix}.attribute_value_id debe ser entero positivo`);
+        } else if (hasText && (typeof item.value !== 'string' || !item.value.trim() || item.value.length > 100)) {
+          errors.push(`${prefix}.value debe ser texto de 1 a 100 caracteres`);
+        }
+      });
+    }
+  }
+  return errors;
+}
+
+async function getProductAttributeRules(productId) {
+  const { rows } = await query(
+    `SELECT attribute_id, is_required
+       FROM product_attributes
+      WHERE product_id = $1`,
+    [productId],
+  );
+  return rows;
+}
+
+function validateCombinationForProduct(combo, rules) {
+  // Compatibilidad con productos antiguos sin filas en product_attributes.
+  // Los productos configurados desde el admin sí pasan por la validación
+  // estricta de atributos aplicables y obligatorios.
+  if (rules.length === 0) return [];
+
+  const errors = [];
+  const allowed = new Map(rules.map((rule) => [Number(rule.attribute_id), rule]));
+  const seen = new Set();
+  for (const item of combo) {
+    if (!allowed.has(Number(item.attribute_id))) {
+      errors.push(`attribute_id ${item.attribute_id} no está vinculado a este producto`);
+    }
+    if (seen.has(Number(item.attribute_id))) {
+      errors.push(`atributo ${item.attribute_id} repetido en attribute_values`);
+    }
+    seen.add(Number(item.attribute_id));
+  }
+  for (const rule of rules) {
+    if (rule.is_required && !seen.has(Number(rule.attribute_id))) {
+      errors.push(`falta seleccionar el atributo ${rule.attribute_id}`);
+    }
+  }
+  return errors;
+}
 
 /**
  * Compara dos combinaciones de (attribute_id, attribute_value_id) ordenadas.
@@ -188,18 +298,15 @@ export async function getVariant(req, res, id) {
 }
 
 export async function createVariant(req, res, productId) {
+  const body = req.body || {};
+  if (!validate(res, body, validateVariantPayload(body, { create: true }))) return;
+
   const { rows: p } = await query('SELECT id FROM products WHERE id = $1', [productId]);
   if (p.length === 0) return notFound(res);
 
-  const body = req.body || {};
+  const attributeRules = await getProductAttributeRules(productId);
   if (!validate(res, body, [
-    body.price !== undefined && body.price !== null && validators.int(Number(body.price), 'price', { min: 0 }),
-    body.compare_at !== undefined && (body.compare_at === null || validators.int(Number(body.compare_at), 'compare_at', { min: 0 })),
-    body.stock !== undefined && validators.int(Number(body.stock), 'stock', { min: 0 }),
-    body.description !== undefined && validators.optionalString(body.description, 'description', { max: 5000 }),
-    body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
-    body.active !== undefined && validators.bool(body.active, 'active'),
-    !Array.isArray(body.attribute_values) || body.attribute_values.length === 0 ? 'attribute_values requerido (array no vacío)' : null,
+    ...validateCombinationForProduct(body.attribute_values, attributeRules),
   ])) return;
 
   // Resolver attribute_values
@@ -241,23 +348,20 @@ export async function createVariant(req, res, productId) {
 }
 
 export async function updateVariant(req, res, id) {
+  const body = req.body || {};
+  if (!validate(res, body, validateVariantPayload(body))) return;
+
   const { rows: existing } = await query('SELECT id, product_id FROM product_variants WHERE id = $1', [id]);
   if (existing.length === 0) return notFound(res);
   const productId = existing[0].product_id;
 
-  const body = req.body || {};
-  if (!validate(res, body, [
-    body.price !== undefined && (body.price === null || validators.int(Number(body.price), 'price', { min: 0 })),
-    body.compare_at !== undefined && (body.compare_at === null || validators.int(Number(body.compare_at), 'compare_at', { min: 0 })),
-    body.stock !== undefined && validators.int(Number(body.stock), 'stock', { min: 0 }),
-    body.description !== undefined && validators.optionalString(body.description, 'description', { max: 5000 }),
-    body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
-    body.active !== undefined && validators.bool(body.active, 'active'),
-  ])) return;
-
   // Si vienen nuevos attribute_values, resolver y chequear invariante
   let combo = null;
   if (body.attribute_values !== undefined) {
+    const attributeRules = await getProductAttributeRules(productId);
+    if (!validate(res, body, [
+      ...validateCombinationForProduct(body.attribute_values, attributeRules),
+    ])) return;
     try {
       combo = await resolveAttributeValues(body.attribute_values);
     } catch (e) {

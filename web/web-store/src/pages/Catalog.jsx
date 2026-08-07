@@ -124,9 +124,9 @@ export default function Catalog() {
             <option value="price_asc">Menor precio</option>
             <option value="price_desc">Mayor precio</option>
           </select>
-          <input type="number" placeholder="Precio mín" min={0} style={{ width: 110 }}
+          <input type="number" placeholder="Precio mín" min={0} step={1} style={{ width: 110 }}
                  value={filters.price_min} onChange={(e) => setParam('price_min', e.target.value)} />
-          <input type="number" placeholder="Precio máx" min={0} style={{ width: 110 }}
+          <input type="number" placeholder="Precio máx" min={0} step={1} style={{ width: 110 }}
                  value={filters.price_max} onChange={(e) => setParam('price_max', e.target.value)} />
         </div>
 

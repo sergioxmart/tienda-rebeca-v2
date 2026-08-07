@@ -87,11 +87,11 @@ export async function createProduct(req, res) {
     return json(res, 400, { ok: false, error: 'category_id_must_be_integer' });
   }
   const basePrice = Number(p.base_price);
-  if (!Number.isFinite(basePrice) || basePrice < 0) {
+  if (!Number.isInteger(basePrice) || basePrice < 0) {
     return json(res, 400, { ok: false, error: 'base_price_invalid' });
   }
   const compareAt = p.compare_at !== undefined && p.compare_at !== null ? Number(p.compare_at) : null;
-  if (compareAt !== null && (!Number.isFinite(compareAt) || compareAt < 0)) {
+  if (compareAt !== null && (!Number.isInteger(compareAt) || compareAt < 0)) {
     return json(res, 400, { ok: false, error: 'compare_at_invalid' });
   }
 

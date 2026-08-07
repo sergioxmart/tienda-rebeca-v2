@@ -21,6 +21,17 @@ const EMPTY = {
   featured: false, active: true,
 };
 
+function integerPrice(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(Math.round(parsed)) : '';
+}
+
+function integerInput(value) {
+  if (value === '') return '';
+  return String(value).split(/[.,]/, 1)[0].replace(/\D/g, '');
+}
+
 function slugify(s) {
   return s.toString().toLowerCase().trim()
     .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
@@ -78,8 +89,8 @@ export default function ProductForm() {
           description: product.description || '',
           brand: product.brand || '',
           category_id: product.category_id,
-          base_price: product.base_price,
-          compare_at: product.compare_at ?? '',
+          base_price: integerPrice(product.base_price),
+          compare_at: integerPrice(product.compare_at),
           featured: product.featured,
           active: product.active,
         });
@@ -243,13 +254,13 @@ export default function ProductForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Precio base (COP)</label>
-            <input className="input" type="number" min={0} required
-                   value={form.base_price} onChange={(e) => setField('base_price', e.target.value)} />
+            <input className="input" type="number" min={0} step={1} required
+                   value={form.base_price} onChange={(e) => setField('base_price', integerInput(e.target.value))} />
           </div>
           <div className="form-group">
             <label>Precio comparativo <span style={{ color: 'var(--color-muted)' }}>(opcional, tachado)</span></label>
-            <input className="input" type="number" min={0}
-                   value={form.compare_at} onChange={(e) => setField('compare_at', e.target.value)} />
+            <input className="input" type="number" min={0} step={1}
+                   value={form.compare_at} onChange={(e) => setField('compare_at', integerInput(e.target.value))} />
           </div>
         </div>
 

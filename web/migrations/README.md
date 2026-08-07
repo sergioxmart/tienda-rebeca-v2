@@ -51,6 +51,7 @@ NNN_descripcion_corta.sql
 | 012 | `012_password_recovery.sql` | Tokens temporales, hasheados y de un solo uso para recuperar la contraseña |
 | 013 | `013_variant_media_colors.sql` | `attribute_values.hex`, descripción de variantes y `product_media.variant_id` para multimedia por variante |
 | 014 | `014_inventory_movements.sql` | Libro mayor de entradas y salidas para `product_variants` |
+| 015 | `015_prices_without_decimals.sql` | Importes monetarios en COP sin escala decimal |
 
 ## Lo que falta decidir
 

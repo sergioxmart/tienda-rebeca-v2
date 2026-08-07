@@ -46,6 +46,7 @@ export default function ProductPage() {
       name: a.attribute_name,
       slug: a.attribute_slug,
       type: a.attribute_type,
+      isRequired: a.is_required !== false,
       values: a.values || [],
     }));
   }, [product]);
@@ -78,7 +79,8 @@ export default function ProductPage() {
   const effectiveCompare = displayVariant && Number(displayVariant.compare_at) > 0
     ? displayVariant.compare_at
     : product?.compare_at;
-  const isAllSelected = attributes.length > 0 && Object.keys(selected).length === attributes.length;
+  const requiredAttributes = attributes.filter((attribute) => attribute.isRequired);
+  const isAllSelected = requiredAttributes.every((attribute) => selected[attribute.id]);
   const hasSelectedVariant = attributes.length === 0 || (isAllSelected && !!matchedVariant);
   const selectedVariantId = matchedVariant?.id ?? (attributes.length === 0 ? product?.id : null);
   const rawSelectedStock = hasSelectedVariant

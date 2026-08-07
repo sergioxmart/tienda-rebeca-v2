@@ -142,7 +142,7 @@ export async function listVariants(req, res, productId) {
 
   const { rows } = await query(
     `SELECT v.id, v.product_id, v.sku, v.price, v.compare_at, v.stock,
-            v.active, v.display_order, v.created_at, v.updated_at
+            v.description, v.active, v.display_order, v.created_at, v.updated_at
        FROM product_variants v
       WHERE v.product_id = $1
       ORDER BY v.display_order, v.id`,
@@ -196,6 +196,7 @@ export async function createVariant(req, res, productId) {
     body.price !== undefined && body.price !== null && validators.int(Number(body.price), 'price', { min: 0 }),
     body.compare_at !== undefined && (body.compare_at === null || validators.int(Number(body.compare_at), 'compare_at', { min: 0 })),
     body.stock !== undefined && validators.int(Number(body.stock), 'stock', { min: 0 }),
+    body.description !== undefined && validators.optionalString(body.description, 'description', { max: 5000 }),
     body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
     body.active !== undefined && validators.bool(body.active, 'active'),
     !Array.isArray(body.attribute_values) || body.attribute_values.length === 0 ? 'attribute_values requerido (array no vacío)' : null,
@@ -216,13 +217,13 @@ export async function createVariant(req, res, productId) {
   // Crear variante + values en una transacción
   const result = await tx(async (client) => {
     const { rows: v } = await client.query(
-      `INSERT INTO product_variants (product_id, sku, price, compare_at, stock, active, display_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO product_variants (product_id, sku, price, compare_at, stock, description, active, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
       [productId, body.sku ?? null,
        body.price !== undefined ? Number(body.price) : null,
        body.compare_at !== undefined ? (body.compare_at === null ? null : Number(body.compare_at)) : null,
-       Number(body.stock ?? 0), body.active ?? true, body.display_order ?? 0],
+       Number(body.stock ?? 0), body.description ?? '', body.active ?? true, body.display_order ?? 0],
     );
     const variantId = v[0].id;
     for (const c of combo) {
@@ -249,6 +250,7 @@ export async function updateVariant(req, res, id) {
     body.price !== undefined && (body.price === null || validators.int(Number(body.price), 'price', { min: 0 })),
     body.compare_at !== undefined && (body.compare_at === null || validators.int(Number(body.compare_at), 'compare_at', { min: 0 })),
     body.stock !== undefined && validators.int(Number(body.stock), 'stock', { min: 0 }),
+    body.description !== undefined && validators.optionalString(body.description, 'description', { max: 5000 }),
     body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
     body.active !== undefined && validators.bool(body.active, 'active'),
   ])) return;
@@ -274,6 +276,7 @@ export async function updateVariant(req, res, id) {
     if (body.price !== undefined)       { fields.push(`price = $${i++}`);       values.push(body.price === null ? null : Number(body.price)); }
     if (body.compare_at !== undefined)   { fields.push(`compare_at = $${i++}`);   values.push(body.compare_at === null ? null : Number(body.compare_at)); }
     if (body.stock !== undefined)       { fields.push(`stock = $${i++}`);       values.push(Number(body.stock)); }
+    if (body.description !== undefined) { fields.push(`description = $${i++}`); values.push(body.description); }
     if (body.active !== undefined)      { fields.push(`active = $${i++}`);      values.push(body.active); }
     if (body.display_order !== undefined){ fields.push(`display_order = $${i++}`); values.push(body.display_order); }
     if (fields.length > 0) {

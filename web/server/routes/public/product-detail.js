@@ -28,7 +28,7 @@ export async function getProductBySlug(req, res, slug) {
 
   // 2. Variantes activas con sus valores
   const { rows: variants } = await query(
-    `SELECT v.id, v.sku, v.price, v.compare_at, v.stock, v.display_order
+    `SELECT v.id, v.sku, v.price, v.compare_at, v.stock, v.description, v.display_order
        FROM product_variants v
       WHERE v.product_id = $1 AND v.active = TRUE
       ORDER BY v.display_order, v.id`,
@@ -40,7 +40,7 @@ export async function getProductBySlug(req, res, slug) {
     const { rows: vav } = await query(
       `SELECT vav.variant_id, vav.attribute_id, vav.attribute_value_id,
               a.slug AS attribute_slug, a.name AS attribute_name, a.type AS attribute_type,
-              av.value AS value
+              av.value AS value, av.hex
          FROM variant_attribute_values vav
          JOIN attributes a       ON a.id = vav.attribute_id
          JOIN attribute_values av ON av.id = vav.attribute_value_id
@@ -58,6 +58,7 @@ export async function getProductBySlug(req, res, slug) {
         attribute_name: row.attribute_name,
         attribute_type: row.attribute_type,
         value: row.value,
+        hex: row.hex,
       });
     }
     for (const v of variants) {
@@ -78,7 +79,7 @@ export async function getProductBySlug(req, res, slug) {
   );
   for (const attr of pa) {
     const { rows: values } = await query(
-      `SELECT id, value, display_order
+      `SELECT id, value, hex, display_order
          FROM attribute_values
         WHERE attribute_id = $1 AND active = TRUE
         ORDER BY display_order, value`,
@@ -90,14 +91,21 @@ export async function getProductBySlug(req, res, slug) {
 
   // 4. Media (fotos)
   const { rows: media } = await query(
-    `SELECT id, kind, url, alt_text, display_order
+    `SELECT id, variant_id, kind, url, alt_text, display_order
        FROM product_media
       WHERE product_id = $1 AND deleted_at IS NULL
       ORDER BY display_order, id`,
     [product.id],
   );
-  product.media = media;
-  product.image_url = media.find((item) => item.kind === 'image')?.url || null;
+  product.media = media.filter((item) => item.variant_id === null);
+  const mediaByVariant = new Map();
+  for (const item of media) {
+    if (item.variant_id === null) continue;
+    if (!mediaByVariant.has(item.variant_id)) mediaByVariant.set(item.variant_id, []);
+    mediaByVariant.get(item.variant_id).push(item);
+  }
+  for (const variant of variants) variant.media = mediaByVariant.get(variant.id) ?? [];
+  product.image_url = product.media.find((item) => item.kind === 'image')?.url || null;
   product.thumb_url = product.image_url;
 
   res.setHeader('Cache-Control', 'public, max-age=60');

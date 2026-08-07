@@ -18,7 +18,7 @@ import VariantEditor from '../components/VariantEditor.jsx';
 const EMPTY = {
   name: '', slug: '', sku: '', description: '', brand: '',
   category_id: '', base_price: '', compare_at: '',
-  featured: false, active: true, display_order: 0,
+  featured: false, active: true,
 };
 
 function slugify(s) {
@@ -43,11 +43,13 @@ export default function ProductForm() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Cargar catálogos
   useEffect(() => {
     (async () => {
       try {
+        setLoadError('');
         const [c, a] = await Promise.all([
           api.get('/api/admin/categories'),
           api.get('/api/admin/attributes'),
@@ -80,13 +82,12 @@ export default function ProductForm() {
           compare_at: product.compare_at ?? '',
           featured: product.featured,
           active: product.active,
-          display_order: product.display_order ?? 0,
         });
         setProductAttributeIds((product.attributes || []).map((a) => a.attribute_id));
         setVariants(vs.variants || []);
       } catch (err) {
+        setLoadError(err.message || 'Error desconocido');
         toast.error('No se pudo cargar el producto', err.message);
-        navigate('/products', { replace: true });
       } finally {
         setLoading(false);
       }
@@ -110,7 +111,6 @@ export default function ProductForm() {
         compare_at: form.compare_at === '' ? null : Number(form.compare_at),
         featured: !!form.featured,
         active: !!form.active,
-        display_order: Number(form.display_order) || 0,
       };
       if (productId) {
         await api.patch(`/api/admin/products/${productId}`, body);
@@ -118,7 +118,7 @@ export default function ProductForm() {
       } else {
         const { product } = await api.post('/api/admin/products', body);
         setProductId(product.id);
-        toast.success('Producto creado', 'Ahora podés agregar atributos y variantes.');
+        toast.success('Producto creado', 'Ahora puedes agregar atributos y variantes.');
         // Limpia form a estado "recién creado" (cambia la URL al edit)
         navigate(`/products/${product.id}`, { replace: true });
       }
@@ -147,7 +147,7 @@ export default function ProductForm() {
   // --- Atributos ---------------------------------------------------------
   const toggleAttribute = async (attrId) => {
     if (!productId) {
-      toast.warning('Guardá el producto primero para vincular atributos');
+      toast.warning('Guarda el producto primero para vincular atributos');
       return;
     }
     const linked = productAttributeIds.includes(attrId);
@@ -179,6 +179,19 @@ export default function ProductForm() {
     return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
   }
 
+  if (loadError) {
+    return (
+      <div className="state-card state-card-error">
+        <h1>No se pudo abrir el producto</h1>
+        <p>{loadError}</p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button className="btn" onClick={() => navigate('/products')}>← Volver a productos</button>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -194,6 +207,11 @@ export default function ProductForm() {
         </div>
       </div>
 
+      <section className="editor-card">
+        <div className="editor-section-heading">
+          <div><span className="eyebrow">Ficha del producto</span><h2>Información principal</h2></div>
+          <span className="form-hint">Los campos con datos básicos alimentan el catálogo público.</span>
+        </div>
       <form onSubmit={handleSave}>
         <div className="form-group">
           <label>Nombre</label>
@@ -217,7 +235,7 @@ export default function ProductForm() {
           <label>Categoría</label>
           <select className="select" required value={form.category_id}
                   onChange={(e) => setField('category_id', e.target.value)}>
-            <option value="">— Seleccioná —</option>
+            <option value="">— Selecciona —</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
@@ -240,11 +258,6 @@ export default function ProductForm() {
             <label>Marca</label>
             <input className="input" maxLength={100}
                    value={form.brand} onChange={(e) => setField('brand', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Orden</label>
-            <input className="input" type="number" min={0}
-                   value={form.display_order} onChange={(e) => setField('display_order', e.target.value)} />
           </div>
         </div>
 
@@ -269,14 +282,15 @@ export default function ProductForm() {
           </div>
         </div>
       </form>
+      </section>
 
       {productId && (
         <>
-          <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
-          <h2>Atributos aplicables</h2>
-          <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>
-            Marcá los atributos que el cliente puede elegir (color, talla, etc.).
-          </p>
+          <section className="editor-card">
+          <div className="editor-section-heading">
+            <div><span className="eyebrow">Configuración</span><h2>Atributos aplicables</h2></div>
+            <p className="form-hint">Marca los atributos que el cliente puede elegir (color, talla, etc.).</p>
+          </div>
           {allAttributes.length === 0 ? (
             <div className="empty" style={{ padding: 20 }}>No hay atributos creados. <a href="/attributes">Crear uno</a></div>
           ) : (
@@ -291,14 +305,16 @@ export default function ProductForm() {
               ))}
             </div>
           )}
+          </section>
 
-          <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--color-border)' }} />
+          <section className="editor-card">
           <VariantEditor
             productId={productId}
             variants={variants}
             attributes={allAttributes.filter((a) => productAttributeIds.includes(a.id))}
             onChange={reloadVariants}
           />
+          </section>
         </>
       )}
 

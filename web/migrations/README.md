@@ -49,6 +49,7 @@ NNN_descripcion_corta.sql
 | 010 | `010_page_modules.sql` | Módulos configurables de páginas |
 | 011 | `011_themes.sql` | Temas y configuración visual |
 | 012 | `012_password_recovery.sql` | Tokens temporales, hasheados y de un solo uso para recuperar la contraseña |
+| 013 | `013_variant_media_colors.sql` | `attribute_values.hex`, descripción de variantes y `product_media.variant_id` para multimedia por variante |
 
 ## Lo que falta decidir
 
@@ -58,5 +59,5 @@ NNN_descripcion_corta.sql
   `Contexto/db-schema.md`.
 - **Categorías adicionales**: hoy solo hay `accesorios-telefono`. Cuando
   Sergio sume `laptops`, `celulares`, etc., es un `INSERT` en `categories`.
-- **Foto por variante**: en v1 las fotos son del producto (template). Si se
-  quiere foto por variante, se agrega `variant_id` a `product_media`.
+- **Multimedia por variante**: desde `013` las imágenes pueden cargarse por
+  variante y los videos se guardan como enlaces HTTPS embebidos.

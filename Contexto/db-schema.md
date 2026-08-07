@@ -93,6 +93,7 @@ globales y los valores los crea el admin.
 - `attributes.slug` es **estable**: NO renombrar (se referencia en código
   y migraciones).
 - `attribute_values.value` es texto libre: "Rojo", "iPhone 15", "1m", etc.
+- `attribute_values.hex` guarda opcionalmente el color visual en formato `#RRGGBB`.
 - `attribute_values(attribute_id, value)` es UNIQUE.
 
 ### `products` (`003_products.sql`)
@@ -117,11 +118,12 @@ Ej: "Funda iPhone" tiene `color` (required) + `modelo-telefono` (required).
 ### `product_media` (`003_products.sql`)
 
 Galería de fotos y embeds de video. Misma lógica que usamos
-para media: `kind ∈ {image, video_embed}`, soft-delete con
+para media: `kind ∈ {image, video_embed}`, `variant_id` opcional para asociar
+la pieza a una combinación concreta, soft-delete con
 `deleted_at`, huérfanas (>30 días sin `product_id`) se limpian con
 un cron (no en SQL).
 
-### `product_variants` (`004_variants.sql`)
+### `product_variants` (`004_variants.sql`, `013_variant_media_colors.sql`)
 
 **Las combinaciones vendibles.** Cada fila es un SKU concreto con su
 stock y (opcionalmente) su precio override.
@@ -129,6 +131,7 @@ stock y (opcionalmente) su precio override.
 - `price` NULL = usa `products.base_price`.
 - `compare_at` es para tachar ("antes X, ahora Y").
 - `stock >= 0` (CHECK). Decremento en checkout transaccional.
+- `description` permite una descripción específica para cada variante.
 - **Invariante (enforced por app)**: la combinación de valores de
   atributos debe ser única dentro del mismo `product_id`. Ver
   `variant_attribute_values` abajo.
@@ -221,9 +224,9 @@ en cada request. Cuando integremos la pasarela, agregamos acá
   (suficiente para casi cualquier pedido de accesorios).
 - **Snapshots en `order_items`**: regla del e-commerce. La historia
   del pedido es inmutable aunque cambien precios/nombres.
-- **Foto del template, no de la variante**: en v1 todas las variantes
-  comparten las fotos del producto. Si después el admin quiere foto
-  por color, agregamos `variant_id` a `product_media`.
+- **Media híbrida**: las fotos generales siguen en el template y las
+  imágenes/videos específicos se asocian a una variante mediante
+  `product_media.variant_id`.
 - **`stock` se descuenta en checkout, no al agregar al carrito**: el
   carrito es efímero (sessionStorage). El stock se mueve recién cuando
   el pago se aprueba.

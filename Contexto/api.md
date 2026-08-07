@@ -94,8 +94,8 @@ no tiene `section`, devuelve 403.
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/attributes/:attributeId/values` | — | `attribute_values` |
-| POST | `/api/admin/attributes/:attributeId/values` | `{ value, display_order?, active? }` | `attribute_values` |
-| PATCH | `/api/admin/attribute-values/:id` | (subset) | `attribute_values` |
+| POST | `/api/admin/attributes/:attributeId/values` | `{ value, hex?, display_order?, active? }` | `attribute_values` |
+| PATCH | `/api/admin/attribute-values/:id` | `{ value?, hex?, active? }` | `attribute_values` |
 | DELETE | `/api/admin/attribute-values/:id` | — | `attribute_values` |
 
 ### Productos
@@ -116,8 +116,8 @@ no tiene `section`, devuelve 403.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/products/:productId/variants` | — | `variants` |
 | GET | `/api/admin/variants/:id` | — | `variants` |
-| POST | `/api/admin/products/:productId/variants` | `{ sku?, price?, compare_at?, stock?, active?, display_order?, attribute_values: [{ attribute_id, value }] }` | `variants` |
-| PATCH | `/api/admin/variants/:id` | (subset) | `variants` |
+| POST | `/api/admin/products/:productId/variants` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values: [{ attribute_id, value }] }` | `variants` |
+| PATCH | `/api/admin/variants/:id` | `{ sku?, price?, compare_at?, stock?, description?, active?, display_order?, attribute_values? }` | `variants` |
 | DELETE | `/api/admin/variants/:id` | — | `variants` |
 | PATCH | `/api/admin/variants/:id/stock` | `{ stock, reason? }` | `variants` (ajuste rápido de stock, queda en audit log) |
 
@@ -125,8 +125,8 @@ no tiene `section`, devuelve 403.
 
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
-| GET | `/api/admin/media` | `?product_id=&kind=&page=&limit=` | `media` |
-| POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `alt_text?`, `display_order?` | `media` |
+| GET | `/api/admin/media` | `?product_id=&variant_id=&kind=&page=&limit=` | `media` |
+| POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id }` | `media` |
 | PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order? }` | `media` |
 | DELETE | `/api/admin/media/:id` | — | `media` (soft-delete) |
 | POST | `/api/admin/media/cleanup` | — | `media` (borra huérfanas >30d) |

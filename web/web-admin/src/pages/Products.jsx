@@ -11,6 +11,10 @@ function formatCOP(n) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(n));
 }
 
+function ChevronIcon({ direction }) {
+  return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
+}
+
 export default function Products() {
   const toast = useToast();
   const navigate = useNavigate();
@@ -20,6 +24,8 @@ export default function Products() {
   const [categoryId, setCategoryId] = useState('');
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
+  const [moving, setMoving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -51,6 +57,27 @@ export default function Products() {
     return () => { cancelled = true; };
   }, [q, categoryId, reloadKey, toast]);
 
+  const moveSelected = async (direction) => {
+    const index = items.findIndex((item) => item.id === selectedId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= items.length || q || categoryId) return;
+    const current = items[index];
+    const target = items[targetIndex];
+    setMoving(true);
+    try {
+      await Promise.all([
+        api.patch(`/api/admin/products/${current.id}`, { display_order: target.display_order }),
+        api.patch(`/api/admin/products/${target.id}`, { display_order: current.display_order }),
+      ]);
+      toast.success('Orden actualizado');
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      toast.error('No se pudo cambiar el orden', err.message);
+    } finally {
+      setMoving(false);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -66,6 +93,19 @@ export default function Products() {
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button className="btn" onClick={() => setReloadKey((k) => k + 1)}>Refrescar</button>
+      </div>
+
+      <div className="order-toolbar">
+        <span>{selectedId ? 'Producto seleccionado' : 'Selecciona un producto para cambiar su posición'}</span>
+        <div className="order-toolbar-actions">
+          <button className="btn btn-sm" title="Subir" aria-label="Subir producto"
+                  disabled={!selectedId || moving || !!q || !!categoryId || items.findIndex((p) => p.id === selectedId) <= 0}
+                  onClick={() => moveSelected(-1)}><ChevronIcon direction="up" /></button>
+          <button className="btn btn-sm" title="Bajar" aria-label="Bajar producto"
+                  disabled={!selectedId || moving || !!q || !!categoryId || items.findIndex((p) => p.id === selectedId) === items.length - 1}
+                  onClick={() => moveSelected(1)}><ChevronIcon direction="down" /></button>
+          {(q || categoryId) && <small>Quita los filtros para ordenar.</small>}
+        </div>
       </div>
 
       {loading ? (
@@ -88,7 +128,7 @@ export default function Products() {
           </thead>
           <tbody>
             {items.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className={selectedId === p.id ? 'row-selected' : ''} onClick={() => setSelectedId(p.id)}>
                 <td>
                   <div style={{ fontWeight: 500 }}>{p.name}</div>
                   <div style={{ color: 'var(--color-muted)', fontSize: 12 }}><code>{p.slug}</code></div>
@@ -103,7 +143,7 @@ export default function Products() {
                   {p.featured && <span className="badge featured" style={{ marginLeft: 4 }}>Destacado</span>}
                 </td>
                 <td className="table-actions">
-                  <Link className="btn btn-sm" to={`/products/${p.id}`}>Editar</Link>
+                  <Link className="btn btn-sm" to={`/products/${p.id}`} onClick={(e) => e.stopPropagation()}>Editar</Link>
                 </td>
               </tr>
             ))}

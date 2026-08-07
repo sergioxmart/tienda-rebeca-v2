@@ -13,13 +13,17 @@ import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
 
-const EMPTY = { name: '', slug: '', description: '', hero_image: '', display_order: 0, active: true };
+const EMPTY = { name: '', slug: '', description: '', hero_image: '', active: true };
 
 function slugify(s) {
   return s.toString().toLowerCase().trim()
     .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
     .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function ChevronIcon({ direction }) {
+  return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
 }
 
 export default function Categories() {
@@ -29,6 +33,8 @@ export default function Categories() {
   const [editing, setEditing] = useState(null);   // { ...form } o null
   const [deleting, setDeleting] = useState(null); // item a borrar o null
   const [saving, setSaving] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
+  const [moving, setMoving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -51,9 +57,29 @@ export default function Categories() {
     slug: c.slug,
     description: c.description || '',
     hero_image: c.hero_image || '',
-    display_order: c.display_order ?? 0,
     active: c.active,
   });
+
+  const moveSelected = async (direction) => {
+    const index = items.findIndex((item) => item.id === selectedId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
+    const current = items[index];
+    const target = items[targetIndex];
+    setMoving(true);
+    try {
+      await Promise.all([
+        api.patch(`/api/admin/categories/${current.id}`, { display_order: target.display_order }),
+        api.patch(`/api/admin/categories/${target.id}`, { display_order: current.display_order }),
+      ]);
+      toast.success('Orden actualizado');
+      await load();
+    } catch (err) {
+      toast.error('No se pudo cambiar el orden', err.message);
+    } finally {
+      setMoving(false);
+    }
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -64,7 +90,7 @@ export default function Categories() {
         slug: editing.slug || slugify(editing.name),
         description: editing.description || '',
         hero_image: editing.hero_image || null,
-        display_order: Number(editing.display_order) || 0,
+        display_order: editing.id ? undefined : items.length,
         active: !!editing.active,
       };
       if (editing.id) {
@@ -112,39 +138,46 @@ export default function Categories() {
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>
       ) : items.length === 0 ? (
-        <Empty title="Sin categorías" description="Creá la primera para empezar." action={
+        <Empty title="Sin categorías" description="Crea la primera para empezar." action={
           <button className="btn btn-primary" onClick={openNew}>+ Nueva categoría</button>
         } />
       ) : (
+        <>
+        <div className="order-toolbar">
+          <span>{selectedId ? 'Categoría seleccionada' : 'Selecciona una categoría para cambiar su posición'}</span>
+          <div className="order-toolbar-actions">
+            <button className="btn btn-sm" title="Subir" aria-label="Subir categoría" disabled={!selectedId || moving || items.findIndex((c) => c.id === selectedId) <= 0} onClick={() => moveSelected(-1)}><ChevronIcon direction="up" /></button>
+            <button className="btn btn-sm" title="Bajar" aria-label="Bajar categoría" disabled={!selectedId || moving || items.findIndex((c) => c.id === selectedId) === items.length - 1} onClick={() => moveSelected(1)}><ChevronIcon direction="down" /></button>
+          </div>
+        </div>
         <table className="data-table">
           <thead>
             <tr>
               <th>Nombre</th>
               <th>Slug</th>
-              <th>Orden</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {items.map((c) => (
-              <tr key={c.id}>
+              <tr key={c.id} className={selectedId === c.id ? 'row-selected' : ''} onClick={() => setSelectedId(c.id)}>
                 <td>{c.name}</td>
                 <td><code>{c.slug}</code></td>
-                <td>{c.display_order}</td>
                 <td>
                   {c.active
                     ? <span className="badge active">Activa</span>
                     : <span className="badge inactive">Inactiva</span>}
                 </td>
                 <td className="table-actions">
-                  <button className="btn btn-sm" onClick={() => openEdit(c)}>Editar</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => setDeleting(c)}>Eliminar</button>
+                  <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>Editar</button>
+                  <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleting(c); }}>Eliminar</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </>
       )}
 
       <Modal
@@ -179,12 +212,6 @@ export default function Categories() {
                         onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
             </div>
             <div className="form-row">
-              <div className="form-group">
-                <label>Orden</label>
-                <input className="input" type="number" min={0}
-                       value={editing.display_order}
-                       onChange={(e) => setEditing({ ...editing, display_order: e.target.value })} />
-              </div>
               <div className="form-group">
                 <label>Estado</label>
                 <select className="select" value={String(editing.active)}

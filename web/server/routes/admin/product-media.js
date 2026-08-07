@@ -33,15 +33,17 @@ import { protect, recordAudit, validators, validate, notFound, conflict } from '
 export async function listMedia(req, res) {
   const url = new URL(req.url, 'http://x');
   const productId = url.searchParams.get('product_id');
+  const variantId = url.searchParams.get('variant_id');
   const kind = url.searchParams.get('kind');
 
   const where = ['deleted_at IS NULL'];
   const params = [];
   if (productId) { params.push(Number(productId)); where.push(`product_id = $${params.length}`); }
+  if (variantId) { params.push(Number(variantId)); where.push(`variant_id = $${params.length}`); }
   if (kind)      { params.push(kind);                  where.push(`kind = $${params.length}`); }
 
   const { rows } = await query(
-    `SELECT id, product_id, kind, url, mime, size_bytes, width, height,
+    `SELECT id, product_id, variant_id, kind, url, mime, size_bytes, width, height,
             alt_text, display_order, created_at
        FROM product_media
        WHERE ${where.join(' AND ')}
@@ -52,6 +54,29 @@ export async function listMedia(req, res) {
 }
 
 export async function uploadMedia(req, res) {
+  if ((req.headers['content-type'] || '').includes('application/json')) {
+    const body = req.body || {};
+    if (body.kind !== 'video_embed' || typeof body.url !== 'string' || !/^https:\/\//i.test(body.url)) {
+      return json(res, 400, { ok: false, error: 'video_url_invalid' });
+    }
+    const productId = body.product_id ? Number(body.product_id) : null;
+    const variantId = body.variant_id ? Number(body.variant_id) : null;
+    if (!productId || !variantId) return json(res, 400, { ok: false, error: 'product_and_variant_required' });
+    const { rows: variant } = await query(
+      'SELECT id FROM product_variants WHERE id = $1 AND product_id = $2',
+      [variantId, productId],
+    );
+    if (variant.length === 0) return notFound(res);
+    const { rows } = await query(
+      `INSERT INTO product_media (product_id, variant_id, kind, url, mime, alt_text, display_order)
+       VALUES ($1, $2, 'video_embed', $3, '', $4, $5)
+       RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      [productId, variantId, body.url.trim(), body.alt_text ?? '', Number(body.display_order ?? 0)],
+    );
+    await recordAudit(req.user?.id, 'media.video_embed', req.ip, { id: rows[0].id, productId, variantId });
+    return json(res, 201, { ok: true, media: rows[0] });
+  }
+
   // multer procesa el multipart y guarda el archivo en req.file
   upload.single('file')(req, res, async (err) => {
     if (err) {
@@ -67,6 +92,7 @@ export async function uploadMedia(req, res) {
     // product_id puede no venir (huérfana, se asocia después)
     const body = req.body || {};
     const productId = body.product_id ? Number(body.product_id) : null;
+    const variantId = body.variant_id ? Number(body.variant_id) : null;
     if (productId !== null) {
       const { rows: p } = await query('SELECT id FROM products WHERE id = $1', [productId]);
       if (p.length === 0) {
@@ -75,12 +101,22 @@ export async function uploadMedia(req, res) {
         return notFound(res);
       }
     }
+    if (variantId !== null) {
+      const { rows: variant } = await query(
+        'SELECT id FROM product_variants WHERE id = $1 AND product_id = $2',
+        [variantId, productId],
+      );
+      if (variant.length === 0) {
+        await deleteUploadFile(url);
+        return notFound(res);
+      }
+    }
 
     const { rows } = await query(
-      `INSERT INTO product_media (product_id, kind, url, mime, size_bytes, alt_text, display_order)
-       VALUES ($1, 'image', $2, $3, $4, $5, $6)
-       RETURNING id, product_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
-      [productId, url, req.file.mimetype || '', size_bytes, body.alt_text ?? '', body.display_order ?? 0],
+      `INSERT INTO product_media (product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order)
+       VALUES ($1, $2, 'image', $3, $4, $5, $6, $7)
+       RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      [productId, variantId, url, req.file.mimetype || '', size_bytes, body.alt_text ?? '', body.display_order ?? 0],
     );
     await recordAudit(req.user?.id, 'media.upload', req.ip, { id: rows[0].id, productId });
     log.info('media uploaded', { id: rows[0].id, url, size: size_bytes, by: req.user?.email });
@@ -108,7 +144,7 @@ export async function updateMedia(req, res, id) {
 
   const { rows } = await query(
     `UPDATE product_media SET ${fields.join(', ')} WHERE id = $${i}
-      RETURNING id, product_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
     values,
   );
   await recordAudit(req.user?.id, 'media.update', req.ip, { id, fields: Object.keys(body) });

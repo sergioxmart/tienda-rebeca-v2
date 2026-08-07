@@ -67,6 +67,10 @@ export default function ProductPage() {
   const effectiveStock = matchedVariant?.stock ?? product?.total_stock ?? 0;
   const isAllSelected = attributes.length > 0 && Object.keys(selected).length === attributes.length;
   const canAdd = (attributes.length === 0 || isAllSelected) && effectiveStock > 0;
+  const activeMedia = matchedVariant?.media?.length ? matchedVariant.media : (product?.media || []);
+  const galleryImages = activeMedia.filter((item) => item.kind === 'image');
+  const image = galleryImages[0]?.url || product?.image_url || product?.thumb_url;
+  const variantDescription = matchedVariant?.description || product?.description;
 
   const handleAdd = () => {
     if (!canAdd || !product) return;
@@ -81,7 +85,7 @@ export default function ProductPage() {
       sku: matchedVariant?.sku ?? product.sku ?? null,
       attribute_summary: attributeSummary,
       unit_price: Number(effectivePrice),
-      image_url: product.image_url || product.thumb_url || null,
+      image_url: image || null,
       qty,
     });
     setAdded(true);
@@ -99,8 +103,6 @@ export default function ProductPage() {
   } />;
   if (!product) return null;
 
-  const image = product.image_url || product.thumb_url;
-
   return (
     <div>
       <p style={{ fontSize: 13, color: 'var(--color-muted)' }}>
@@ -111,7 +113,15 @@ export default function ProductPage() {
       </p>
 
       <div className="product-page">
-        <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+        <div className="product-gallery">
+          <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+          {galleryImages.length > 1 && <div className="gallery-strip">
+            {galleryImages.map((item) => <img key={item.id} src={item.url} alt={item.alt_text || product.name} />)}
+          </div>}
+          {activeMedia.some((item) => item.kind === 'video_embed') && <div className="gallery-video-links">
+            {activeMedia.filter((item) => item.kind === 'video_embed').map((item) => <a key={item.id} href={item.url} target="_blank" rel="noreferrer">▶ Ver video de esta variante</a>)}
+          </div>}
+        </div>
 
         <div>
           {product.brand && (
@@ -153,10 +163,10 @@ export default function ProductPage() {
             </button>
           </div>
 
-          {product.description && (
+          {variantDescription && (
             <div style={{ marginTop: 24 }}>
               <h3>Descripción</h3>
-              <p className="description">{product.description}</p>
+              <p className="description">{variantDescription}</p>
             </div>
           )}
         </div>

@@ -21,7 +21,7 @@ export async function listAttributes(req, res) {
   // Para cada atributo, traer los values activos.
   for (const a of attrs) {
     const { rows: values } = await query(
-      `SELECT id, value, display_order
+      `SELECT id, value, hex, display_order
          FROM attribute_values
          WHERE attribute_id = $1 AND active = TRUE
          ORDER BY display_order, value`,

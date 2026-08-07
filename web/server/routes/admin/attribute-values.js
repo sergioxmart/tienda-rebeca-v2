@@ -7,7 +7,7 @@
 // Endpoints:
 //   GET  /api/admin/attributes/:attributeId/values       → lista values del attribute
 //   POST /api/admin/attributes/:attributeId/values       → crea uno nuevo
-//   PATCH /api/admin/attribute-values/:id                → edita (value, display_order, active)
+//   PATCH /api/admin/attribute-values/:id                → edita (value, hex, active)
 //   DELETE /api/admin/attribute-values/:id               → borra
 //
 // Validación:
@@ -31,7 +31,7 @@ async function listValues(req, res, attributeId) {
   if (attr.length === 0) return notFound(res);
 
   const { rows } = await query(
-    `SELECT id, attribute_id, value, display_order, active,
+    `SELECT id, attribute_id, value, hex, display_order, active,
             created_at, updated_at
        FROM attribute_values
        WHERE attribute_id = $1
@@ -48,6 +48,7 @@ async function createValue(req, res, attributeId) {
   const p = req.body || {};
   if (!validate(res, p, [
     validators.requiredString(p.value, 'value', { max: 100 }),
+    p.hex !== undefined && p.hex !== null && (!/^#[0-9A-Fa-f]{6}$/.test(p.hex) ? 'hex inválido (usa #RRGGBB)' : null),
   ])) return;
   if (p.display_order !== undefined
       && !validate(res, p, [validators.int(p.display_order, 'display_order')])) {
@@ -56,10 +57,10 @@ async function createValue(req, res, attributeId) {
 
   try {
     const { rows } = await query(
-      `INSERT INTO attribute_values (attribute_id, value, display_order, active)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, attribute_id, value, display_order, active, created_at, updated_at`,
-      [attributeId, p.value.trim(), p.display_order ?? 0, p.active ?? true],
+      `INSERT INTO attribute_values (attribute_id, value, hex, display_order, active)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, attribute_id, value, hex, display_order, active, created_at, updated_at`,
+      [attributeId, p.value.trim(), p.hex || null, p.display_order ?? 0, p.active ?? true],
     );
     await recordAudit(req.user.id, 'attribute_value.create', req.ip, { id: rows[0].id, attributeId });
     log.info('attribute_value created', { id: rows[0].id, attributeId, by: req.user.email });
@@ -77,6 +78,7 @@ async function updateValue(req, res, id) {
   const p = req.body || {};
   if (!validate(res, p, [
     validators.optionalString(p.value, 'value', { max: 100 }),
+    p.hex !== undefined && p.hex !== null && (!/^#[0-9A-Fa-f]{6}$/.test(p.hex) ? 'hex inválido (usa #RRGGBB)' : null),
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),
     p.active !== undefined && validators.bool(p.active, 'active'),
   ])) return;
@@ -85,6 +87,7 @@ async function updateValue(req, res, id) {
   const values = [];
   let i = 1;
   if (p.value !== undefined)         { fields.push(`value = $${i++}`);          values.push(p.value.trim()); }
+  if (p.hex !== undefined)           { fields.push(`hex = $${i++}`);            values.push(p.hex || null); }
   if (p.display_order !== undefined) { fields.push(`display_order = $${i++}`);  values.push(p.display_order); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);         values.push(p.active); }
   if (fields.length === 0) {
@@ -96,7 +99,7 @@ async function updateValue(req, res, id) {
     const { rows } = await query(
       `UPDATE attribute_values SET ${fields.join(', ')}
         WHERE id = $${i}
-        RETURNING id, attribute_id, value, display_order, active, created_at, updated_at`,
+        RETURNING id, attribute_id, value, hex, display_order, active, created_at, updated_at`,
       values,
     );
     await recordAudit(req.user.id, 'attribute_value.update', req.ip, { id, fields: Object.keys(p) });

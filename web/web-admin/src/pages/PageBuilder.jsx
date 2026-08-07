@@ -45,6 +45,8 @@ const MODULE_SCHEMAS = {
       { key: 'cta_link', label: 'Link del botón', type: 'text',  placeholder: '/categoria/accesorios-telefono' },
       { key: 'secondary_cta_text', label: 'Texto del segundo enlace', type: 'text', defaultValue: 'Explorar catálogo' },
       { key: 'secondary_cta_link', label: 'Link del segundo enlace', type: 'text', defaultValue: '/categoria' },
+      { key: 'custom_code_enabled', label: 'Código Personalizado', type: 'checkbox', defaultValue: false },
+      { key: 'custom_code', label: 'HTML/CSS personalizado', type: 'custom_code', placeholder: 'Pega aquí la estructura HTML y CSS de tu Hero.' },
     ],
   },
   banner: {
@@ -91,7 +93,48 @@ const MODULE_SCHEMAS = {
       { key: 'limit', label: 'Cantidad máxima',      type: 'number', defaultValue: 8 },
     ],
   },
+  footer: {
+    label: 'Footer',
+    description: 'Pie de página global con información de contacto y categorías.',
+    icon: '🧾',
+    settings: [
+      { key: 'title', label: 'Título del Footer', type: 'text', placeholder: 'Usa el nombre de la tienda si queda vacío' },
+      { key: 'description', label: 'Descripción', type: 'textarea', placeholder: 'Mensaje breve de la tienda' },
+      { key: 'show_categories', label: 'Mostrar categorías', type: 'checkbox', defaultValue: true },
+      { key: 'show_contact', label: 'Mostrar contacto', type: 'checkbox', defaultValue: true },
+      { key: 'copyright', label: 'Texto de copyright', type: 'text', placeholder: 'Se genera automáticamente si queda vacío' },
+    ],
+  },
 };
+
+const HERO_TEMPLATE = `<!-- Hero personalizado de TechStore -->
+<style>
+  .techstore-custom-hero {
+    padding: 64px 8%;
+    border-radius: 24px;
+    color: #fff;
+    background: linear-gradient(135deg, #081d34, #174e70);
+  }
+  .techstore-custom-hero h1 { margin: 0 0 12px; font-size: clamp(36px, 6vw, 72px); }
+  .techstore-custom-hero p { max-width: 560px; line-height: 1.6; }
+</style>
+
+<section class="techstore-custom-hero">
+  <span>Tu etiqueta superior</span>
+  <h1>Tu título personalizado</h1>
+  <p>Escribe aquí el mensaje principal de tu Hero.</p>
+  <a href="/categoria" class="btn btn-accent">Ver catálogo</a>
+</section>`;
+
+function downloadHeroTemplate() {
+  const blob = new Blob([HERO_TEMPLATE], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'techstore-hero-personalizado.html';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 const EMPTY_NEW = { type: 'hero', settings: {}, active: true };
 const NAV_DEFAULTS = {
@@ -129,6 +172,7 @@ function defaultSettingsForType(type) {
   for (const f of schema.settings) {
     if (f.defaultValue !== undefined) out[f.key] = f.defaultValue;
     else if (f.type === 'number') out[f.key] = 0;
+    else if (f.type === 'checkbox') out[f.key] = false;
     else out[f.key] = '';
   }
   return out;
@@ -304,6 +348,7 @@ export default function PageBuilder() {
           if (merged[f.key] === undefined) {
             if (f.defaultValue !== undefined) merged[f.key] = f.defaultValue;
             else if (f.type === 'number') merged[f.key] = 0;
+            else if (f.type === 'checkbox') merged[f.key] = false;
             else merged[f.key] = '';
           }
         }
@@ -349,7 +394,7 @@ export default function PageBuilder() {
       for (const f of (schema?.settings || [])) {
         const raw = editing.settings[f.key];
         if (raw === '' || raw === undefined || raw === null) continue;
-        settingsOut[f.key] = f.type === 'number' ? Number(raw) : raw;
+        settingsOut[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? Boolean(raw) : raw;
       }
       const nextModule = { id: editing.id || `draft-${Date.now()}`, type: editing.type, settings: settingsOut, active: editing.active };
       const nextModules = editing.mode === 'new'
@@ -520,8 +565,30 @@ export default function PageBuilder() {
               </div>
             </div>
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '12px 0' }} />
-            {schema.settings.map((f) => (
-              <div className="form-group" key={f.key}>
+            {schema.settings.map((f) => {
+              const heroCustomEnabled = editing.type === 'hero' && Boolean(editing.settings.custom_code_enabled);
+              if (editing.type === 'hero' && heroCustomEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
+              if (f.type === 'custom_code' && !heroCustomEnabled) return null;
+              if (f.type === 'checkbox') {
+                return <label className="builder-checkbox-field" key={f.key}>
+                  <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
+                  <span>{f.label}</span>
+                </label>;
+              }
+              if (f.type === 'custom_code') {
+                return <div className="form-group builder-custom-code-editor" key={f.key}>
+                  <label htmlFor="builder-hero-custom-code">{f.label}</label>
+                  <textarea id="builder-hero-custom-code" className="textarea" rows={16}
+                            value={editing.settings[f.key] ?? ''}
+                            placeholder={f.placeholder || ''}
+                            onChange={(e) => setSetting(f.key, e.target.value)} />
+                  <div className="builder-custom-code-help">
+                    <span>Usa HTML y CSS. Por seguridad, las etiquetas <code>&lt;script&gt;</code> no se ejecutan.</span>
+                    <button className="btn btn-sm" type="button" onClick={downloadHeroTemplate}>Descargar plantilla</button>
+                  </div>
+                </div>;
+              }
+              return <div className="form-group" key={f.key}>
                 <label>{f.label}</label>
                 {f.type === 'textarea' ? (
                   <textarea className="textarea"
@@ -543,8 +610,8 @@ export default function PageBuilder() {
                          placeholder={f.placeholder || ''}
                          onChange={(e) => setSetting(f.key, e.target.value)} />
                 )}
-              </div>
-            ))}
+              </div>;
+            })}
           </form> : <LiveStorePreview modules={[editing]} navSettings={navSettings} title="Vista previa real del módulo" />}
           </>
         )}

@@ -281,13 +281,16 @@ bumpearse en el mismo commit que el cambio.
 ## Estado actual del proyecto (a agosto 2026)
 
 - ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ 17 migrations de TechStore (001_categories, 002_attributes,
+- ✅ 24 migrations de TechStore (001_categories, 002_attributes,
   003_products, 004_variants, 005_admin_auth, 006_orders,
   007_payments, 008_site_config, 009_auth_admin_extras,
   010_page_modules, 011_themes, 012_password_recovery,
   013_variant_media_colors, 014_inventory_movements,
   015_prices_without_decimals, 016_media_variant_links,
-  017_fix_product_attributes_trigger).
+  017_fix_product_attributes_trigger, 018_preserve_order_history,
+  019_builder_drafts, 020_media_attribute_categories,
+  021_admin_theme_colors, 022_admin_background_images,
+  023_login_background_crop, 024_footer_builder_module).
 - ✅ Backend admin completo: 8 routers con RBAC + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.
 - ✅ 25 tests verdes.

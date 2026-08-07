@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
-import { ADMIN_THEME_DEFAULTS, ADMIN_THEME_FIELDS, applyAdminTheme } from '../adminTheme.js';
+import { ADMIN_BACKGROUND_DEFAULTS, ADMIN_THEME_DEFAULTS, ADMIN_THEME_FIELDS, applyAdminTheme } from '../adminTheme.js';
 
 const KNOWN_KEYS = [
   { key: 'site_name',          label: 'Nombre de la tienda',     type: 'text',     placeholder: 'TechStore Colombia' },
@@ -44,6 +44,76 @@ function ColorField({ id, label, value, onChange }) {
   );
 }
 
+function BackgroundCropControls({ imageUrl, positionX, positionY, zoom, onChange }) {
+  return (
+    <div className="admin-background-preview-wrap">
+      <div className="admin-background-preview" aria-label="Vista previa del encuadre">
+        <img
+          src={imageUrl}
+          alt="Vista previa del fondo"
+          style={{
+            objectPosition: `${positionX}% ${positionY}%`,
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: `${positionX}% ${positionY}%`,
+          }}
+        />
+        <span>Vista previa</span>
+      </div>
+      <div className="admin-background-controls">
+        <label>Zoom <strong>{zoom}%</strong><input type="range" min="100" max="220" step="1" value={zoom} onChange={(e) => onChange('zoom', Number(e.target.value))} /></label>
+        <label>Posición horizontal <strong>{positionX}%</strong><input type="range" min="0" max="100" step="1" value={positionX} onChange={(e) => onChange('positionX', Number(e.target.value))} /></label>
+        <label>Posición vertical <strong>{positionY}%</strong><input type="range" min="0" max="100" step="1" value={positionY} onChange={(e) => onChange('positionY', Number(e.target.value))} /></label>
+      </div>
+    </div>
+  );
+}
+
+function AdminBackgroundEditor({ prefix, label, description, config, setKey, onUpload, onDelete, uploading }) {
+  const modeKey = `${prefix}_bg_mode`;
+  const imageKey = `${prefix}_bg_image_url`;
+  const xKey = `${prefix}_bg_position_x`;
+  const yKey = `${prefix}_bg_position_y`;
+  const zoomKey = `${prefix}_bg_zoom`;
+  const imageUrl = config[imageKey];
+  const zoom = Number(config[zoomKey] || 100);
+  const positionX = Number(config[xKey] ?? 50);
+  const positionY = Number(config[yKey] ?? 50);
+
+  return (
+    <div className="admin-background-editor">
+      <div className="config-card-heading">
+        <div><h3>{label}</h3><p>{description}</p></div>
+        <span className="config-card-icon">▧</span>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor={modeKey}>Tipo de fondo</label>
+          <select id={modeKey} className="select" value={config[modeKey] || 'solid'} onChange={(e) => setKey(modeKey, e.target.value)}>
+            <option value="solid">Color sólido</option>
+            <option value="image">Imagen</option>
+          </select>
+        </div>
+        <ColorField id={`${prefix}_color`} label="Color base" value={String(config[`${prefix}_bg`] || ADMIN_THEME_DEFAULTS[`${prefix}_bg`])} onChange={(value) => setKey(`${prefix}_bg`, value)} />
+      </div>
+      <div className="background-upload-row">
+        <input id={`${prefix}_upload`} type="file" accept=".png,.jpg,.jpeg,.webp,.avif,image/png,image/jpeg,image/webp,image/avif" style={{ display: 'none' }} onChange={(e) => onUpload(e, prefix)} />
+        <label className="btn" htmlFor={`${prefix}_upload`}>
+          {uploading ? <span className="spinner" /> : imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
+        </label>
+        {imageUrl && <button className="btn btn-danger" type="button" onClick={() => onDelete(prefix)}>Quitar imagen</button>}
+        <span className="help">La imagen se guarda al subirla; el encuadre se guarda con “Guardar cambios”.</span>
+      </div>
+      {imageUrl && <BackgroundCropControls
+        imageUrl={imageUrl}
+        positionX={positionX}
+        positionY={positionY}
+        zoom={zoom}
+        onChange={(key, value) => setKey(key === 'zoom' ? zoomKey : key === 'positionX' ? xKey : yKey, value)}
+      />}
+    </div>
+  );
+}
+
 export default function SiteConfig() {
   const toast = useToast();
   const fileRef = useRef(null);
@@ -53,6 +123,7 @@ export default function SiteConfig() {
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [uploadingAdminBackground, setUploadingAdminBackground] = useState(null);
   const [logoVersion, setLogoVersion] = useState(() => Date.now());
 
   useEffect(() => {
@@ -75,7 +146,7 @@ export default function SiteConfig() {
 
   const setKey = (k, v) => setConfig((cur) => {
     const next = { ...cur, [k]: v };
-    if (ADMIN_THEME_DEFAULTS[k]) applyAdminTheme(next);
+    if (ADMIN_THEME_DEFAULTS[k] || ADMIN_BACKGROUND_DEFAULTS[k]) applyAdminTheme(next);
     return next;
   });
 
@@ -182,6 +253,51 @@ export default function SiteConfig() {
     }
   };
 
+  const handleAdminBackgroundUpload = async (e, prefix) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/avif']);
+    if (!allowedTypes.has(file.type)) {
+      toast.error('Usa una imagen PNG, JPG, WebP o AVIF');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('La imagen no puede pesar más de 8 MB');
+      return;
+    }
+    setUploadingAdminBackground(prefix);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const data = await api.upload(`/api/admin/site-config/${prefix === 'admin_sidebar' ? 'admin-sidebar' : 'admin-main'}-background`, form);
+      setConfig((cur) => {
+        const next = { ...cur, [`${prefix}_bg_image_url`]: data.image_url, [`${prefix}_bg_mode`]: 'image' };
+        applyAdminTheme(next);
+        return next;
+      });
+      toast.success('Imagen de fondo cargada');
+    } catch (err) {
+      toast.error('No se pudo subir la imagen', err.message);
+    } finally {
+      setUploadingAdminBackground(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleAdminBackgroundDelete = async (prefix) => {
+    try {
+      await api.delete(`/api/admin/site-config/${prefix === 'admin_sidebar' ? 'admin-sidebar' : 'admin-main'}-background`);
+      setConfig((cur) => {
+        const next = { ...cur, [`${prefix}_bg_image_url`]: null, [`${prefix}_bg_mode`]: 'solid' };
+        applyAdminTheme(next);
+        return next;
+      });
+      toast.success('Imagen de fondo eliminada');
+    } catch (err) {
+      toast.error('No se pudo eliminar la imagen', err.message);
+    }
+  };
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
   const logoSrc = config.logo_url
@@ -243,6 +359,39 @@ export default function SiteConfig() {
           {config.admin_login_bg_image_url && <button className="btn btn-danger" type="button" onClick={handleBackgroundDelete}>Quitar imagen</button>}
           {config.admin_login_bg_image_url && <span className="help">Imagen cargada. Se usa cuando el tipo es “Imagen con capa de color”.</span>}
         </div>
+        {config.admin_login_bg_image_url && <BackgroundCropControls
+          imageUrl={config.admin_login_bg_image_url}
+          positionX={Number(config.admin_login_bg_position_x ?? 50)}
+          positionY={Number(config.admin_login_bg_position_y ?? 50)}
+          zoom={Number(config.admin_login_bg_zoom ?? 100)}
+          onChange={(key, value) => setKey(`admin_login_bg_${key === 'zoom' ? 'zoom' : key === 'positionX' ? 'position_x' : 'position_y'}`, value)}
+        />}
+      </div>
+
+      <div className="config-card">
+        <AdminBackgroundEditor
+          prefix="admin_sidebar"
+          label="Fondo de la barra lateral"
+          description="Usa un color o una imagen con encuadre ajustable para el menú lateral."
+          config={config}
+          setKey={setKey}
+          onUpload={handleAdminBackgroundUpload}
+          onDelete={handleAdminBackgroundDelete}
+          uploading={uploadingAdminBackground === 'admin_sidebar'}
+        />
+      </div>
+
+      <div className="config-card">
+        <AdminBackgroundEditor
+          prefix="admin_main"
+          label="Fondo principal del admin"
+          description="Personaliza el área detrás de los contenedores de contenido."
+          config={config}
+          setKey={setKey}
+          onUpload={handleAdminBackgroundUpload}
+          onDelete={handleAdminBackgroundDelete}
+          uploading={uploadingAdminBackground === 'admin_main'}
+        />
       </div>
 
       {/* Logo */}

@@ -58,6 +58,9 @@ NNN_descripcion_corta.sql
 | 019 | `019_builder_drafts.sql` | Estado borrador aislado del Builder |
 | 020 | `020_media_attribute_categories.sql` | Categorías para multimedia y atributos |
 | 021 | `021_admin_theme_colors.sql` | Defaults de colores del panel administrativo |
+| 022 | `022_admin_background_images.sql` | Fondos con imagen para Sidebar y área principal del admin |
+| 023 | `023_login_background_crop.sql` | Encuadre de la imagen del fondo de login |
+| 024 | `024_footer_builder_module.sql` | Convierte el Footer global en un módulo configurable del Builder |
 
 ## Lo que falta decidir
 

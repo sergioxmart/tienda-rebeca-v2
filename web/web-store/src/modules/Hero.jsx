@@ -18,6 +18,8 @@ export default function Hero({ settings = {} }) {
     visual_mode = 'abstract',
     product_slug,
     visual_image_url,
+    custom_code_enabled,
+    custom_code,
   } = settings;
   const [product, setProduct] = useState(null);
 
@@ -43,6 +45,11 @@ export default function Hero({ settings = {} }) {
   const style = image_url
     ? { backgroundImage: `linear-gradient(rgba(15,42,71,0.55), rgba(15,42,71,0.7)), url(${image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : undefined;
+  if (custom_code_enabled && custom_code) {
+    // El Hero personalizado acepta HTML/CSS, pero nunca ejecuta JavaScript.
+    const safeMarkup = String(custom_code).replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+    return <div className="hero-custom-code" dangerouslySetInnerHTML={{ __html: safeMarkup }} />;
+  }
   return (
     <section className="hero" style={style}>
       <div className="hero-glow hero-glow-one" />

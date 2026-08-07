@@ -28,6 +28,19 @@ function normalizeMediaUrl(value) {
     : value;
 }
 
+const ADMIN_BACKGROUND_TARGETS = {
+  sidebar: {
+    imageKey: 'admin_sidebar_bg_image_url',
+    modeKey: 'admin_sidebar_bg_mode',
+    filename: 'admin-sidebar-background',
+  },
+  main: {
+    imageKey: 'admin_main_bg_image_url',
+    modeKey: 'admin_main_bg_mode',
+    filename: 'admin-main-background',
+  },
+};
+
 const ADMIN_COLOR_KEYS = [
   'admin_sidebar_bg',
   'admin_active_color',
@@ -36,6 +49,11 @@ const ADMIN_COLOR_KEYS = [
   'admin_text_color',
 ];
 const ADMIN_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+const ADMIN_BACKGROUND_PREFIXES = [
+  { prefix: 'admin_sidebar', modes: ['solid', 'image'] },
+  { prefix: 'admin_main', modes: ['solid', 'image'] },
+  { prefix: 'admin_login', modes: ['solid', 'gradient', 'image'] },
+];
 
 // --- Handlers -------------------------------------------------------------
 
@@ -46,7 +64,7 @@ export async function getSiteConfig(req, res) {
   // Devolvemos como objeto { key: value } en vez de array, más cómodo para el cliente.
   const out = {};
   for (const r of rows) {
-    out[r.key] = ['logo_url', 'admin_login_bg_image_url'].includes(r.key)
+    out[r.key] = ['logo_url', 'admin_login_bg_image_url', 'admin_sidebar_bg_image_url', 'admin_main_bg_image_url'].includes(r.key)
       ? normalizeMediaUrl(r.value)
       : r.value;
   }
@@ -68,6 +86,21 @@ export async function updateSiteConfig(req, res) {
   for (const key of ADMIN_COLOR_KEYS) {
     if (p[key] !== undefined && (typeof p[key] !== 'string' || !ADMIN_COLOR_RE.test(p[key]))) {
       return json(res, 400, { ok: false, error: 'invalid_admin_color', key });
+    }
+  }
+  for (const { prefix, modes } of ADMIN_BACKGROUND_PREFIXES) {
+    const modeKey = `${prefix}_bg_mode`;
+    if (p[modeKey] !== undefined && !modes.includes(p[modeKey])) {
+      return json(res, 400, { ok: false, error: 'invalid_admin_background_mode', key: modeKey });
+    }
+    for (const key of [`${prefix}_bg_position_x`, `${prefix}_bg_position_y`]) {
+      if (p[key] !== undefined && (!Number.isFinite(Number(p[key])) || Number(p[key]) < 0 || Number(p[key]) > 100)) {
+        return json(res, 400, { ok: false, error: 'invalid_admin_background_position', key });
+      }
+    }
+    const zoomKey = `${prefix}_bg_zoom`;
+    if (p[zoomKey] !== undefined && (!Number.isFinite(Number(p[zoomKey])) || Number(p[zoomKey]) < 100 || Number(p[zoomKey]) > 220)) {
+      return json(res, 400, { ok: false, error: 'invalid_admin_background_zoom', key: zoomKey });
     }
   }
   if (p.admin_login_bg !== undefined &&
@@ -207,6 +240,67 @@ export async function deleteLoginBackground(req, res) {
   return json(res, 200, { ok: true });
 }
 
+export function uploadAdminBackground(req, res, scope) {
+  const target = ADMIN_BACKGROUND_TARGETS[scope];
+  if (!target) return json(res, 404, { ok: false, error: 'not_found' });
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      log.warn('admin background upload error', { scope, msg: err.message });
+      return json(res, 400, { ok: false, error: 'upload_failed', message: err.message });
+    }
+    if (!req.file) return json(res, 400, { ok: false, error: 'file_required' });
+
+    const { rows: old } = await query(`SELECT value FROM site_config WHERE key = $1`, [target.imageKey]);
+    if (old[0]?.value && typeof old[0].value === 'string') {
+      try { await deleteUploadFile(old[0].value); } catch { /* ignore */ }
+    }
+
+    const { url } = await writeUploadFile(req.file, { subdir: 'site', filename: target.filename });
+    await tx(async (client) => {
+      await client.query(
+        `INSERT INTO site_config (key, value, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [target.imageKey, JSON.stringify(url)],
+      );
+      await client.query(
+        `INSERT INTO site_config (key, value, updated_at)
+         VALUES ($1, '"image"'::jsonb, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [target.modeKey],
+      );
+    });
+    await recordAudit(req.user?.id, `site_config.${scope}_background_upload`, req.ip, { url });
+    return json(res, 200, { ok: true, image_url: url, mode: 'image' });
+  });
+}
+
+export async function deleteAdminBackground(req, res, scope) {
+  const target = ADMIN_BACKGROUND_TARGETS[scope];
+  if (!target) return json(res, 404, { ok: false, error: 'not_found' });
+  const { rows } = await query(`SELECT value FROM site_config WHERE key = $1`, [target.imageKey]);
+  const current = rows[0]?.value;
+  if (current && typeof current === 'string') {
+    try { await deleteUploadFile(current); } catch { /* ignore */ }
+  }
+  await tx(async (client) => {
+    await client.query(
+      `INSERT INTO site_config (key, value, updated_at)
+       VALUES ($1, 'null'::jsonb, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = 'null'::jsonb, updated_at = NOW()`,
+      [target.imageKey],
+    );
+    await client.query(
+      `INSERT INTO site_config (key, value, updated_at)
+       VALUES ($1, '"solid"'::jsonb, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [target.modeKey],
+    );
+  });
+  await recordAudit(req.user?.id, `site_config.${scope}_background_delete`, req.ip, {});
+  return json(res, 200, { ok: true });
+}
+
 // --- Router ---------------------------------------------------------------
 
 const routes = [
@@ -216,6 +310,8 @@ const routes = [
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: deleteLogo,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: uploadLoginBackground, section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: deleteLoginBackground, section: 'site_config' },
+  { method: 'POST',   pattern: /^\/api\/admin\/site-config\/admin-(sidebar|main)-background\/?$/, handler: uploadAdminBackground, section: 'site_config' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/admin-(sidebar|main)-background\/?$/, handler: deleteAdminBackground, section: 'site_config' },
 ];
 
 export async function tryHandleSiteConfig(req, res) {

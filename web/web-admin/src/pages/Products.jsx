@@ -115,14 +115,14 @@ export default function Products() {
           <button className="btn btn-primary" onClick={() => navigate('/products/new')}>+ Nuevo producto</button>
         } />
       ) : (
-        <table className="data-table">
+        <table className="data-table products-table">
           <thead>
             <tr>
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio base</th>
               <th>Estado</th>
-              <th style={{ textAlign: 'right' }}>Acciones</th>
+              <th className="table-actions-heading">Acciones</th>
             </tr>
           </thead>
           <tbody>

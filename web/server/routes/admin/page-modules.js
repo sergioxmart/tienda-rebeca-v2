@@ -31,6 +31,7 @@ const MODULE_TYPES = new Set([
   'categories_grid',
   'featured_products',
   'recent_products',
+  'footer',
 ]);
 
 export async function listModules(req, res) {

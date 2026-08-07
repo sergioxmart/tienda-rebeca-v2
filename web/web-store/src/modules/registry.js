@@ -14,6 +14,7 @@ import Categories from './Categories.jsx';
 import CategoriesGrid from './CategoriesGrid.jsx';
 import FeaturedProducts from './FeaturedProducts.jsx';
 import RecentProducts from './RecentProducts.jsx';
+import Footer from '../components/Footer.jsx';
 
 export const MODULE_RENDERERS = {
   hero:              Hero,
@@ -22,4 +23,5 @@ export const MODULE_RENDERERS = {
   categories_grid:   CategoriesGrid,
   featured_products: FeaturedProducts,
   recent_products:   RecentProducts,
+  footer:            Footer,
 };

@@ -159,11 +159,15 @@ de una transacción y crean un movimiento auditable.
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/site-config` | — | `site_config` |
-| PATCH | `/api/admin/site-config` | `{ key: value, ... }` (incluye `admin_sidebar_bg`, `admin_active_color`, `admin_main_bg`, `admin_surface_bg`, `admin_text_color`) | `site_config` |
+| PATCH | `/api/admin/site-config` | `{ key: value, ... }` (incluye colores admin y posiciones/zoom `admin_*_bg_position_x`, `admin_*_bg_position_y`, `admin_*_bg_zoom`) | `site_config` |
 | POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
 | POST | `/api/admin/site-config/login-background` | `multipart/form-data` con `file` | Sube o reemplaza la imagen de fondo del login. |
 | DELETE | `/api/admin/site-config/login-background` | — | Elimina la imagen de fondo del login. |
+| POST | `/api/admin/site-config/admin-sidebar-background` | `multipart/form-data` con `file` | Sube o reemplaza el fondo del Sidebar del admin. |
+| DELETE | `/api/admin/site-config/admin-sidebar-background` | — | Elimina la imagen del Sidebar y vuelve a color. |
+| POST | `/api/admin/site-config/admin-main-background` | `multipart/form-data` con `file` | Sube o reemplaza el fondo principal del admin. |
+| DELETE | `/api/admin/site-config/admin-main-background` | — | Elimina la imagen principal y vuelve a color. |
 
 ### Temas
 

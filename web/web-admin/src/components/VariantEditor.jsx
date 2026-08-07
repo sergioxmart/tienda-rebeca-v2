@@ -331,6 +331,7 @@ export default function VariantEditor({ productId, variants, attributes, categor
             <button className="btn btn-sm" aria-label="Bajar variante" title="Bajar" disabled={!selectedId || moving || variants.findIndex((v) => v.id === selectedId) === variants.length - 1} onClick={() => moveSelected(1)}><ChevronIcon direction="down" /></button>
           </div>
         </div>
+        <div className="table-wrap variant-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -368,6 +369,7 @@ export default function VariantEditor({ productId, variants, attributes, categor
             ))}
           </tbody>
         </table>
+        </div>
         </>
       )}
 

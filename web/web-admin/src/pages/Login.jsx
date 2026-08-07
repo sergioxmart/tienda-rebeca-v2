@@ -36,19 +36,25 @@ export default function Login() {
   const [bgSecondary, setBgSecondary] = useState('#FF6B35');
   const [bgMode, setBgMode] = useState('solid');
   const [bgImage, setBgImage] = useState(null);
+  const [bgPositionX, setBgPositionX] = useState(50);
+  const [bgPositionY, setBgPositionY] = useState(50);
+  const [bgZoom, setBgZoom] = useState(100);
   const [storeName, setStoreName] = useState('TechStore');
   const [logoUrl, setLogoUrl] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/public/site-config');
+        const res = await fetch('/api/public/site-config?login_theme=1', { cache: 'no-store' });
         const data = await res.json();
         const c = data?.config || {};
         if (typeof c.admin_login_bg === 'string' && COLOR_RE.test(c.admin_login_bg)) setBg(c.admin_login_bg);
         if (typeof c.admin_login_bg_secondary === 'string' && COLOR_RE.test(c.admin_login_bg_secondary)) setBgSecondary(c.admin_login_bg_secondary);
         if (['solid', 'gradient', 'image'].includes(c.admin_login_bg_mode)) setBgMode(c.admin_login_bg_mode);
         if (typeof c.admin_login_bg_image_url === 'string' && c.admin_login_bg_image_url) setBgImage(c.admin_login_bg_image_url);
+        if (Number.isFinite(Number(c.admin_login_bg_position_x))) setBgPositionX(Math.min(100, Math.max(0, Number(c.admin_login_bg_position_x))));
+        if (Number.isFinite(Number(c.admin_login_bg_position_y))) setBgPositionY(Math.min(100, Math.max(0, Number(c.admin_login_bg_position_y))));
+        if (Number.isFinite(Number(c.admin_login_bg_zoom))) setBgZoom(Math.min(220, Math.max(100, Number(c.admin_login_bg_zoom))));
         if (typeof c.site_name === 'string' && c.site_name.trim()) {
           setStoreName(c.site_name);
           document.title = `${c.site_name} · Admin`;
@@ -69,15 +75,16 @@ export default function Login() {
       return {
         backgroundColor: bg,
         backgroundImage: `linear-gradient(135deg, ${bg}dd, ${bgSecondary}aa), url("${bgImage}")`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundSize: `cover, ${bgZoom}% auto`,
+        backgroundPosition: `center, ${bgPositionX}% ${bgPositionY}%`,
+        backgroundRepeat: 'no-repeat',
       };
     }
     if (bgMode === 'gradient') {
       return { background: `linear-gradient(135deg, ${bg} 0%, ${bgSecondary} 100%)` };
     }
     return { background: bg };
-  }, [bg, bgMode, bgImage, bgSecondary]);
+  }, [bg, bgMode, bgImage, bgSecondary, bgPositionX, bgPositionY, bgZoom]);
 
   if (status === 'auth') {
     return <Navigate to={location.state?.from?.pathname || '/'} replace />;

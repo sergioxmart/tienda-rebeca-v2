@@ -6,26 +6,12 @@
 // Cada tipo tiene su renderer en src/modules/registry.js. Si el admin
 // agrega un type nuevo, hay que sumarlo al registry Y al backend.
 
-import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import React from 'react';
 import { MODULE_RENDERERS } from '../modules/registry.js';
-import { useBuilderPreview } from '../preview/BuilderPreviewContext.jsx';
+import { usePageModules } from '../modules/PageModulesContext.jsx';
 
 export default function Home() {
-  const preview = useBuilderPreview();
-  const [modules, setModules] = useState(null);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (preview.active) {
-      setModules(preview.draft?.modules || null);
-      setError(null);
-      return undefined;
-    }
-    api.pageModules()
-      .then((d) => setModules(d.modules || []))
-      .catch((e) => setError(e.message));
-  }, [preview.active, preview.draft]);
+  const { modules, error } = usePageModules();
 
   if (error) {
     return (
@@ -50,6 +36,9 @@ export default function Home() {
   return (
     <div>
       {modules.map((m) => {
+        // El Footer es global y lo renderiza App para todas las rutas. Su
+        // configuración proviene del módulo, evitando duplicarlo en Home.
+        if (m.type === 'footer') return null;
         const Renderer = MODULE_RENDERERS[m.type];
         if (!Renderer) {
           // Tipo desconocido (probablemente agregado al backend pero no

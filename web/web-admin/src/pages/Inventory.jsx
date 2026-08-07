@@ -107,6 +107,22 @@ export default function Inventory() {
 
   const selectedRow = variants.find((item) => item.variant_id === selectedId);
   const canWrite = user?.role === 'admin' || user?.role === 'operator';
+  const [collapsedProducts, setCollapsedProducts] = useState(() => new Set());
+  const groupedVariants = useMemo(() => {
+    const groups = new Map();
+    for (const variant of variants) {
+      if (!groups.has(variant.product_id)) {
+        groups.set(variant.product_id, {
+          product_id: variant.product_id,
+          product_name: variant.product_name,
+          product_slug: variant.product_slug,
+          variants: [],
+        });
+      }
+      groups.get(variant.product_id).variants.push(variant);
+    }
+    return [...groups.values()];
+  }, [variants]);
   const summary = useMemo(() => {
     const totalUnits = variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
     return {
@@ -117,6 +133,15 @@ export default function Inventory() {
       empty: variants.filter((variant) => Number(variant.stock) <= 0).length,
     };
   }, [variants]);
+
+  const toggleProduct = (productId) => {
+    setCollapsedProducts((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
 
   const hasFilters = productId || q || lowStock !== '';
 
@@ -158,16 +183,27 @@ export default function Inventory() {
               <div className="inventory-table-heading"><div><strong>Variantes</strong><span>Selecciona una fila para ver el historial y registrar movimientos.</span></div><span className="inventory-count">{variants.length} resultados</span></div>
               <div className="inventory-table-wrap"><table className="data-table inventory-table">
                 <thead><tr><th>Producto</th><th>Variante</th><th>SKU</th><th style={{ textAlign: 'right' }}>Stock actual</th><th aria-label="Abrir detalle" /></tr></thead>
-                <tbody>{variants.map((variant) => {
-                  const stock = Number(variant.stock || 0);
-                  const stockLabel = stock <= 0 ? 'Agotado' : stock <= 5 ? 'Stock bajo' : 'Disponible';
-                  return <tr key={variant.variant_id} className={selectedId === variant.variant_id ? 'row-selected' : ''} onClick={() => selectVariant(variant.variant_id)}>
-                    <td><div className="inventory-product-cell"><span className="inventory-avatar">{initials(variant.product_name)}</span><div><strong>{variant.product_name}</strong><small>Producto #{variant.product_id}</small></div></div></td>
-                    <td><span className="inventory-combination">{variant.combination || 'Variante general'}</span></td>
-                    <td><code>{variant.sku || '—'}</code></td>
-                    <td><div className="inventory-stock-cell"><strong className={`inventory-stock ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : ''}`}>{stock}</strong><span className={`inventory-status ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : 'is-ok'}`}>{stockLabel}</span></div></td>
-                    <td className="inventory-row-arrow">›</td>
-                  </tr>;
+                <tbody>{groupedVariants.map((group) => {
+                  const collapsed = collapsedProducts.has(group.product_id);
+                  const productStock = group.variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+                  return <React.Fragment key={group.product_id}>
+                    <tr className="inventory-group-row" onClick={() => toggleProduct(group.product_id)}>
+                      <td colSpan={3}><div className="inventory-group-cell"><span className="inventory-group-chevron">{collapsed ? '▸' : '▾'}</span><span className="inventory-avatar">{initials(group.product_name)}</span><div><strong>{group.product_name}</strong><small>Producto #{group.product_id} · {group.variants.length} variante{group.variants.length === 1 ? '' : 's'}</small></div></div></td>
+                      <td><div className="inventory-group-total"><strong>{productStock}</strong><small>unidades</small></div></td>
+                      <td />
+                    </tr>
+                    {!collapsed && group.variants.map((variant) => {
+                      const stock = Number(variant.stock || 0);
+                      const stockLabel = stock <= 0 ? 'Agotado' : stock <= 5 ? 'Stock bajo' : 'Disponible';
+                      return <tr key={variant.variant_id} className={`inventory-variant-row ${selectedId === variant.variant_id ? 'row-selected' : ''}`} onClick={() => selectVariant(variant.variant_id)}>
+                        <td><span className="inventory-variant-label">Variante</span></td>
+                        <td><span className="inventory-combination">{variant.combination || 'Variante general'}</span></td>
+                        <td><code>{variant.sku || '—'}</code></td>
+                        <td><div className="inventory-stock-cell"><strong className={`inventory-stock ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : ''}`}>{stock}</strong><span className={`inventory-status ${stock === 0 ? 'is-empty' : stock <= 5 ? 'is-low' : 'is-ok'}`}>{stockLabel}</span></div></td>
+                        <td className="inventory-row-arrow">›</td>
+                      </tr>;
+                    })}
+                  </React.Fragment>;
                 })}</tbody>
               </table></div>
             </section>

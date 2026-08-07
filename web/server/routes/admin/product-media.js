@@ -12,6 +12,7 @@
 //   GET    /api/admin/media                     → lista con ?product_id=&kind=
 //   POST   /api/admin/media                     → upload (multipart)
 //   PATCH  /api/admin/media/:id                 → edita alt_text/display_order
+//   POST   /api/admin/media/:id/attach          → reutiliza un archivo en una variante
 //   DELETE /api/admin/media/:id                 → soft-delete (deleted_at=NOW())
 //   POST   /api/admin/media/cleanup             → borra huérfanas >30d
 //
@@ -39,7 +40,13 @@ export async function listMedia(req, res) {
   const where = ['deleted_at IS NULL'];
   const params = [];
   if (productId) { params.push(Number(productId)); where.push(`product_id = $${params.length}`); }
-  if (variantId) { params.push(Number(variantId)); where.push(`variant_id = $${params.length}`); }
+  if (variantId) {
+    params.push(Number(variantId));
+    where.push(`(product_media.variant_id = $${params.length} OR EXISTS (
+      SELECT 1 FROM product_media_variants pmv
+       WHERE pmv.media_id = product_media.id AND pmv.variant_id = $${params.length}
+    ))`);
+  }
   if (kind)      { params.push(kind);                  where.push(`kind = $${params.length}`); }
 
   const { rows } = await query(
@@ -50,7 +57,65 @@ export async function listMedia(req, res) {
        ORDER BY display_order, id`,
     params,
   );
-  return json(res, 200, { ok: true, media: rows });
+  // La biblioteca muestra archivos físicos únicos. Las asociaciones
+  // antiguas podían haber creado varias filas con la misma URL; se ocultan
+  // aquí para que no aparezcan como imágenes duplicadas.
+  const visibleRows = !productId && !variantId
+    ? rows.filter((item, index, list) => list.findIndex((candidate) => candidate.kind === item.kind && candidate.url === item.url) === index)
+    : rows;
+  return json(res, 200, { ok: true, media: visibleRows });
+}
+
+/**
+ * Asocia una multimedia existente a una variante sin moverla de su ubicación
+ * original. Se crea otra fila que reutiliza la misma URL física.
+ */
+export async function attachMedia(req, res, id) {
+  const body = req.body || {};
+  const productId = Number(body.product_id);
+  const variantId = Number(body.variant_id);
+  if (!Number.isInteger(productId) || productId < 1
+      || !Number.isInteger(variantId) || variantId < 1) {
+    return json(res, 400, { ok: false, error: 'product_and_variant_required' });
+  }
+
+  const { rows: source } = await query(
+    `SELECT id, kind, url, mime, size_bytes, width, height, alt_text
+       FROM product_media
+      WHERE id = $1 AND deleted_at IS NULL`,
+    [id],
+  );
+  if (source.length === 0) return notFound(res);
+
+  const { rows: variant } = await query(
+    'SELECT id FROM product_variants WHERE id = $1 AND product_id = $2',
+    [variantId, productId],
+  );
+  if (variant.length === 0) return notFound(res);
+
+  const item = source[0];
+  const { rows: duplicate } = await query(
+    `SELECT pm.id
+       FROM product_media pm
+      WHERE pm.url = $1 AND pm.deleted_at IS NULL
+        AND (pm.variant_id = $2 OR EXISTS (
+          SELECT 1 FROM product_media_variants pmv
+           WHERE pmv.media_id = pm.id AND pmv.variant_id = $2
+        ))`,
+    [item.url, variantId],
+  );
+  if (duplicate.length > 0) return conflict(res, 'media_already_attached', { id: duplicate[0].id });
+
+  const { rows } = await query(
+    `INSERT INTO product_media_variants (media_id, variant_id)
+     VALUES ($1, $2)
+     RETURNING media_id, variant_id, created_at`,
+    [item.id, variantId],
+  );
+  await recordAudit(req.user?.id, 'media.attach_variant', req.ip, {
+    id: item.id, sourceId: item.id, productId, variantId,
+  });
+  return json(res, 201, { ok: true, media: { ...item, variant_id: rows[0].variant_id } });
 }
 
 export async function uploadMedia(req, res) {
@@ -182,6 +247,7 @@ export async function cleanupOrphans(req, res) {
 const routes = [
   { method: 'GET',    pattern: /^\/api\/admin\/media\/?$/,                  handler: listMedia,     section: 'media' },
   { method: 'POST',   pattern: /^\/api\/admin\/media\/?$/,                  handler: uploadMedia,   section: 'media' },
+  { method: 'POST',   pattern: /^\/api\/admin\/media\/(\d+)\/attach\/?$/, handler: attachMedia,  section: 'media' },
   { method: 'PATCH',  pattern: /^\/api\/admin\/media\/(\d+)\/?$/,           handler: updateMedia,   section: 'media' },
   { method: 'DELETE', pattern: /^\/api\/admin\/media\/(\d+)\/?$/,           handler: deleteMedia,   section: 'media' },
   { method: 'POST',   pattern: /^\/api\/admin\/media\/cleanup\/?$/,         handler: cleanupOrphans, section: 'media' },

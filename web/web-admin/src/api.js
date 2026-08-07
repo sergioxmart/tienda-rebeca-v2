@@ -87,7 +87,7 @@ async function request(method, path, { body, isForm, headers } = {}) {
       unauthorizedHandler?.();
     }
     const code = (data && data.error) || `http_${res.status}`;
-    const message = (data && (data.message || data.error_human || (Array.isArray(data.errors) ? data.errors.join(', ') : null))) || res.statusText;
+    const message = (data && (data.message || data.error_human || (Array.isArray(data.errors) ? data.errors.filter((error) => typeof error === 'string').join(', ') : null))) || res.statusText;
     throw new ApiError(message, { status: res.status, code, details: data });
   }
   return data;

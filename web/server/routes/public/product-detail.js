@@ -103,15 +103,23 @@ export async function getProductBySlug(req, res, slug) {
 
   // 4. Media (fotos)
   const { rows: media } = await query(
-    `SELECT id, variant_id, kind, url, alt_text, display_order
-       FROM product_media
-      WHERE product_id = $1 AND deleted_at IS NULL
+    `SELECT pm.id, pm.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order
+       FROM product_media pm
+      WHERE pm.deleted_at IS NULL AND pm.product_id = $1
+     UNION ALL
+     SELECT pm.id, pmv.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order
+       FROM product_media pm
+       JOIN product_media_variants pmv ON pmv.media_id = pm.id
+       JOIN product_variants linked_variant ON linked_variant.id = pmv.variant_id
+      WHERE pm.deleted_at IS NULL AND linked_variant.product_id = $1
       ORDER BY display_order, id`,
     [product.id],
   );
-  product.media = media.filter((item) => item.variant_id === null);
+  const uniqueMedia = media.filter((item, index, list) => list.findIndex((candidate) =>
+    candidate.variant_id === item.variant_id && candidate.kind === item.kind && candidate.url === item.url) === index);
+  product.media = uniqueMedia.filter((item) => item.variant_id === null);
   const mediaByVariant = new Map();
-  for (const item of media) {
+  for (const item of uniqueMedia) {
     if (item.variant_id === null) continue;
     if (!mediaByVariant.has(item.variant_id)) mediaByVariant.set(item.variant_id, []);
     mediaByVariant.get(item.variant_id).push(item);

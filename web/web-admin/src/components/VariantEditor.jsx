@@ -18,6 +18,7 @@ import { useToast } from './Toast.jsx';
 import Modal from './Modal.jsx';
 import Confirm from './Confirm.jsx';
 import Empty from './Empty.jsx';
+import MoneyInput from './MoneyInput.jsx';
 
 function formatCOP(n) {
   if (n === null || n === undefined || n === '') return '—';
@@ -28,11 +29,6 @@ function integerPrice(value) {
   if (value === null || value === undefined || value === '') return '';
   const parsed = Number(value);
   return Number.isFinite(parsed) ? String(Math.round(parsed)) : '';
-}
-
-function integerInput(value) {
-  if (value === '') return '';
-  return String(value).split(/[.,]/, 1)[0].replace(/\D/g, '');
 }
 
 function ChevronIcon({ direction }) {
@@ -61,6 +57,9 @@ export default function VariantEditor({ productId, variants, attributes, onChang
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
+  const [libraryMedia, setLibraryMedia] = useState([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
 
   // Cargar todos los valores de los atributos del producto
   useEffect(() => {
@@ -91,10 +90,27 @@ export default function VariantEditor({ productId, variants, attributes, onChang
     } finally { setMediaLoading(false); }
   };
 
+  const loadLibrary = async () => {
+    setLibraryLoading(true);
+    try {
+      const data = await api.get('/api/admin/media');
+      setLibraryMedia(data.media || []);
+    } catch (err) {
+      toast.error('No se pudo cargar la biblioteca', err.message);
+      setLibraryMedia([]);
+    } finally { setLibraryLoading(false); }
+  };
+
   useEffect(() => {
     setVideoUrl('');
-    if (editing?.id) loadMedia(editing.id);
-    else setMedia([]);
+    setLibraryOpen(false);
+    if (editing?.id) {
+      loadMedia(editing.id);
+      loadLibrary();
+    } else {
+      setMedia([]);
+      setLibraryMedia([]);
+    }
   }, [editing?.id]);
 
   const openNew = () => setEditing({ ...EMPTY, attribute_values: attributes.map((a) => ({ attribute_id: a.id, attribute_value_id: '' })) });
@@ -261,6 +277,26 @@ export default function VariantEditor({ productId, variants, attributes, onChang
     } catch (err) { toast.error('No se pudo eliminar el archivo', err.message); }
   };
 
+  const attachLibraryMedia = async (item) => {
+    if (!editing?.id) return;
+    setMediaBusy(true);
+    try {
+      await api.post(`/api/admin/media/${item.id}/attach`, {
+        product_id: Number(productId),
+        variant_id: Number(editing.id),
+      });
+      toast.success('Multimedia agregada a la variante');
+      await loadMedia(editing.id);
+      setLibraryOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'media_already_attached') {
+        toast.error('Esta multimedia ya está en la variante');
+      } else {
+        toast.error('No se pudo agregar la multimedia', err.message);
+      }
+    } finally { setMediaBusy(false); }
+  };
+
   if (attributes.length === 0) {
     return (
       <>
@@ -370,13 +406,13 @@ export default function VariantEditor({ productId, variants, attributes, onChang
             <div className="form-row">
               <div className="form-group">
                 <label>Precio base de la variante <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
-                <input className="input" type="number" min={0} step={1} disabled={editing.price_mode !== 'variant'}
-                       value={editing.price} onChange={(e) => setEditing({ ...editing, price: integerInput(e.target.value) })} />
+                <MoneyInput disabled={editing.price_mode !== 'variant'} placeholder="0"
+                            value={editing.price} onChange={(value) => setEditing({ ...editing, price: value })} />
               </div>
               <div className="form-group">
                 <label>Precio comparativo <span style={{ color: 'var(--color-muted)' }}>(0 usa el principal)</span></label>
-                <input className="input" type="number" min={0} step={1} disabled={editing.price_mode !== 'variant'}
-                       value={editing.compare_at} onChange={(e) => setEditing({ ...editing, compare_at: integerInput(e.target.value) })} />
+                <MoneyInput disabled={editing.price_mode !== 'variant'} placeholder="0"
+                            value={editing.compare_at} onChange={(value) => setEditing({ ...editing, compare_at: value })} />
                 <p className="form-hint">Se muestra tachado cuando es mayor que el precio base.</p>
               </div>
             </div>
@@ -414,11 +450,32 @@ export default function VariantEditor({ productId, variants, attributes, onChang
             {editing.id && <div className="variant-media-panel">
               <div className="variant-media-heading">
                 <div><h3>Multimedia de la variante</h3><p>Sube varias imágenes o agrega un enlace de video para esta combinación.</p></div>
-                <label className="btn btn-sm btn-primary">
-                  {mediaBusy ? 'Cargando…' : '＋ Imágenes'}
-                  <input type="file" accept="image/*" multiple hidden disabled={mediaBusy} onChange={uploadImages} />
-                </label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn btn-sm" disabled={mediaBusy} onClick={() => { setLibraryOpen((open) => !open); if (!libraryMedia.length) loadLibrary(); }}>
+                    {libraryOpen ? 'Cerrar biblioteca' : 'Elegir de biblioteca'}
+                  </button>
+                  <label className="btn btn-sm btn-primary">
+                    {mediaBusy ? 'Cargando…' : '＋ Imágenes'}
+                    <input type="file" accept="image/*" multiple hidden disabled={mediaBusy} onChange={uploadImages} />
+                  </label>
+                </div>
               </div>
+              {libraryOpen && <div className="variant-media-library">
+                <div className="variant-media-library-heading">
+                  <strong>Multimedia cargada en /media</strong>
+                  <span>Selecciona una para reutilizarla en esta variante.</span>
+                </div>
+                {libraryLoading ? <p className="form-hint">Cargando biblioteca…</p> : (() => {
+                  const attachedUrls = new Set(media.map((item) => item.url));
+                  const available = libraryMedia.filter((item) => !attachedUrls.has(item.url));
+                  return available.length === 0 ? <p className="form-hint">No hay archivos disponibles para agregar.</p> : <div className="variant-media-library-grid">
+                    {available.map((item) => <button type="button" className="variant-media-library-item" key={item.id} disabled={mediaBusy} onClick={() => attachLibraryMedia(item)}>
+                      {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <span className="variant-video-tile">▶ Video</span>}
+                      <span>{item.kind === 'image' ? 'Agregar imagen' : 'Agregar video'}</span>
+                    </button>)}
+                  </div>;
+                })()}
+              </div>}
               <div className="variant-video-add">
                 <input className="input" type="url" placeholder="https://… enlace de video" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
                 <button className="btn btn-sm" type="button" disabled={mediaBusy || !videoUrl.trim()} onClick={addVideo}>Agregar video</button>

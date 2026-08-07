@@ -115,11 +115,12 @@ aplican a este producto** y si el cliente DEBE elegir un valor.
 Ej: "Funda iPhone" tiene `color` (required) + `modelo-telefono` (required).
 "Cable USB-C" tiene `tipo-conexion` (required) + `largo` (required).
 
-### `product_media` (`003_products.sql`)
+### `product_media` + `product_media_variants` (`003_products.sql`, `016_media_variant_links.sql`)
 
 Galería de fotos y embeds de video. Misma lógica que usamos
-para media: `kind ∈ {image, video_embed}`, `variant_id` opcional para asociar
-la pieza a una combinación concreta, soft-delete con
+para media: `kind ∈ {image, video_embed}`, `variant_id` conserva asociaciones
+anteriores y `product_media_variants` permite reutilizar la misma pieza en
+varias combinaciones, soft-delete con
 `deleted_at`, huérfanas (>30 días sin `product_id`) se limpian con
 un cron (no en SQL).
 

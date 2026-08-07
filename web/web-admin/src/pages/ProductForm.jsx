@@ -14,6 +14,7 @@ import { useToast } from '../components/Toast.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Modal from '../components/Modal.jsx';
 import VariantEditor from '../components/VariantEditor.jsx';
+import MoneyInput from '../components/MoneyInput.jsx';
 
 const EMPTY = {
   name: '', slug: '', sku: '', description: '', brand: '',
@@ -27,9 +28,8 @@ function integerPrice(value) {
   return Number.isFinite(parsed) ? String(Math.round(parsed)) : '';
 }
 
-function integerInput(value) {
-  if (value === '') return '';
-  return String(value).split(/[.,]/, 1)[0].replace(/\D/g, '');
+function ChevronIcon({ direction }) {
+  return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
 }
 
 function slugify(s) {
@@ -49,12 +49,14 @@ export default function ProductForm() {
   const [productId, setProductId] = useState(id ? Number(id) : null);
   const [categories, setCategories] = useState([]);
   const [allAttributes, setAllAttributes] = useState([]);
-  const [productAttributeIds, setProductAttributeIds] = useState([]);
+  const [productAttributes, setProductAttributes] = useState([]);
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [selectedAttributeId, setSelectedAttributeId] = useState(null);
+  const [movingAttribute, setMovingAttribute] = useState(false);
 
   // Cargar catálogos
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function ProductForm() {
           featured: product.featured,
           active: product.active,
         });
-        setProductAttributeIds((product.attributes || []).map((a) => a.attribute_id));
+        setProductAttributes((product.attributes || []).sort((a, b) => a.display_order - b.display_order || a.attribute_name.localeCompare(b.attribute_name)));
         setVariants(vs.variants || []);
       } catch (err) {
         setLoadError(err.message || 'Error desconocido');
@@ -156,6 +158,11 @@ export default function ProductForm() {
   };
 
   // --- Atributos ---------------------------------------------------------
+  const productAttributeIds = productAttributes.map((item) => item.attribute_id);
+  const orderedProductAttributes = productAttributes
+    .map((item) => allAttributes.find((attribute) => attribute.id === item.attribute_id))
+    .filter(Boolean);
+
   const toggleAttribute = async (attrId) => {
     if (!productId) {
       toast.warning('Guarda el producto primero para vincular atributos');
@@ -165,14 +172,42 @@ export default function ProductForm() {
     try {
       if (linked) {
         await api.delete(`/api/admin/products/${productId}/attributes/${attrId}`);
-        setProductAttributeIds((cur) => cur.filter((x) => x !== attrId));
+        setProductAttributes((cur) => cur.filter((item) => item.attribute_id !== attrId));
       } else {
-        await api.post(`/api/admin/products/${productId}/attributes`, { attribute_id: attrId });
-        setProductAttributeIds((cur) => [...cur, attrId]);
+        const { product_attribute } = await api.post(`/api/admin/products/${productId}/attributes`, {
+          attribute_id: attrId,
+          display_order: productAttributes.length,
+        });
+        setProductAttributes((cur) => [...cur, product_attribute || {
+          attribute_id: attrId,
+          display_order: cur.length,
+          is_required: true,
+        }]);
       }
     } catch (err) {
       toast.error('No se pudo actualizar el atributo', err.message);
     }
+  };
+
+  const moveProductAttribute = async (direction) => {
+    const selectedIndex = productAttributes.findIndex((item) => item.attribute_id === selectedAttributeId);
+    const targetIndex = selectedIndex + direction;
+    if (selectedIndex < 0 || targetIndex < 0 || targetIndex >= productAttributes.length) return;
+
+    const next = [...productAttributes];
+    [next[selectedIndex], next[targetIndex]] = [next[targetIndex], next[selectedIndex]];
+    const normalized = next.map((item, index) => ({ ...item, display_order: index }));
+    setProductAttributes(normalized);
+    setMovingAttribute(true);
+    try {
+      await Promise.all(normalized.map((item) => api.patch(
+        `/api/admin/products/${productId}/attributes/${item.attribute_id}`,
+        { display_order: item.display_order },
+      )));
+      toast.success('Orden de atributos actualizado');
+    } catch (err) {
+      toast.error('No se pudo cambiar el orden', err.message);
+    } finally { setMovingAttribute(false); }
   };
 
   // --- Variantes ---------------------------------------------------------
@@ -254,13 +289,13 @@ export default function ProductForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Precio base (COP)</label>
-            <input className="input" type="number" min={0} step={1} required
-                   value={form.base_price} onChange={(e) => setField('base_price', integerInput(e.target.value))} />
+            <MoneyInput required placeholder="0" value={form.base_price}
+                        onChange={(value) => setField('base_price', value)} />
           </div>
           <div className="form-group">
             <label>Precio comparativo <span style={{ color: 'var(--color-muted)' }}>(opcional, tachado)</span></label>
-            <input className="input" type="number" min={0} step={1}
-                   value={form.compare_at} onChange={(e) => setField('compare_at', integerInput(e.target.value))} />
+            <MoneyInput placeholder="0" value={form.compare_at}
+                        onChange={(value) => setField('compare_at', value)} />
           </div>
         </div>
 
@@ -305,15 +340,32 @@ export default function ProductForm() {
           {allAttributes.length === 0 ? (
             <div className="empty" style={{ padding: 20 }}>No hay atributos creados. <a href="/attributes">Crear uno</a></div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {allAttributes.map((a) => (
-                <label key={a.id} className="badge" style={{ cursor: 'pointer', padding: '6px 12px' }}>
-                  <input type="checkbox" className="checkbox"
-                         checked={productAttributeIds.includes(a.id)}
-                         onChange={() => toggleAttribute(a.id)} />
-                  {a.name}
-                </label>
-              ))}
+            <div>
+              {orderedProductAttributes.length > 0 && <>
+                <div className="order-toolbar">
+                  <span>{selectedAttributeId ? 'Atributo seleccionado' : 'Selecciona un atributo para cambiar su posición'}</span>
+                  <div className="order-toolbar-actions">
+                    <button type="button" className="btn btn-sm" aria-label="Subir atributo" title="Subir" disabled={!selectedAttributeId || movingAttribute || productAttributes.findIndex((item) => item.attribute_id === selectedAttributeId) <= 0} onClick={() => moveProductAttribute(-1)}><ChevronIcon direction="up" /></button>
+                    <button type="button" className="btn btn-sm" aria-label="Bajar atributo" title="Bajar" disabled={!selectedAttributeId || movingAttribute || productAttributes.findIndex((item) => item.attribute_id === selectedAttributeId) === productAttributes.length - 1} onClick={() => moveProductAttribute(1)}><ChevronIcon direction="down" /></button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                  {orderedProductAttributes.map((a) => (
+                    <label key={a.id} className={`badge ${selectedAttributeId === a.id ? 'active' : ''}`} style={{ cursor: 'pointer', padding: '6px 12px' }} onClick={() => setSelectedAttributeId(a.id)}>
+                      <input type="checkbox" className="checkbox" checked onChange={() => toggleAttribute(a.id)} />
+                      {a.name}
+                    </label>
+                  ))}
+                </div>
+              </>}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {allAttributes.filter((a) => !productAttributeIds.includes(a.id)).map((a) => (
+                  <label key={a.id} className="badge" style={{ cursor: 'pointer', padding: '6px 12px' }}>
+                    <input type="checkbox" className="checkbox" checked={false} onChange={() => toggleAttribute(a.id)} />
+                    {a.name}
+                  </label>
+                ))}
+              </div>
             </div>
           )}
           </section>
@@ -322,7 +374,7 @@ export default function ProductForm() {
           <VariantEditor
             productId={productId}
             variants={variants}
-            attributes={allAttributes.filter((a) => productAttributeIds.includes(a.id))}
+            attributes={orderedProductAttributes}
             onChange={reloadVariants}
           />
           </section>

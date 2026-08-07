@@ -139,6 +139,7 @@ de una transacción y crean un movimiento auditable.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/media` | `?product_id=&variant_id=&kind=&page=&limit=` | `media` |
 | POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id }` | `media` |
+| POST | `/api/admin/media/:id/attach` | `{ product_id, variant_id }` | `media` (reutiliza un archivo existente en una variante) |
 | PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order? }` | `media` |
 | DELETE | `/api/admin/media/:id` | — | `media` (soft-delete) |
 | POST | `/api/admin/media/cleanup` | — | `media` (borra huérfanas >30d) |

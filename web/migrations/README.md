@@ -52,6 +52,8 @@ NNN_descripcion_corta.sql
 | 013 | `013_variant_media_colors.sql` | `attribute_values.hex`, descripción de variantes y `product_media.variant_id` para multimedia por variante |
 | 014 | `014_inventory_movements.sql` | Libro mayor de entradas y salidas para `product_variants` |
 | 015 | `015_prices_without_decimals.sql` | Importes monetarios en COP sin escala decimal |
+| 016 | `016_media_variant_links.sql` | Asociaciones reutilizables de multimedia con variantes |
+| 017 | `017_fix_product_attributes_trigger.sql` | Elimina trigger incompatible con `product_attributes` |
 
 ## Lo que falta decidir
 

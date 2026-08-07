@@ -135,7 +135,7 @@ export async function updateProduct(req, res, id) {
     validators.optionalString(p.description, 'description', { max: 5000 }),
     validators.optionalString(p.brand, 'brand', { max: 100 }),
     p.base_price !== undefined && validators.int(Number(p.base_price), 'base_price', { min: 0 }),
-    p.compare_at !== undefined && (p.compare_at === null || validators.int(Number(p.compare_at), 'compare_at', { min: 0 })),
+    p.compare_at !== undefined && (p.compare_at === null ? null : validators.int(Number(p.compare_at), 'compare_at', { min: 0 })),
     p.category_id !== undefined && validators.int(Number(p.category_id), 'category_id'),
     p.active !== undefined && validators.bool(p.active, 'active'),
     p.featured !== undefined && validators.bool(p.featured, 'featured'),
@@ -157,7 +157,7 @@ export async function updateProduct(req, res, id) {
   if (p.description !== undefined)   { fields.push(`description = $${i++}`);   values.push(p.description); }
   if (p.brand !== undefined)         { fields.push(`brand = $${i++}`);         values.push(p.brand); }
   if (p.base_price !== undefined)    { fields.push(`base_price = $${i++}`);    values.push(Number(p.base_price)); }
-  if (p.compare_at !== undefined)    { fields.push(`compare_at = $${i++}`);    values.push(p.compare_at); }
+  if (p.compare_at !== undefined)    { fields.push(`compare_at = $${i++}`);    values.push(p.compare_at === null ? null : Number(p.compare_at)); }
   if (p.category_id !== undefined)   { fields.push(`category_id = $${i++}`);   values.push(Number(p.category_id)); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);        values.push(p.active); }
   if (p.featured !== undefined)      { fields.push(`featured = $${i++}`);      values.push(p.featured); }
@@ -232,6 +232,35 @@ export async function removeProductAttribute(req, res, productId, attributeId) {
   return json(res, 200, { ok: true });
 }
 
+export async function updateProductAttribute(req, res, productId, attributeId) {
+  const body = req.body || {};
+  if (!validate(res, body, [
+    body.display_order !== undefined && validators.int(body.display_order, 'display_order', { min: 0 }),
+    body.is_required !== undefined && validators.bool(body.is_required, 'is_required'),
+  ])) return;
+  if (body.display_order === undefined && body.is_required === undefined) {
+    return json(res, 400, { ok: false, error: 'nothing_to_update' });
+  }
+
+  const fields = [];
+  const values = [];
+  let i = 1;
+  if (body.is_required !== undefined) { fields.push(`is_required = $${i++}`); values.push(body.is_required); }
+  if (body.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(body.display_order); }
+  values.push(productId, Number(attributeId));
+  const { rows } = await query(
+    `UPDATE product_attributes SET ${fields.join(', ')}
+      WHERE product_id = $${i} AND attribute_id = $${i + 1}
+      RETURNING product_id, attribute_id, is_required, display_order, created_at`,
+    values,
+  );
+  if (rows.length === 0) return notFound(res);
+  await recordAudit(req.user?.id, 'product_attribute.update', req.ip, {
+    productId, attributeId, fields: Object.keys(body),
+  });
+  return json(res, 200, { ok: true, product_attribute: rows[0] });
+}
+
 // --- Router ---------------------------------------------------------------
 
 const routes = [
@@ -241,6 +270,7 @@ const routes = [
   { method: 'PATCH',  pattern: /^\/api\/admin\/products\/(\d+)\/?$/,                           handler: updateProduct,       section: 'products' },
   { method: 'DELETE', pattern: /^\/api\/admin\/products\/(\d+)\/?$/,                           handler: deleteProduct,       section: 'products' },
   { method: 'POST',   pattern: /^\/api\/admin\/products\/(\d+)\/attributes\/?$/,              handler: addProductAttribute,    section: 'products' },
+  { method: 'PATCH',  pattern: /^\/api\/admin\/products\/(\d+)\/attributes\/(\d+)\/?$/,       handler: updateProductAttribute, section: 'products' },
   { method: 'DELETE', pattern: /^\/api\/admin\/products\/(\d+)\/attributes\/(\d+)\/?$/,       handler: removeProductAttribute, section: 'products' },
 ];
 

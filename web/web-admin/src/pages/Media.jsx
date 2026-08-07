@@ -31,11 +31,14 @@ export default function Media() {
   const [editingAlt, setEditingAlt] = useState(null);  // media item
   const [altText, setAltText] = useState('');
   const [deleting, setDeleting] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('');
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await api.get('/api/admin/media');
+      const data = await api.get(`/api/admin/media${categoryFilter ? `?category_id=${categoryFilter}` : ''}`);
       setItems(data.media || data.items || []);
     } catch (err) {
       toast.error('No se pudo cargar la galería', err.message);
@@ -44,7 +47,11 @@ export default function Media() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [categoryFilter]);
+
+  useEffect(() => {
+    api.get('/api/admin/categories').then((data) => setCategories(data.categories || [])).catch(() => setCategories([]));
+  }, []);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -61,6 +68,7 @@ export default function Media() {
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (uploadCategory) fd.append('category_id', uploadCategory);
       await api.upload('/api/admin/media', fd);
       toast.success('Imagen subida');
       await load();
@@ -70,6 +78,14 @@ export default function Media() {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  };
+
+  const updateCategory = async (item, categoryId) => {
+    try {
+      await api.patch(`/api/admin/media/${item.id}`, { category_id: categoryId ? Number(categoryId) : null });
+      setItems((current) => current.map((media) => media.id === item.id ? { ...media, category_id: categoryId ? Number(categoryId) : null } : media));
+      toast.success('Categoría de imagen actualizada');
+    } catch (err) { toast.error('No se pudo clasificar la imagen', err.message); }
   };
 
   const openAlt = (m) => {
@@ -105,14 +121,23 @@ export default function Media() {
         <h1>Imágenes</h1>
         <div>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+          <select className="select media-upload-category" value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} aria-label="Categoría para la imagen nueva">
+            <option value="">Categoría automática</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
           <button className="btn btn-primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
             {uploading ? <span className="spinner" /> : '+ Subir imagen'}
           </button>
         </div>
       </div>
       <p style={{ color: 'var(--color-muted)' }}>
-        Subí imágenes y vincúlalas a un producto desde la edición del producto.
+        Clasifica tus imágenes por categoría y vincúlalas a un producto o variante desde su edición.
       </p>
+
+      <div className="media-toolbar">
+        <div><strong>Biblioteca multimedia</strong><span>{items.length} archivo{items.length === 1 ? '' : 's'} visibles</span></div>
+        <label>Filtrar por categoría<select className="select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+      </div>
 
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>
@@ -144,6 +169,10 @@ export default function Media() {
                 <div style={{ color: 'var(--color-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {m.alt_text || <em>sin alt</em>}
                 </div>
+                <select className="select media-card-category" value={m.category_id || ''} onChange={(e) => updateCategory(m, e.target.value)} aria-label={`Categoría de ${m.alt_text || 'imagen'}`}>
+                  <option value="">Sin categoría</option>
+                  {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                </select>
                 <div className="table-actions" style={{ marginTop: 6 }}>
                   <button className="btn btn-sm" onClick={() => openAlt(m)}>Alt</button>
                   <button className="btn btn-sm btn-danger" onClick={() => setDeleting(m)}>×</button>

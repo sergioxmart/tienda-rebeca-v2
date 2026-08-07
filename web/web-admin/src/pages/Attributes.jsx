@@ -46,6 +46,8 @@ export default function Attributes() {
   const [selectedAttrId, setSelectedAttrId] = useState(null);
   const [selectedValueIds, setSelectedValueIds] = useState({});
   const [moving, setMoving] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -61,9 +63,18 @@ export default function Attributes() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    api.get('/api/admin/categories').then((data) => {
+      const next = data.categories || [];
+      setCategories(next);
+      if (!selectedCategoryId && next[0]) setSelectedCategoryId(String(next[0].id));
+    }).catch(() => setCategories([]));
+  }, []);
+
   const loadValues = async (attrId) => {
     try {
-      const data = await api.get(`/api/admin/attributes/${attrId}/values`);
+      const query = selectedCategoryId ? `?category_id=${selectedCategoryId}` : '';
+      const data = await api.get(`/api/admin/attributes/${attrId}/values${query}`);
       setValues((cur) => ({ ...cur, [attrId]: data.values || [] }));
     } catch (err) {
       toast.error('No se pudieron cargar los valores', err.message);
@@ -79,9 +90,13 @@ export default function Attributes() {
     }
   };
 
+  useEffect(() => {
+    if (expanded) loadValues(expanded);
+  }, [selectedCategoryId]);
+
   // --- Attribute CRUD ----------------------------------------------------
-  const openNewAttr = () => setEditingAttr({ name: '', slug: '', type: 'text' });
-  const openEditAttr = (a) => setEditingAttr({ id: a.id, name: a.name, slug: a.slug, type: a.type || 'text' });
+  const openNewAttr = () => setEditingAttr({ name: '', slug: '', type: 'text', category_ids: categories.map((category) => category.id) });
+  const openEditAttr = (a) => setEditingAttr({ id: a.id, name: a.name, slug: a.slug, type: a.type || 'text', category_ids: (a.category_ids || []).map(Number) });
 
   const saveAttr = async (e) => {
     e?.preventDefault();
@@ -92,6 +107,7 @@ export default function Attributes() {
         slug: editingAttr.slug || slugify(editingAttr.name),
         type: editingAttr.type,
         display_order: editingAttr.id ? undefined : attrs.length,
+        category_ids: editingAttr.category_ids || [],
       };
       if (editingAttr.id) {
         await api.patch(`/api/admin/attributes/${editingAttr.id}`, body);
@@ -129,7 +145,7 @@ export default function Attributes() {
   };
 
   // --- Value CRUD --------------------------------------------------------
-  const openNewVal = (attrId, attrType) => setEditingVal({ mode: 'new', attrId, attrType, value: '', hex: '#2563EB' });
+  const openNewVal = (attrId, attrType) => setEditingVal({ mode: 'new', attrId, attrType, categoryId: selectedCategoryId, value: '', hex: '#2563EB' });
   const openEditVal = (attrId, attrType, v) => setEditingVal({ mode: 'edit', attrId, attrType, id: v.id, value: v.value, hex: v.hex || '#2563EB' });
 
   const saveVal = async (e) => {
@@ -141,6 +157,7 @@ export default function Attributes() {
           value: editingVal.value,
           display_order: (values[editingVal.attrId] || []).length,
           hex: editingVal.attrType === 'color' ? editingVal.hex : null,
+          category_id: editingVal.categoryId || null,
         });
         toast.success('Valor creado');
       } else {
@@ -160,9 +177,13 @@ export default function Attributes() {
   };
 
   const deleteVal = async (attrId, valId) => {
+    if (!selectedCategoryId) {
+      toast.error('Selecciona una categoría', 'Elimina valores desde una pestaña específica para no afectar otras categorías.');
+      return;
+    }
     try {
-      await api.delete(`/api/admin/attribute-values/${valId}`);
-      toast.success('Valor eliminado');
+      await api.delete(`/api/admin/attribute-values/${valId}?category_id=${selectedCategoryId}`);
+      toast.success('Valor retirado de la categoría');
       await loadValues(attrId);
     } catch (err) {
       toast.error('No se pudo eliminar', err.message);
@@ -205,12 +226,25 @@ export default function Attributes() {
     finally { setMoving(false); }
   };
 
+  const visibleAttrs = selectedCategoryId
+    ? attrs.filter((attribute) => (attribute.category_ids || []).some((categoryId) => Number(categoryId) === Number(selectedCategoryId)))
+    : attrs;
+
+  const toggleAttrCategory = (categoryId) => setEditingAttr((current) => {
+    const ids = current.category_ids || [];
+    return { ...current, category_ids: ids.includes(categoryId) ? ids.filter((id) => id !== categoryId) : [...ids, categoryId] };
+  });
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
   }
 
   return (
     <div>
+      {categories.length > 0 && <div className="modal-tabs attributes-category-tabs" role="tablist" aria-label="Categorías de atributos">
+        <button className={`modal-tab ${selectedCategoryId === '' ? 'active' : ''}`} type="button" onClick={() => setSelectedCategoryId('')}>Todas</button>
+        {categories.map((category) => <button key={category.id} className={`modal-tab ${String(selectedCategoryId) === String(category.id) ? 'active' : ''}`} type="button" onClick={() => setSelectedCategoryId(String(category.id))}>{category.name}</button>)}
+      </div>}
       <div className="page-header">
         <h1>Atributos</h1>
         <button className="btn btn-primary" onClick={openNewAttr}>+ Nuevo atributo</button>
@@ -231,7 +265,7 @@ export default function Attributes() {
             </div>
           </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {attrs.map((a) => (
+          {visibleAttrs.map((a) => (
             <div key={a.id} style={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
@@ -244,7 +278,7 @@ export default function Attributes() {
                 <div>
                   <strong>{a.name}</strong>{' '}
                   <code style={{ color: 'var(--color-muted)' }}>{a.slug}</code>{' '}
-                  <span className="badge">{a.type}</span>
+                  <span className="badge">{a.type}</span>{(a.categories || []).length > 0 && <span className="form-hint" style={{ display: 'inline', marginLeft: 6 }}>{a.categories.map((category) => category.name).join(' · ')}</span>}
                 </div>
                 <div className="table-actions" onClick={(e) => e.stopPropagation()}>
                   <button className="btn btn-sm" onClick={() => openEditAttr(a)}>Editar</button>
@@ -256,7 +290,11 @@ export default function Attributes() {
                 <div style={{ borderTop: '1px solid var(--color-border)', padding: 12 }}>
                   <div className="page-header" style={{ marginBottom: 12 }}>
                     <h3 style={{ margin: 0 }}>Valores</h3>
-                    <button className="btn btn-sm btn-primary" onClick={() => openNewVal(a.id, a.type)}>+ Nuevo valor</button>
+                    <button className="btn btn-sm btn-primary" disabled={!selectedCategoryId} onClick={() => openNewVal(a.id, a.type)}>
+                      {selectedCategoryId
+                        ? `+ Nuevo valor para ${categories.find((category) => String(category.id) === String(selectedCategoryId))?.name || 'la categoría'}`
+                        : 'Selecciona una categoría para agregar valores'}
+                    </button>
                   </div>
                   {(values[a.id] || []).length > 0 && <div className="order-toolbar order-toolbar-nested">
                     <span>{selectedValueIds[a.id] ? 'Valor seleccionado' : 'Selecciona un valor para cambiar su posición'}</span>
@@ -279,7 +317,7 @@ export default function Attributes() {
                             {a.type === 'color' && <td><span className="color-swatch" style={{ background: v.hex || '#E5E7EB' }} /> <code>{v.hex || 'sin hex'}</code></td>}
                             <td className="table-actions">
                               <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEditVal(a.id, a.type, v); }}>Editar</button>
-                              <button className="btn btn-sm btn-danger" onClick={() => deleteVal(a.id, v.id)}>×</button>
+                              <button className="btn btn-sm btn-danger" disabled={!selectedCategoryId} title={selectedCategoryId ? 'Retirar de esta categoría' : 'Selecciona una categoría'} onClick={() => deleteVal(a.id, v.id)}>×</button>
                             </td>
                           </tr>
                         ))}
@@ -329,6 +367,16 @@ export default function Attributes() {
                   {ATTR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
+            </div>
+            <div className="form-group">
+              <label>Categorías donde aplica</label>
+              <div className="category-checkbox-grid">
+                {categories.map((category) => <label key={category.id} className="category-checkbox">
+                  <input type="checkbox" checked={(editingAttr.category_ids || []).includes(category.id)} onChange={() => toggleAttrCategory(category.id)} />
+                  <span>{category.name}</span>
+                </label>)}
+              </div>
+              <p className="form-hint">Los productos solo podrán seleccionar atributos vinculados a su categoría.</p>
             </div>
             <p className="form-hint">El orden se cambia desde las flechas de la lista.</p>
           </form>

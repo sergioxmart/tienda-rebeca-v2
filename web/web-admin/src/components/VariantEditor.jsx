@@ -44,7 +44,7 @@ const EMPTY = {
   attribute_values: [],  // [{ attribute_id, attribute_value_id }]
 };
 
-export default function VariantEditor({ productId, variants, attributes, onChange }) {
+export default function VariantEditor({ productId, variants, attributes, categoryId, onChange }) {
   const toast = useToast();
   const [allValues, setAllValues] = useState({});  // { [attribute_id]: [{id, value}] }
   const [editing, setEditing] = useState(null);    // variant en edición o { ...EMPTY } para nueva
@@ -67,7 +67,8 @@ export default function VariantEditor({ productId, variants, attributes, onChang
       const map = {};
       for (const a of attributes) {
         try {
-          const { values } = await api.get(`/api/admin/attributes/${a.id}/values`);
+          const query = Number.isInteger(categoryId) && categoryId > 0 ? `?category_id=${categoryId}` : '';
+          const { values } = await api.get(`/api/admin/attributes/${a.id}/values${query}`);
           map[a.id] = values || [];
         } catch {
           map[a.id] = [];
@@ -75,7 +76,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
       }
       setAllValues(map);
     })();
-  }, [attributes]);
+  }, [attributes, categoryId]);
 
   const reload = async () => { await onChange?.(); };
 

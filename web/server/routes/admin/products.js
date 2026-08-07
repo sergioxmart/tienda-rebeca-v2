@@ -248,7 +248,7 @@ export async function deleteProduct(req, res, id) {
 // --- Handlers (product_attributes M2M) ----------------------------------
 
 export async function addProductAttribute(req, res, productId) {
-  const { rows: p } = await query('SELECT id FROM products WHERE id = $1', [productId]);
+  const { rows: p } = await query('SELECT id, category_id FROM products WHERE id = $1', [productId]);
   if (p.length === 0) return notFound(res);
 
   const body = req.body || {};
@@ -261,6 +261,17 @@ export async function addProductAttribute(req, res, productId) {
   }
   const { rows: a } = await query('SELECT id FROM attributes WHERE id = $1', [attributeId]);
   if (a.length === 0) return notFound(res);
+  const { rows: categoryAttribute } = await query(
+    'SELECT 1 FROM attribute_categories WHERE attribute_id = $1 AND category_id = $2',
+    [attributeId, p[0].category_id],
+  );
+  if (categoryAttribute.length === 0) {
+    return json(res, 400, {
+      ok: false,
+      error: 'attribute_category_mismatch',
+      message: 'Este atributo no está disponible para la categoría del producto.',
+    });
+  }
 
   try {
     const { rows } = await query(

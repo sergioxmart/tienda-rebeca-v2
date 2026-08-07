@@ -10,7 +10,7 @@
 //   - type: 'text' | 'color' | 'number'.
 //   - display_order: entero, default 0.
 
-import { query } from '../../lib/db.js';
+import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
 import { protect, recordAudit, slugify, validators, validate, notFound, conflict } from './_helpers.js';
@@ -21,19 +21,29 @@ import { protect, recordAudit, slugify, validators, validate, notFound, conflict
 
 export async function listAttributes(req, res) {
   const { rows } = await query(
-    `SELECT id, slug, name, type, display_order, active,
-            created_at, updated_at
-       FROM attributes
-       ORDER BY display_order, name`,
+    `SELECT a.id, a.slug, a.name, a.type, a.display_order, a.active,
+            a.created_at, a.updated_at,
+            COALESCE(json_agg(json_build_object('id', c.id, 'name', c.name, 'slug', c.slug)
+              ORDER BY c.display_order, c.name) FILTER (WHERE c.id IS NOT NULL), '[]'::json) AS categories,
+            COALESCE(array_agg(c.id ORDER BY c.display_order, c.name) FILTER (WHERE c.id IS NOT NULL), '{}') AS category_ids
+       FROM attributes a
+       LEFT JOIN attribute_categories ac ON ac.attribute_id = a.id
+       LEFT JOIN categories c ON c.id = ac.category_id
+       GROUP BY a.id
+       ORDER BY a.display_order, a.name`,
   );
   return json(res, 200, { ok: true, attributes: rows });
 }
 
 export async function getAttribute(req, res, id) {
   const { rows } = await query(
-    `SELECT id, slug, name, type, display_order, active,
-            created_at, updated_at
-       FROM attributes WHERE id = $1`,
+    `SELECT a.id, a.slug, a.name, a.type, a.display_order, a.active,
+            a.created_at, a.updated_at,
+            COALESCE(array_agg(ac.category_id ORDER BY ac.category_id), '{}') AS category_ids
+       FROM attributes a
+       LEFT JOIN attribute_categories ac ON ac.attribute_id = a.id
+      WHERE a.id = $1
+      GROUP BY a.id`,
     [id],
   );
   if (rows.length === 0) return notFound(res);
@@ -58,16 +68,25 @@ export async function createAttribute(req, res) {
     return;
   }
 
+  const categoryIds = await resolveCategoryIds(p.category_ids);
+  if (categoryIds.error) return json(res, 400, { ok: false, error: 'invalid_category_ids', message: categoryIds.error });
+
   try {
-    const { rows } = await query(
-      `INSERT INTO attributes (slug, name, type, display_order, active)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, slug, name, type, display_order, active, created_at, updated_at`,
-      [slug, p.name.trim(), p.type ?? 'text', p.display_order ?? 0, p.active ?? true],
-    );
-    await recordAudit(req.user.id, 'attribute.create', req.ip, { id: rows[0].id, slug });
-    log.info('attribute created', { id: rows[0].id, slug, by: req.user.email });
-    return json(res, 201, { ok: true, attribute: rows[0] });
+    const result = await tx(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO attributes (slug, name, type, display_order, active)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, slug, name, type, display_order, active, created_at, updated_at`,
+        [slug, p.name.trim(), p.type ?? 'text', p.display_order ?? 0, p.active ?? true],
+      );
+      for (const categoryId of categoryIds.value) {
+        await client.query('INSERT INTO attribute_categories (attribute_id, category_id) VALUES ($1, $2)', [rows[0].id, categoryId]);
+      }
+      return rows[0];
+    });
+    await recordAudit(req.user.id, 'attribute.create', req.ip, { id: result.id, slug, categoryIds: categoryIds.value });
+    log.info('attribute created', { id: result.id, slug, by: req.user.email });
+    return json(res, 201, { ok: true, attribute: { ...result, category_ids: categoryIds.value } });
   } catch (err) {
     if (err.code === '23505') return conflict(res, 'slug_already_exists', { slug });
     throw err;
@@ -88,6 +107,9 @@ export async function updateAttribute(req, res, id) {
     p.active !== undefined && validators.bool(p.active, 'active'),
   ])) return;
 
+  const categoryIds = p.category_ids !== undefined ? await resolveCategoryIds(p.category_ids) : null;
+  if (categoryIds?.error) return json(res, 400, { ok: false, error: 'invalid_category_ids', message: categoryIds.error });
+
   // Construir UPDATE dinámico solo con los campos presentes
   const fields = [];
   const values = [];
@@ -97,24 +119,65 @@ export async function updateAttribute(req, res, id) {
   if (p.type !== undefined)         { fields.push(`type = $${i++}`);          values.push(p.type); }
   if (p.display_order !== undefined){ fields.push(`display_order = $${i++}`); values.push(p.display_order); }
   if (p.active !== undefined)       { fields.push(`active = $${i++}`);        values.push(p.active); }
-  if (fields.length === 0) {
+  if (fields.length === 0 && !categoryIds) {
     return json(res, 400, { ok: false, error: 'nothing_to_update' });
   }
   values.push(id);
 
   try {
-    const { rows } = await query(
-      `UPDATE attributes SET ${fields.join(', ')}
-        WHERE id = $${i}
-        RETURNING id, slug, name, type, display_order, active, created_at, updated_at`,
-      values,
-    );
-    await recordAudit(req.user.id, 'attribute.update', req.ip, { id, fields: Object.keys(p) });
-    return json(res, 200, { ok: true, attribute: rows[0] });
+    const result = await tx(async (client) => {
+      let attribute;
+      if (fields.length > 0) {
+        const { rows } = await client.query(
+          `UPDATE attributes SET ${fields.join(', ')}
+            WHERE id = $${i}
+            RETURNING id, slug, name, type, display_order, active, created_at, updated_at`,
+          values,
+        );
+        attribute = rows[0];
+      } else {
+        const { rows } = await client.query('SELECT id, slug, name, type, display_order, active, created_at, updated_at FROM attributes WHERE id = $1', [id]);
+        attribute = rows[0];
+      }
+      if (categoryIds) {
+        await client.query('DELETE FROM attribute_categories WHERE attribute_id = $1 AND category_id <> ALL($2::int[])', [id, categoryIds.value]);
+        await client.query('DELETE FROM attribute_category_values WHERE attribute_id = $1 AND category_id <> ALL($2::int[])', [id, categoryIds.value]);
+        for (const categoryId of categoryIds.value) {
+          await client.query('INSERT INTO attribute_categories (attribute_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [id, categoryId]);
+          await client.query(
+            `INSERT INTO attribute_category_values (attribute_id, category_id, attribute_value_id)
+             SELECT $1, $2, id FROM attribute_values WHERE attribute_id = $1
+             ON CONFLICT DO NOTHING`,
+            [id, categoryId],
+          );
+        }
+      }
+      return attribute;
+    });
+    await recordAudit(req.user.id, 'attribute.update', req.ip, { id, fields: Object.keys(p), categoryIds: categoryIds?.value });
+    return json(res, 200, { ok: true, attribute: { ...result, ...(categoryIds ? { category_ids: categoryIds.value } : {}) } });
   } catch (err) {
     if (err.code === '23505') return conflict(res, 'slug_already_exists');
     throw err;
   }
+}
+
+async function resolveCategoryIds(input) {
+  let ids;
+  if (input === undefined) {
+    const { rows } = await query('SELECT id FROM categories WHERE active = TRUE ORDER BY display_order, name');
+    ids = rows.map((row) => row.id);
+  } else if (!Array.isArray(input)) {
+    return { error: 'category_ids debe ser un array de enteros' };
+  } else {
+    ids = [...new Set(input.map(Number))];
+    if (ids.some((value) => !Number.isInteger(value) || value < 1)) return { error: 'category_ids contiene un id inválido' };
+  }
+  if (ids.length > 0) {
+    const { rows } = await query('SELECT id FROM categories WHERE id = ANY($1::int[])', [ids]);
+    if (rows.length !== ids.length) return { error: 'una o más categorías no existen' };
+  }
+  return { value: ids };
 }
 
 export async function deleteAttribute(req, res, id) {

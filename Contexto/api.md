@@ -94,18 +94,18 @@ no tiene `section`, devuelve 403.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/attributes` | — | `attributes` |
 | GET | `/api/admin/attributes/:id` | — | `attributes` |
-| POST | `/api/admin/attributes` | `{ slug, name, type?, display_order?, active? }` | `attributes` |
-| PATCH | `/api/admin/attributes/:id` | `{ name?, slug?, type?, display_order?, active? }` | `attributes` |
+| POST | `/api/admin/attributes` | `{ slug, name, type?, display_order?, active?, category_ids? }` | `attributes` |
+| PATCH | `/api/admin/attributes/:id` | `{ name?, slug?, type?, display_order?, active?, category_ids? }` | `attributes` |
 | DELETE | `/api/admin/attributes/:id` | — | `attributes` |
 
 ### Valores de atributos
 
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
-| GET | `/api/admin/attributes/:attributeId/values` | — | `attribute_values` |
-| POST | `/api/admin/attributes/:attributeId/values` | `{ value, hex?, display_order?, active? }` | `attribute_values` |
+| GET | `/api/admin/attributes/:attributeId/values` | `?category_id=` opcional | `attribute_values` |
+| POST | `/api/admin/attributes/:attributeId/values` | `{ value, hex?, display_order?, active?, category_id? }` | `attribute_values` |
 | PATCH | `/api/admin/attribute-values/:id` | `{ value?, hex?, active? }` | `attribute_values` |
-| DELETE | `/api/admin/attribute-values/:id` | — | `attribute_values` |
+| DELETE | `/api/admin/attribute-values/:id` | `?category_id=` desvincula solo de esa categoría; sin parámetro elimina el valor global | `attribute_values` |
 
 ### Productos
 
@@ -146,10 +146,10 @@ de una transacción y crean un movimiento auditable.
 
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
-| GET | `/api/admin/media` | `?product_id=&variant_id=&kind=&page=&limit=` | `media` |
-| POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id }` | `media` |
+| GET | `/api/admin/media` | `?product_id=&variant_id=&category_id=&kind=&page=&limit=` | `media` |
+| POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `category_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id, category_id? }` | `media` |
 | POST | `/api/admin/media/:id/attach` | `{ product_id, variant_id }` | `media` (reutiliza un archivo existente en una variante) |
-| PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order? }` | `media` |
+| PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order?, category_id? }` | `media` |
 | DELETE | `/api/admin/media/:id` | — | `media` (borrado definitivo del registro y archivo físico) |
 | DELETE | `/api/admin/media/:id/variants/:variantId` | — | `media` (desvincula de una variante, conserva el archivo) |
 | POST | `/api/admin/media/cleanup` | — | `media` (borra huérfanas >30d) |

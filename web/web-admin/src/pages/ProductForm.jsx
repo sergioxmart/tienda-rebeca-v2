@@ -163,6 +163,12 @@ export default function ProductForm() {
 
   // --- Atributos ---------------------------------------------------------
   const productAttributeIds = productAttributes.map((item) => item.attribute_id);
+  const selectedCategoryId = Number(form.category_id);
+  const availableAttributes = allAttributes.filter((attribute) => {
+    if (!Number.isInteger(selectedCategoryId) || selectedCategoryId < 1) return false;
+    if (!Array.isArray(attribute.category_ids) || attribute.category_ids.length === 0) return false;
+    return attribute.category_ids.some((categoryId) => Number(categoryId) === selectedCategoryId);
+  });
   const orderedProductAttributes = productAttributes
     .map((item) => allAttributes.find((attribute) => attribute.id === item.attribute_id))
     .filter(Boolean);
@@ -363,7 +369,7 @@ export default function ProductForm() {
                 </div>
               </>}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {allAttributes.filter((a) => !productAttributeIds.includes(a.id)).map((a) => (
+                {availableAttributes.filter((a) => !productAttributeIds.includes(a.id)).map((a) => (
                   <label key={a.id} className="badge" style={{ cursor: 'pointer', padding: '6px 12px' }}>
                     <input type="checkbox" className="checkbox" checked={false} onChange={() => toggleAttribute(a.id)} />
                     {a.name}
@@ -379,6 +385,7 @@ export default function ProductForm() {
             productId={productId}
             variants={variants}
             attributes={orderedProductAttributes}
+            categoryId={selectedCategoryId}
             onChange={reloadVariants}
           />
           </section>

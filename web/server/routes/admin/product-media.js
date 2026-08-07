@@ -36,6 +36,10 @@ export async function listMedia(req, res) {
   const productId = url.searchParams.get('product_id');
   const variantId = url.searchParams.get('variant_id');
   const kind = url.searchParams.get('kind');
+  const categoryId = url.searchParams.get('category_id');
+  if (categoryId !== null && (!Number.isInteger(Number(categoryId)) || Number(categoryId) < 1)) {
+    return json(res, 400, { ok: false, error: 'category_id_invalid' });
+  }
 
   const where = ['deleted_at IS NULL'];
   const params = [];
@@ -48,9 +52,10 @@ export async function listMedia(req, res) {
     ))`);
   }
   if (kind)      { params.push(kind);                  where.push(`kind = $${params.length}`); }
+  if (categoryId) { params.push(Number(categoryId));  where.push(`category_id = $${params.length}`); }
 
   const { rows } = await query(
-    `SELECT id, product_id, variant_id, kind, url, mime, size_bytes, width, height,
+    `SELECT id, product_id, category_id, variant_id, kind, url, mime, size_bytes, width, height,
             alt_text, display_order, created_at
        FROM product_media
        WHERE ${where.join(' AND ')}
@@ -132,11 +137,22 @@ export async function uploadMedia(req, res) {
       [variantId, productId],
     );
     if (variant.length === 0) return notFound(res);
+    const { rows: product } = await query('SELECT category_id FROM products WHERE id = $1', [productId]);
+    const categoryId = body.category_id === undefined || body.category_id === null || body.category_id === ''
+      ? product[0]?.category_id || null
+      : Number(body.category_id);
+    if (categoryId !== null && (!Number.isInteger(categoryId) || categoryId < 1)) {
+      return json(res, 400, { ok: false, error: 'category_id_invalid' });
+    }
+    if (categoryId !== null) {
+      const { rows: category } = await query('SELECT id FROM categories WHERE id = $1', [categoryId]);
+      if (category.length === 0) return json(res, 400, { ok: false, error: 'category_not_found' });
+    }
     const { rows } = await query(
-      `INSERT INTO product_media (product_id, variant_id, kind, url, mime, alt_text, display_order)
-       VALUES ($1, $2, 'video_embed', $3, '', $4, $5)
-       RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
-      [productId, variantId, body.url.trim(), body.alt_text ?? '', Number(body.display_order ?? 0)],
+      `INSERT INTO product_media (product_id, category_id, variant_id, kind, url, mime, alt_text, display_order)
+       VALUES ($1, $2, $3, 'video_embed', $4, '', $5, $6)
+       RETURNING id, product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      [productId, categoryId, variantId, body.url.trim(), body.alt_text ?? '', Number(body.display_order ?? 0)],
     );
     await recordAudit(req.user?.id, 'media.video_embed', req.ip, { id: rows[0].id, productId, variantId });
     return json(res, 201, { ok: true, media: rows[0] });
@@ -158,12 +174,27 @@ export async function uploadMedia(req, res) {
     const body = req.body || {};
     const productId = body.product_id ? Number(body.product_id) : null;
     const variantId = body.variant_id ? Number(body.variant_id) : null;
+    let categoryId = body.category_id === undefined || body.category_id === null || body.category_id === ''
+      ? null
+      : Number(body.category_id);
+    if (categoryId !== null && (!Number.isInteger(categoryId) || categoryId < 1)) {
+      await deleteUploadFile(url);
+      return json(res, 400, { ok: false, error: 'category_id_invalid' });
+    }
     if (productId !== null) {
-      const { rows: p } = await query('SELECT id FROM products WHERE id = $1', [productId]);
+      const { rows: p } = await query('SELECT id, category_id FROM products WHERE id = $1', [productId]);
       if (p.length === 0) {
         // Borrar el archivo que acabamos de escribir
         await deleteUploadFile(url);
         return notFound(res);
+      }
+      if (categoryId === null) categoryId = p[0].category_id;
+    }
+    if (categoryId !== null) {
+      const { rows: category } = await query('SELECT id FROM categories WHERE id = $1', [categoryId]);
+      if (category.length === 0) {
+        await deleteUploadFile(url);
+        return json(res, 400, { ok: false, error: 'category_not_found' });
       }
     }
     if (variantId !== null) {
@@ -178,10 +209,10 @@ export async function uploadMedia(req, res) {
     }
 
     const { rows } = await query(
-      `INSERT INTO product_media (product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order)
-       VALUES ($1, $2, 'image', $3, $4, $5, $6, $7)
-       RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
-      [productId, variantId, url, req.file.mimetype || '', size_bytes, body.alt_text ?? '', body.display_order ?? 0],
+      `INSERT INTO product_media (product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order)
+       VALUES ($1, $2, $3, 'image', $4, $5, $6, $7, $8)
+       RETURNING id, product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      [productId, categoryId, variantId, url, req.file.mimetype || '', size_bytes, body.alt_text ?? '', body.display_order ?? 0],
     );
     await recordAudit(req.user?.id, 'media.upload', req.ip, { id: rows[0].id, productId });
     log.info('media uploaded', { id: rows[0].id, url, size: size_bytes, by: req.user?.email });
@@ -197,6 +228,7 @@ export async function updateMedia(req, res, id) {
   if (!validate(res, body, [
     validators.optionalString(body.alt_text, 'alt_text', { max: 500 }),
     body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
+    body.category_id !== undefined && body.category_id !== null && validators.int(body.category_id, 'category_id', { min: 1 }),
   ])) return;
 
   const fields = [];
@@ -204,12 +236,20 @@ export async function updateMedia(req, res, id) {
   let i = 1;
   if (body.alt_text !== undefined)      { fields.push(`alt_text = $${i++}`);      values.push(body.alt_text); }
   if (body.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(body.display_order); }
+  if (body.category_id !== undefined) {
+    if (body.category_id !== null) {
+      const { rows: category } = await query('SELECT id FROM categories WHERE id = $1', [Number(body.category_id)]);
+      if (category.length === 0) return json(res, 400, { ok: false, error: 'category_not_found' });
+    }
+    fields.push(`category_id = $${i++}`);
+    values.push(body.category_id === null ? null : Number(body.category_id));
+  }
   if (fields.length === 0) return json(res, 400, { ok: false, error: 'nothing_to_update' });
   values.push(id);
 
   const { rows } = await query(
     `UPDATE product_media SET ${fields.join(', ')} WHERE id = $${i}
-      RETURNING id, product_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      RETURNING id, product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
     values,
   );
   await recordAudit(req.user?.id, 'media.update', req.ip, { id, fields: Object.keys(body) });

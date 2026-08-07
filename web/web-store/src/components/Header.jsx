@@ -84,6 +84,8 @@ export default function Header() {
     return () => document.body.classList.remove('menu-is-open');
   }, [menuOpen]);
 
+  if (site && site.navbar_enabled === false) return null;
+
   const submitSearch = (event) => {
     event.preventDefault();
     const value = query.trim();

@@ -16,7 +16,6 @@ import React, { useEffect, useState } from 'react';
 import { api, ApiError } from '../api.js';
 import { useToast } from './Toast.jsx';
 import Modal from './Modal.jsx';
-import Confirm from './Confirm.jsx';
 import Empty from './Empty.jsx';
 import MoneyInput from './MoneyInput.jsx';
 
@@ -50,6 +49,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
   const [allValues, setAllValues] = useState({});  // { [attribute_id]: [{id, value}] }
   const [editing, setEditing] = useState(null);    // variant en edición o { ...EMPTY } para nueva
   const [deleting, setDeleting] = useState(null);
+  const [deleteText, setDeleteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [moving, setMoving] = useState(false);
@@ -200,7 +200,9 @@ export default function VariantEditor({ productId, variants, attributes, onChang
 
   const handleDelete = async () => {
     try {
-      await api.delete(`/api/admin/variants/${deleting.id}`);
+      await api.delete(`/api/admin/variants/${deleting.id}`, {
+        body: Number(deleting.stock) > 0 ? { confirm_text: deleteText } : {},
+      });
       toast.success('Variante eliminada');
       setDeleting(null);
       await reload();
@@ -359,7 +361,7 @@ export default function VariantEditor({ productId, variants, attributes, onChang
                 </td>
                 <td className="table-actions">
                   <button className="btn btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(v); }}>Editar</button>
-                  <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleting(v); }}>×</button>
+                  <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteText(''); setDeleting(v); }}>×</button>
                 </td>
               </tr>
             ))}
@@ -491,15 +493,38 @@ export default function VariantEditor({ productId, variants, attributes, onChang
         )}
       </Modal>
 
-      <Confirm
+      <Modal
         open={!!deleting}
-        title="¿Eliminar variante?"
-        message="Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
-        danger
-        onCancel={() => setDeleting(null)}
-        onConfirm={handleDelete}
-      />
+        onClose={() => setDeleting(null)}
+        title={Number(deleting?.stock) > 0 ? 'Confirmación crítica' : '¿Eliminar variante?'}
+        footer={(
+          <>
+            <button className="btn" onClick={() => setDeleting(null)}>Cancelar</button>
+            <button
+              className="btn btn-danger"
+              onClick={handleDelete}
+              disabled={Number(deleting?.stock) > 0 && deleteText !== 'ELIMINAR'}
+            >
+              Aceptar y eliminar
+            </button>
+          </>
+        )}
+      >
+        {Number(deleting?.stock) > 0 ? (
+          <>
+            <div className="alert alert-error" role="alert">
+              La variante tiene stock registrado. Si continúa, se perderá el stock actual de esta variante. El historial de ventas y pedidos no se verá afectado. La multimedia se desvinculará, pero no se eliminará de Media.
+            </div>
+            <p>Stock actual: <strong>{Number(deleting.stock)}</strong> unidades.</p>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Escribe <strong>ELIMINAR</strong> en mayúsculas para confirmar</label>
+              <input className="input" autoFocus value={deleteText} onChange={(e) => setDeleteText(e.target.value)} placeholder="ELIMINAR" />
+            </div>
+          </>
+        ) : (
+          <p style={{ margin: 0 }}>La variante se eliminará y su multimedia solo se desvinculará. Esta acción no se puede deshacer.</p>
+        )}
+      </Modal>
     </>
   );
 }

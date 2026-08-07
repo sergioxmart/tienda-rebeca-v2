@@ -55,6 +55,7 @@ NNN_descripcion_corta.sql
 | 016 | `016_media_variant_links.sql` | Asociaciones reutilizables de multimedia con variantes |
 | 017 | `017_fix_product_attributes_trigger.sql` | Elimina trigger incompatible con `product_attributes` |
 | 018 | `018_preserve_order_history_on_product_delete.sql` | Conserva snapshots de ventas al eliminar productos |
+| 019 | `019_builder_drafts.sql` | Estado borrador aislado del Builder |
 
 ## Lo que falta decidir
 

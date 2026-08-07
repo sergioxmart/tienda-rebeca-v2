@@ -11,6 +11,7 @@
 //   - Eliminar
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
@@ -21,6 +22,7 @@ const EMPTY_NEW = { name: '', description: '' };
 
 export default function Themes() {
   const toast = useToast();
+  const navigate = useNavigate();
   const fileRef = useRef(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,9 @@ export default function Themes() {
   const [applying, setApplying] = useState(null);   // theme
   const [deleting, setDeleting] = useState(null);   // theme
   const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [pendingImportFile, setPendingImportFile] = useState(null);
+  const [selectedModuleIndexes, setSelectedModuleIndexes] = useState([]);
 
   const load = async () => {
     setLoading(true);
@@ -70,9 +75,10 @@ export default function Themes() {
   const handleApply = async () => {
     try {
       await api.post(`/api/admin/themes/${applying.id}/apply`, {});
-      toast.success('Tema aplicado', 'La home se actualizó.');
+      toast.success('Tema cargado al borrador', 'La tienda publicada no cambió.');
       setApplying(null);
       await load();
+      navigate('/builder');
     } catch (err) {
       toast.error('No se pudo aplicar el tema', err.message);
     }
@@ -131,16 +137,40 @@ export default function Themes() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      await api.upload('/api/admin/themes/import', fd);
-      toast.success('Tema importado');
-      await load();
+      const data = await api.upload('/api/admin/themes/import/preview', fd);
+      setPendingImportFile(file);
+      setImportPreview(data.preview);
+      setSelectedModuleIndexes((data.preview?.modules || []).map((module) => module.index));
     } catch (err) {
-      toast.error('No se pudo importar', err.message);
+      toast.error('No se pudo leer el tema', err.message);
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = '';
     }
   };
+
+  const handleConfirmImport = async () => {
+    if (!pendingImportFile) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', pendingImportFile);
+      fd.append('module_indexes', JSON.stringify(selectedModuleIndexes));
+      await api.upload('/api/admin/themes/import', fd);
+      toast.success('Tema importado', 'Solo se guardaron los bloques seleccionados.');
+      setImportPreview(null);
+      setPendingImportFile(null);
+      await load();
+    } catch (err) {
+      toast.error('No se pudo importar', err.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const toggleImportModule = (index) => setSelectedModuleIndexes((current) => (
+    current.includes(index) ? current.filter((value) => value !== index) : [...current, index]
+  ));
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
@@ -224,6 +254,36 @@ export default function Themes() {
               Esto guarda los page_modules activos y un subset de site_config (nombre, contacto, color de login) como snapshot.
             </div>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!importPreview}
+        onClose={() => !importing && setImportPreview(null)}
+        size="lg"
+        title={`Previsualizar importación${importPreview?.name ? ` · ${importPreview.name}` : ''}`}
+        footer={
+          <>
+            <button className="btn" onClick={() => setImportPreview(null)} disabled={importing}>Cancelar</button>
+            <button className="btn btn-primary" onClick={handleConfirmImport} disabled={importing}>
+              {importing ? <span className="spinner" /> : `Importar ${selectedModuleIndexes.length} bloque${selectedModuleIndexes.length === 1 ? '' : 's'}`}
+            </button>
+          </>
+        }
+      >
+        {importPreview && (
+          <div className="theme-import-preview">
+            <p className="form-hint">Selecciona los bloques que quieres guardar en el nuevo tema. La importación no modifica la tienda publicada.</p>
+            <div className="theme-import-module-list">
+              {importPreview.modules.map((module) => (
+                <label className="theme-import-module" key={module.index}>
+                  <input type="checkbox" checked={selectedModuleIndexes.includes(module.index)} onChange={() => toggleImportModule(module.index)} />
+                  <span><strong>{module.type}</strong><small>{module.active ? 'Activo' : 'Inactivo'} · bloque #{module.index + 1}</small></span>
+                </label>
+              ))}
+            </div>
+            {importPreview.site_config_keys?.length > 0 && <div className="help">También incluye configuración del sitio: {importPreview.site_config_keys.join(', ')}.</div>}
+          </div>
         )}
       </Modal>
 

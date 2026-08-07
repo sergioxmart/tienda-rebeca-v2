@@ -409,9 +409,24 @@ export async function updateVariant(req, res, id) {
 }
 
 export async function deleteVariant(req, res, id) {
-  const { rows: existing } = await query('SELECT id FROM product_variants WHERE id = $1', [id]);
+  const { rows: existing } = await query('SELECT id, stock FROM product_variants WHERE id = $1', [id]);
   if (existing.length === 0) return notFound(res);
-  await query('DELETE FROM product_variants WHERE id = $1', [id]);
+
+  if (Number(existing[0].stock) > 0 && req.body?.confirm_text !== 'ELIMINAR') {
+    return conflict(res, 'stock_confirmation_required', {
+      stock: Number(existing[0].stock),
+      message: 'La variante tiene stock registrado. Si continúa, se perderá el stock actual de esta variante. El historial de ventas y pedidos no se verá afectado. La multimedia se desvinculará, pero no se eliminará de Media.',
+    });
+  }
+
+  await tx(async (client) => {
+    // product_media.variant_id tiene ON DELETE CASCADE para otros flujos,
+    // pero al borrar una variante desde el admin la multimedia central debe
+    // sobrevivir: primero quitamos ambas formas de asociación.
+    await client.query('UPDATE product_media SET variant_id = NULL WHERE variant_id = $1', [id]);
+    await client.query('DELETE FROM product_media_variants WHERE variant_id = $1', [id]);
+    await client.query('DELETE FROM product_variants WHERE id = $1', [id]);
+  });
   await recordAudit(req.user?.id, 'variant.delete', req.ip, { id });
   return json(res, 200, { ok: true });
 }

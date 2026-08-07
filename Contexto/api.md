@@ -173,9 +173,24 @@ de una transacción y crean un movimiento auditable.
 | POST | `/api/admin/themes` | `{ name, description? }` | `site_config` |
 | GET | `/api/admin/themes/:id/export` | — | `site_config` |
 | GET | `/api/admin/themes/current/export` | — | `site_config` (descarga el snapshot del estado aplicado actualmente) |
-| POST | `/api/admin/themes/import` | `multipart/form-data` con `file` | `site_config` |
-| POST | `/api/admin/themes/:id/apply` | — | `site_config` |
+| POST | `/api/admin/themes/import/preview` | `multipart/form-data` con `file`; devuelve módulos y configuración para seleccionar | `site_config` |
+| POST | `/api/admin/themes/import` | `multipart/form-data` con `file`, `module_indexes` JSON opcional | `site_config` |
+| POST | `/api/admin/themes/:id/apply` | —; carga el tema al borrador, no modifica la tienda publicada | `site_config` |
 | DELETE | `/api/admin/themes/:id` | — | `site_config` |
+
+### Web Builder y borradores
+
+El Builder trabaja sobre un único borrador aislado. La tienda pública
+continúa leyendo `page_modules` y `site_config` publicados hasta que el
+administrador confirma la publicación.
+
+| Método | Path | Body / Resultado | Section |
+| ------ | ---- | --------------- | ------- |
+| GET | `/api/admin/builder/draft` | Devuelve el borrador o un snapshot del estado publicado si no existe | `site_config` |
+| POST | `/api/admin/builder/draft` | `{ modules, site_config_subset }` | `site_config` |
+| POST | `/api/admin/builder/draft/from-theme/:id` | Carga un tema al borrador | `site_config` |
+| DELETE | `/api/admin/builder/draft` | Descarta el borrador | `site_config` |
+| POST | `/api/admin/builder/publish` | Copia el borrador al estado publicado y lo elimina | `site_config` |
 
 ### Pedidos (admin)
 

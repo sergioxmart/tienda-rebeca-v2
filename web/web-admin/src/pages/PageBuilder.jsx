@@ -1,5 +1,5 @@
-// Web Builder: gestión de page_modules (los bloques que se renderizan en
-// la home del store).
+// Web Builder: gestión del borrador de page_modules (los bloques que se
+// renderizan en la home del store al publicar).
 //
 // Acciones:
 //   - Listar módulos en orden (con ↑↓)
@@ -17,8 +17,7 @@
 //   - aca en MODULE_SCHEMAS (label, icon, settings[])
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api, ApiError } from '../api.js';
+import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
@@ -96,6 +95,7 @@ const MODULE_SCHEMAS = {
 
 const EMPTY_NEW = { type: 'hero', settings: {}, active: true };
 const NAV_DEFAULTS = {
+  navbar_enabled: true,
   navbar_announcement: 'Envíos a toda Colombia · Compra fácil y segura',
   navbar_show_announcement: true,
   navbar_show_search: true,
@@ -112,6 +112,16 @@ function normalizeNavLinks(value) {
     .filter((link) => link.label || link.href);
 }
 
+function normalizeModules(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((module, index) => ({
+    ...module,
+    id: module.id ?? `draft-${module.type || 'module'}-${index}`,
+    settings: module.settings && typeof module.settings === 'object' ? module.settings : {},
+    active: module.active !== false,
+  }));
+}
+
 function defaultSettingsForType(type) {
   const schema = MODULE_SCHEMAS[type];
   if (!schema) return {};
@@ -122,6 +132,52 @@ function defaultSettingsForType(type) {
     else out[f.key] = '';
   }
   return out;
+}
+
+function ModulePreview({ module }) {
+  const settings = module?.settings || {};
+  const type = module?.type;
+  if (type === 'hero') return (
+    <section className="builder-preview-hero" style={settings.image_url ? { backgroundImage: `linear-gradient(120deg, rgba(15,42,71,.92), rgba(15,42,71,.5)), url(${settings.image_url})` } : undefined}>
+      <small>{settings.eyebrow || 'Tecnología para tu día a día'}</small>
+      <h2>{settings.title || 'Título del hero'}</h2>
+      <p>{settings.subtitle || 'Escribe un mensaje claro para presentar tu tienda.'}</p>
+      <button className="btn btn-accent btn-sm" type="button">{settings.cta_text || 'Ver catálogo'}</button>
+    </section>
+  );
+  if (type === 'banner') return <div className="builder-preview-banner" style={settings.image_url ? { backgroundImage: `url(${settings.image_url})` } : undefined}><strong>{settings.alt || 'Banner promocional'}</strong></div>;
+  if (type === 'categories' || type === 'categories_grid') return <section className="builder-preview-section"><h3>{settings.title || 'Categorías'}</h3><div className="builder-preview-chips"><span>Accesorios</span><span>Celulares</span><span>Ofertas</span></div></section>;
+  if (type === 'featured_products' || type === 'recent_products') return <section className="builder-preview-section"><h3>{settings.title || 'Productos'}</h3><div className="builder-preview-products"><span>Producto destacado</span><span>Producto destacado</span><span>Producto destacado</span></div></section>;
+  return <div className="builder-preview-section"><strong>{type || 'Módulo'}</strong><p>Vista previa no disponible para este tipo.</p></div>;
+}
+
+function BuilderPreview({ modules, navSettings }) {
+  return (
+    <div className="builder-live-preview">
+      {navSettings?.navbar_enabled !== false && <div className="builder-preview-navbar"><strong>TechStore</strong><span>Tienda</span><span>Catálogo</span><span className="builder-preview-navbar-search">⌕ Buscar</span><span>🛒</span></div>}
+      {(modules || []).filter((module) => module.active !== false).map((module, index) => <ModulePreview key={module.id || `${module.type}-${index}`} module={module} />)}
+      {(modules || []).length === 0 && <div className="empty"><h3>Sin módulos en el borrador</h3></div>}
+    </div>
+  );
+}
+
+function BuilderModuleRow({ icon, label, description, active, onMoveUp, onMoveDown, onToggle, onConfigure, onDelete, disableUp, disableDown, disableDelete }) {
+  return (
+    <div className={`builder-module-row ${active ? '' : 'is-inactive'}`}>
+      <div className="builder-module-order">
+        <button className="btn btn-sm" type="button" onClick={onMoveUp} disabled={disableUp} title="Subir">↑</button>
+        <button className="btn btn-sm" type="button" onClick={onMoveDown} disabled={disableDown} title="Bajar">↓</button>
+      </div>
+      <div className="builder-module-icon" aria-hidden="true">{icon}</div>
+      <div className="builder-module-copy"><strong>{label}</strong><span>{description}</span></div>
+      <span className={`badge ${active ? 'active' : 'inactive'}`}>{active ? 'Activo' : 'Inactivo'}</span>
+      <div className="table-actions builder-module-actions">
+        <button className="btn btn-sm" type="button" onClick={onToggle}>{active ? 'Desactivar' : 'Activar'}</button>
+        <button className="btn btn-sm" type="button" onClick={onConfigure}>Configurar</button>
+        <button className="btn btn-sm btn-danger" type="button" onClick={onDelete} disabled={disableDelete} title={disableDelete ? 'El Navbar es parte estructural de la tienda' : 'Eliminar'}>×</button>
+      </div>
+    </div>
+  );
 }
 
 export default function PageBuilder() {
@@ -135,12 +191,19 @@ export default function PageBuilder() {
   const [products, setProducts] = useState([]);
   const [navSettings, setNavSettings] = useState(NAV_DEFAULTS);
   const [navSaving, setNavSaving] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [modalTab, setModalTab] = useState('edit');
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await api.get('/api/admin/page-modules');
-      setModules(data.modules || []);
+      const data = await api.get('/api/admin/builder/draft');
+      const draft = data.draft || {};
+      setModules(normalizeModules(draft.modules));
+      setHasDraft(Boolean(data.has_draft));
+      setNavSettings((current) => ({ ...current, ...(draft.site_config_subset || {}), navbar_links: normalizeNavLinks(draft.site_config_subset?.navbar_links ?? current.navbar_links) }));
       setReorderDirty(false);
     } catch (err) {
       toast.error('No se pudieron cargar los módulos', err.message);
@@ -152,21 +215,20 @@ export default function PageBuilder() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await api.get('/api/admin/site-config');
-        const config = data.config || data;
-        setNavSettings((current) => ({
-          ...current,
-          ...Object.fromEntries(Object.keys(NAV_DEFAULTS).filter((key) => key !== 'navbar_links').map((key) => [key, config[key] ?? current[key]])),
-          navbar_links: normalizeNavLinks(config.navbar_links),
-        }));
-      } catch (err) {
-        toast.error('No se pudo cargar la configuración del navbar', err.message);
-      }
-    })();
     api.get('/api/admin/products?active=true').then((data) => setProducts(data.products || [])).catch(() => setProducts([]));
-  }, [toast]);
+  }, []);
+
+  const persistDraft = async (nextModules, nextNavSettings) => {
+    setDraftSaving(true);
+    try {
+      await api.post('/api/admin/builder/draft', { modules: nextModules, site_config_subset: nextNavSettings });
+      setHasDraft(true);
+      return true;
+    } catch (err) {
+      toast.error('No se pudo guardar el borrador', err.message);
+      return false;
+    } finally { setDraftSaving(false); }
+  };
 
   const move = (idx, dir) => {
     const next = [...modules];
@@ -178,17 +240,14 @@ export default function PageBuilder() {
   };
 
   const saveOrder = async () => {
-    try {
-      await api.patch('/api/admin/page-modules/reorder', { ids: modules.map((m) => m.id) });
-      toast.success('Orden guardado');
+    if (await persistDraft(modules, navSettings)) {
+      toast.success('Orden del borrador guardado');
       setReorderDirty(false);
-    } catch (err) {
-      toast.error('No se pudo guardar el orden', err.message);
     }
   };
 
-  const openNew = () => setEditing({ mode: 'new', ...EMPTY_NEW, settings: defaultSettingsForType('hero') });
-  const openEdit = (m) => setEditing({ mode: 'edit', id: m.id, type: m.type, settings: { ...m.settings }, active: m.active });
+  const openNew = () => { setModalTab('edit'); setEditing({ mode: 'new', ...EMPTY_NEW, settings: defaultSettingsForType('hero') }); };
+  const openEdit = (m) => { setModalTab('edit'); setEditing({ mode: 'edit', id: m.id, type: m.type, settings: { ...m.settings }, active: m.active }); };
 
   const onTypeChange = (newType) => {
     setEditing((cur) => {
@@ -229,11 +288,9 @@ export default function PageBuilder() {
   const saveNavSettings = async () => {
     setNavSaving(true);
     try {
-      await api.patch('/api/admin/site-config', {
-        ...navSettings,
-        navbar_links: navSettings.navbar_links.filter((link) => link.label.trim() && link.href.trim()),
-      });
-      toast.success('Navbar actualizado');
+      const next = { ...navSettings, navbar_links: navSettings.navbar_links.filter((link) => link.label.trim() && link.href.trim()) };
+      setNavSettings(next);
+      if (await persistDraft(modules, next)) toast.success('Navbar guardado en el borrador');
     } catch (err) {
       toast.error('No se pudo guardar el navbar', err.message);
     } finally {
@@ -253,15 +310,14 @@ export default function PageBuilder() {
         if (raw === '' || raw === undefined || raw === null) continue;
         settingsOut[f.key] = f.type === 'number' ? Number(raw) : raw;
       }
-      if (editing.mode === 'new') {
-        await api.post('/api/admin/page-modules', { type: editing.type, settings: settingsOut, active: editing.active });
-        toast.success('Módulo creado');
-      } else {
-        await api.patch(`/api/admin/page-modules/${editing.id}`, { type: editing.type, settings: settingsOut, active: editing.active });
-        toast.success('Módulo actualizado');
-      }
+      const nextModule = { id: editing.id || `draft-${Date.now()}`, type: editing.type, settings: settingsOut, active: editing.active };
+      const nextModules = editing.mode === 'new'
+        ? [...modules, nextModule]
+        : modules.map((module) => module.id === editing.id ? { ...module, ...nextModule } : module);
+      if (!await persistDraft(nextModules, navSettings)) return;
+      setModules(nextModules);
+      toast.success(editing.mode === 'new' ? 'Módulo agregado al borrador' : 'Módulo actualizado en el borrador');
       setEditing(null);
-      await load();
     } catch (err) {
       toast.error('No se pudo guardar', err.message);
     } finally {
@@ -270,23 +326,39 @@ export default function PageBuilder() {
   };
 
   const toggleActive = async (m) => {
-    try {
-      await api.patch(`/api/admin/page-modules/${m.id}`, { active: !m.active });
-      await load();
-    } catch (err) {
-      toast.error('No se pudo cambiar el estado', err.message);
-    }
+    const nextModules = modules.map((module) => module.id === m.id ? { ...module, active: !module.active } : module);
+    if (await persistDraft(nextModules, navSettings)) setModules(nextModules);
+  };
+
+  const toggleNavbar = async () => {
+    const nextNav = { ...navSettings, navbar_enabled: navSettings.navbar_enabled === false };
+    setNavSettings(nextNav);
+    await persistDraft(modules, nextNav);
   };
 
   const handleDelete = async () => {
-    try {
-      await api.delete(`/api/admin/page-modules/${deleting.id}`);
+    const nextModules = modules.filter((module) => module.id !== deleting.id);
+    if (await persistDraft(nextModules, navSettings)) {
+      setModules(nextModules);
       toast.success('Módulo eliminado');
       setDeleting(null);
-      await load();
-    } catch (err) {
-      toast.error('No se pudo eliminar', err.message);
     }
+  };
+
+  const discardDraft = async () => {
+    try {
+      await api.delete('/api/admin/builder/draft');
+      toast.success('Borrador descartado', 'La tienda publicada no cambió.');
+      await load();
+    } catch (err) { toast.error('No se pudo descartar el borrador', err.message); }
+  };
+
+  const publishDraft = async () => {
+    try {
+      await api.post('/api/admin/builder/publish', {});
+      toast.success('Cambios publicados', 'La tienda pública ya puede recibir la nueva versión.');
+      await load();
+    } catch (err) { toast.error('No se pudo publicar', err.message); }
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
@@ -299,18 +371,21 @@ export default function PageBuilder() {
         <div>
           <h1>Web Builder</h1>
           <p style={{ color: 'var(--color-muted)', margin: 0, fontSize: 13 }}>
-            Estos bloques se renderizan en la home del store. Reordénalos con ↑↓ y guarda el orden.
+            Configura el borrador de la tienda, revísalo y publícalo cuando estés conforme.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {reorderDirty && (
             <button className="btn btn-primary" onClick={saveOrder}>Guardar orden</button>
           )}
+          <button className="btn" onClick={() => setPreviewOpen(true)}>Vista previa</button>
+          {hasDraft && <button className="btn btn-danger" onClick={discardDraft} disabled={draftSaving}>Descartar borrador</button>}
+          {hasDraft && <button className="btn btn-primary" onClick={publishDraft} disabled={draftSaving}>Publicar</button>}
           <button className="btn btn-accent" onClick={openNew}>+ Nuevo módulo</button>
         </div>
       </div>
 
-      <section className="builder-global-card">
+      <section className="builder-global-card" id="builder-navbar-config">
         <div className="builder-card-heading">
           <div><span className="builder-kicker">Apariencia global</span><h2>Navbar de la tienda</h2><p>Personaliza la barra que aparece en todas las páginas de 5173.</p></div>
           <button className="btn btn-primary" onClick={saveNavSettings} disabled={navSaving}>{navSaving ? <span className="spinner" /> : 'Guardar navbar'}</button>
@@ -325,6 +400,7 @@ export default function PageBuilder() {
           <div className="form-group"><label>Mostrar categorías automáticas</label><select className="select" value={String(navSettings.navbar_show_categories)} onChange={(e) => setNavValue('navbar_show_categories', e.target.value === 'true')}><option value="true">Sí, usar categorías del catálogo</option><option value="false">No</option></select></div>
         </div>
         <div className="builder-toggle-row">
+          <label><input type="checkbox" checked={navSettings.navbar_enabled !== false} onChange={(e) => setNavValue('navbar_enabled', e.target.checked)} /> Navbar activo</label>
           <label><input type="checkbox" checked={navSettings.navbar_show_announcement} onChange={(e) => setNavValue('navbar_show_announcement', e.target.checked)} /> Mostrar mensaje superior</label>
           <label><input type="checkbox" checked={navSettings.navbar_show_search} onChange={(e) => setNavValue('navbar_show_search', e.target.checked)} /> Mostrar buscador</label>
           <label><input type="checkbox" checked={navSettings.navbar_show_cart} onChange={(e) => setNavValue('navbar_show_cart', e.target.checked)} /> Mostrar carrito</label>
@@ -340,47 +416,47 @@ export default function PageBuilder() {
         </div>}
       </section>
 
+      <div className="builder-module-list">
+        <BuilderModuleRow
+          icon="🧭"
+          label="Nav Bar"
+          description="Barra principal de navegación, búsqueda y carrito."
+          active={navSettings.navbar_enabled !== false}
+          onMoveUp={() => {}}
+          onMoveDown={() => {}}
+          onToggle={toggleNavbar}
+          onConfigure={() => document.getElementById('builder-navbar-config')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          onDelete={() => {}}
+          disableUp
+          disableDown
+          disableDelete
+        />
+      </div>
+
       {modules.length === 0 ? (
         <Empty title="Sin módulos" description="La home no muestra nada. Crea el primero." action={
           <button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>
         } />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="builder-module-list">
           {modules.map((m, idx) => {
             const sch = MODULE_SCHEMAS[m.type];
             const label = sch?.label || m.type;
             const icon = sch?.icon || '📦';
-            return (
-              <div key={m.id} style={{
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                padding: 12,
-                opacity: m.active ? 1 : 0.55,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <button className="btn btn-sm" onClick={() => move(idx, -1)} disabled={idx === 0} title="Subir">↑</button>
-                    <button className="btn btn-sm" onClick={() => move(idx, 1)} disabled={idx === modules.length - 1} title="Bajar">↓</button>
-                  </div>
-                  <div style={{ fontSize: 22 }}>{icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{label}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-muted)' }}>
-                      {sch?.description || `Tipo: ${m.type}`}
-                    </div>
-                  </div>
-                  <span className={`badge ${m.active ? 'active' : 'inactive'}`}>{m.active ? 'Activo' : 'Inactivo'}</span>
-                  <div className="table-actions">
-                    <button className="btn btn-sm" onClick={() => toggleActive(m)}>
-                      {m.active ? 'Desactivar' : 'Activar'}
-                    </button>
-                    <button className="btn btn-sm" onClick={() => openEdit(m)}>Configurar</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => setDeleting(m)}>×</button>
-                  </div>
-                </div>
-              </div>
-            );
+            return <BuilderModuleRow
+              key={m.id}
+              icon={icon}
+              label={label}
+              description={sch?.description || `Tipo: ${m.type}`}
+              active={m.active !== false}
+              onMoveUp={() => move(idx, -1)}
+              onMoveDown={() => move(idx, 1)}
+              onToggle={() => toggleActive(m)}
+              onConfigure={() => openEdit(m)}
+              onDelete={() => setDeleting(m)}
+              disableUp={idx === 0}
+              disableDown={idx === modules.length - 1}
+            />;
           })}
         </div>
       )}
@@ -405,7 +481,12 @@ export default function PageBuilder() {
         }
       >
         {editing && schema && (
-          <form onSubmit={handleSave}>
+          <>
+            <div className="builder-modal-tabs" role="tablist" aria-label="Modo del editor">
+              <button className={`builder-modal-tab ${modalTab === 'edit' ? 'is-active' : ''}`} type="button" onClick={() => setModalTab('edit')}>Editar</button>
+              <button className={`builder-modal-tab ${modalTab === 'preview' ? 'is-active' : ''}`} type="button" onClick={() => setModalTab('preview')}>Vista previa</button>
+            </div>
+            {modalTab === 'edit' ? <form onSubmit={handleSave}>
             <div className="form-row">
               <div className="form-group">
                 <label>Tipo de módulo</label>
@@ -451,8 +532,19 @@ export default function PageBuilder() {
                 )}
               </div>
             ))}
-          </form>
+          </form> : <BuilderPreview modules={[editing]} navSettings={navSettings} />}
+          </>
         )}
+      </Modal>
+
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        size="lg"
+        title="Vista previa del borrador"
+        footer={<button className="btn" onClick={() => setPreviewOpen(false)}>Cerrar</button>}
+      >
+        <BuilderPreview modules={modules} navSettings={navSettings} />
       </Modal>
 
       <Confirm

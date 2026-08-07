@@ -9,7 +9,7 @@
 //   POST   /api/admin/themes                  → crear theme desde el estado actual
 //   GET    /api/admin/themes/:id              → detalle
 //   DELETE /api/admin/themes/:id              → borrar
-//   POST   /api/admin/themes/:id/apply        → aplicar (reemplaza modules + subset de site_config)
+//   POST   /api/admin/themes/:id/apply        → cargar el tema al borrador
 //   GET    /api/admin/themes/:id/export       → descargar zip con theme.json
 //   GET    /api/admin/themes/current/export   → descargar el estado aplicado ahora
 //   POST   /api/admin/themes/import           → multipart zip → crea theme nuevo
@@ -18,7 +18,7 @@
 // del sitio, no del theme. Si el theme referencia una imagen que no
 // existe, el módulo simplemente no la muestra.
 
-import { query, tx } from '../../lib/db.js';
+import { query } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
 import AdmZip from 'adm-zip';
@@ -26,6 +26,7 @@ import { ZipArchive } from 'archiver';
 import multer from 'multer';
 import { env } from '../../lib/env.js';
 import { protect, recordAudit, validators, validate, notFound } from './_helpers.js';
+import { upsertDraft, BUILDER_CONFIG_KEYS } from './builder.js';
 
 // Multer propio para el import: acepta CUALQUIER mime (el zip se
 // anuncia como application/octet-stream y no queremos validar el
@@ -45,6 +46,13 @@ const SITE_CONFIG_KEYS_THAT_MATTER = [
   'contact_instagram',
   'contact_facebook',
   'admin_login_bg',
+  'navbar_enabled',
+  'navbar_announcement',
+  'navbar_show_announcement',
+  'navbar_show_search',
+  'navbar_show_cart',
+  'navbar_show_categories',
+  'navbar_links',
 ];
 
 // --- Helpers ---------------------------------------------------------------
@@ -131,31 +139,15 @@ export async function applyTheme(req, res, id) {
   try { validateThemeShape(existing[0].data); theme = existing[0].data; }
   catch (e) { return json(res, 400, { ok: false, error: 'invalid_theme', message: e.message }); }
 
-  await tx(async (client) => {
-    // 1) Reemplazar page_modules: borrar todos y re-insertar desde el theme.
-    await client.query(`DELETE FROM page_modules`);
-    for (let i = 0; i < theme.modules.length; i++) {
-      const m = theme.modules[i];
-      await client.query(
-        `INSERT INTO page_modules (type, position, settings, active)
-         VALUES ($1, $2, $3::jsonb, COALESCE($4, TRUE))`,
-        [m.type, i + 1, JSON.stringify(m.settings || {}), m.active],
-      );
-    }
-    // 2) Aplicar site_config_subset (merge).
-    const subset = theme.site_config_subset || {};
-    for (const [k, v] of Object.entries(subset)) {
-      await client.query(
-        `INSERT INTO site_config (key, value, updated_at)
-         VALUES ($1, $2::jsonb, NOW())
-         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-        [k, JSON.stringify(v)],
-      );
-    }
-  });
-  await recordAudit(req.user?.id, 'theme.apply', req.ip, { id, name: existing[0].name });
-  log.info('theme applied', { id, name: existing[0].name, by: req.user?.email });
-  return json(res, 200, { ok: true });
+  const draft = await upsertDraft({
+    modules: theme.modules,
+    site_config_subset: Object.fromEntries(
+      Object.entries(theme.site_config_subset || {}).filter(([key]) => BUILDER_CONFIG_KEYS.includes(key)),
+    ),
+  }, Number(id), req.user, req);
+  await recordAudit(req.user?.id, 'theme.apply_to_draft', req.ip, { id, name: existing[0].name });
+  log.info('theme applied to draft', { id, name: existing[0].name, by: req.user?.email });
+  return json(res, 200, { ok: true, draft, applied_to: 'draft' });
 }
 
 async function sendThemeZip(req, res, name, data, id = 'current') {
@@ -194,6 +186,42 @@ export async function exportCurrentTheme(req, res) {
   return sendThemeZip(req, res, 'Tema actual', data);
 }
 
+function parseThemeBuffer(buffer) {
+  const zip = new AdmZip(buffer);
+  const entry = zip.getEntry('theme.json');
+  if (!entry) throw new Error('theme_json_not_found');
+  const theme = JSON.parse(entry.getData().toString('utf8'));
+  validateThemeShape(theme);
+  return theme;
+}
+
+function previewFromTheme(theme) {
+  return {
+    name: typeof theme.name === 'string' ? theme.name : '',
+    description: typeof theme.description === 'string' ? theme.description : '',
+    modules: theme.modules.map((module, index) => ({
+      index,
+      type: module.type,
+      active: module.active !== false,
+      settings: module.settings || {},
+    })),
+    site_config_keys: Object.keys(theme.site_config_subset || {}),
+  };
+}
+
+export async function previewImportTheme(req, res) {
+  themeUpload.single('file')(req, res, async (err) => {
+    if (err) return json(res, 400, { ok: false, error: 'upload_failed', message: err.message });
+    if (!req.file) return json(res, 400, { ok: false, error: 'file_required' });
+    try {
+      const theme = parseThemeBuffer(req.file.buffer);
+      return json(res, 200, { ok: true, preview: previewFromTheme(theme) });
+    } catch (e) {
+      return json(res, 400, { ok: false, error: e.message === 'theme_json_not_found' ? e.message : 'invalid_theme', message: e.message });
+    }
+  });
+}
+
 export async function importTheme(req, res) {
   // multipart zip. multer procesa el body y nos deja req.file.buffer.
   themeUpload.single('file')(req, res, async (err) => {
@@ -208,18 +236,19 @@ export async function importTheme(req, res) {
 
     let theme;
     try {
-      const zip = new AdmZip(buffer);
-      const entry = zip.getEntry('theme.json');
-      if (!entry) return json(res, 400, { ok: false, error: 'theme_json_not_found' });
-      const raw = entry.getData().toString('utf8');
-      theme = JSON.parse(raw);
+      theme = parseThemeBuffer(buffer);
     } catch (e) {
       return json(res, 400, { ok: false, error: 'invalid_json', message: e.message });
     }
-    try {
-      validateThemeShape(theme);
-    } catch (e) {
-      return json(res, 400, { ok: false, error: 'invalid_theme', message: e.message });
+    const rawIndexes = req.body?.module_indexes;
+    if (rawIndexes !== undefined) {
+      let indexes;
+      try { indexes = JSON.parse(rawIndexes); } catch { return json(res, 400, { ok: false, error: 'module_indexes_invalid' }); }
+      if (!Array.isArray(indexes) || !indexes.every((index) => Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < theme.modules.length)) {
+        return json(res, 400, { ok: false, error: 'module_indexes_invalid' });
+      }
+      const selected = new Set(indexes.map(Number));
+      theme.modules = theme.modules.filter((_module, index) => selected.has(index));
     }
 
     // El nombre del theme: si viene name en el JSON, lo usamos; si no, "Theme importado <fecha>".
@@ -249,6 +278,7 @@ const routes = [
   { method: 'DELETE', pattern: /^\/api\/admin\/themes\/(\d+)\/?$/,             handler: deleteTheme,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/themes\/(\d+)\/apply\/?$/,      handler: applyTheme,        section: 'site_config' },
   { method: 'GET',    pattern: /^\/api\/admin\/themes\/(\d+)\/export\/?$/,     handler: exportTheme,       section: 'site_config' },
+  { method: 'POST',   pattern: /^\/api\/admin\/themes\/import\/preview\/?$/,    handler: previewImportTheme, section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/themes\/import\/?$/,            handler: importTheme,        section: 'site_config' },
 ];
 

@@ -64,10 +64,19 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/attributes` | — | Lista de atributos globales con sus valores. Para los filtros del catálogo. |
 | GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
+| POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
 | POST | `/api/public/checkout` | `{ items: [{ variant_id, quantity }], customer, address, payment_provider }` | Crea `order` + `payment_intent` con el provider elegido. Devuelve `checkout_url` para redirigir. |
 | GET  | `/api/public/orders/:order_number` | `?email=` | Lookup de pedido por número + email (sin login). El cliente puede ver el estado de su pedido. |
 
 ## `/api/admin/*` (panel)
+
+### Pedidos y ventas
+
+| Método | Path | Body / Query | Section |
+| ------ | ---- | ------------ | ------- |
+| GET | `/api/admin/orders` | `?status=&q=` | `orders` |
+| GET | `/api/admin/orders/:id` | — | `orders` |
+| GET | `/api/admin/sales` | `?from=&to=&payment_method=&status=` | `sales` |
 
 ### Categorías
 

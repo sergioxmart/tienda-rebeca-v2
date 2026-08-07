@@ -9,6 +9,7 @@ import { getSiteConfig } from './site-config.js';
 import { listProducts } from './products.js';
 import { getProductBySlug } from './product-detail.js';
 import { listPublicModules } from './page-modules.js';
+import { validateCart } from './cart.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -17,6 +18,11 @@ export async function handlePublic(req, res) {
   // Health
   if (pathname === '/api/public/health') {
     return json(res, 200, { ok: true, scope: 'public' });
+  }
+
+  // Cart validation (no auth: the cart is anonymous and client-side)
+  if (pathname === '/api/public/cart/validate' && method === 'POST') {
+    return validateCart(req, res);
   }
 
   // Site config (path exacto)
@@ -54,4 +60,3 @@ export async function handlePublic(req, res) {
 
   return json(res, 404, { ok: false, error: 'not_found' });
 }
-

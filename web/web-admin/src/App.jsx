@@ -16,6 +16,8 @@ import Users from './pages/Users.jsx';
 import PageBuilder from './pages/PageBuilder.jsx';
 import Themes from './pages/Themes.jsx';
 import Inventory from './pages/Inventory.jsx';
+import Orders from './pages/Orders.jsx';
+import Sales from './pages/Sales.jsx';
 
 function RequireAuth({ children }) {
   const { status } = useAuth();
@@ -50,6 +52,9 @@ export default function App() {
         <Route path="/products/new" element={<ProductForm />} />
         <Route path="/products/:id" element={<ProductForm />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/:id" element={<Orders />} />
+        <Route path="/sales" element={<Sales />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/attributes" element={<Attributes />} />
         <Route path="/media" element={<Media />} />

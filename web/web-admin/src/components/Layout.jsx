@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 
+const SIDEBAR_STORAGE_KEY = 'techstore.admin.sidebar.groups.v1';
+
 const NAV_GROUPS = [
   {
     label: 'Operación',
@@ -11,13 +13,15 @@ const NAV_GROUPS = [
       { to: '/', label: 'Resumen', icon: 'dashboard' },
       { to: '/products', label: 'Productos', icon: 'box' },
       { to: '/inventory', label: 'Inventario', icon: 'inventory' },
+      { to: '/orders', label: 'Pedidos', icon: 'orders' },
+      { to: '/sales', label: 'Ventas', icon: 'sales' },
       { to: '/categories', label: 'Categorías', icon: 'folder' },
       { to: '/attributes', label: 'Atributos', icon: 'tag' },
       { to: '/media', label: 'Imágenes', icon: 'image' },
     ],
   },
   {
-    label: 'Sitio web',
+    label: 'Sitio Web',
     items: [
       { to: '/builder', label: 'Constructor', icon: 'layout' },
       { to: '/themes', label: 'Temas', icon: 'sparkles' },
@@ -42,6 +46,8 @@ function Icon({ name }) {
     sparkles: 'm12 3 1.2 4.8L18 9l-4.8 1.2L12 15l-1.2-4.8L6 9l4.8-1.2L12 3ZM19 15l.6 2.4L22 18l-2.4.6L19 21l-.6-2.4L16 18l2.4-.6L19 15Z',
     settings: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0-5 1 .2.7 2.1 1.5.6 2-1.1 1.5 1.5-1.1 2 .6 1.5 2.1.7.7-.2 1-2.1.7-.6 1.5 1.1 2-1.5 1.5-2-1.1-1.5.6-.7 2.1-1-.2-1-.7-.7-2.1-1.5-.6-2 1.1-1.5-1.5 1.1-2-.6-1.5-2.1-.7-.7.2-1Z',
     users: 'M16 20v-1.5a3.5 3.5 0 0 0-7 0V20m3.5-8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm4-5a2.5 2.5 0 0 1 0 4.8M19 20v-1a3 3 0 0 0-2-2.8',
+    orders: 'M5 5h14v14H5V5Zm3 4h8M8 13h8M8 16h5',
+    sales: 'M5 19V9m7 10V5m7 14v-7',
   };
 
   return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]} /></svg>;
@@ -51,6 +57,17 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [site, setSite] = useState({ site_name: 'TechStore', logo_url: null });
+  const [openGroups, setOpenGroups] = useState(() => {
+    const defaults = Object.fromEntries(NAV_GROUPS.map((group) => [group.label, ['Operación', 'Sitio Web'].includes(group.label)]));
+    try {
+      const saved = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || 'null');
+      return saved && typeof saved === 'object' ? { ...defaults, ...saved } : defaults;
+    } catch { return defaults; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(openGroups)); } catch { /* ignore */ }
+  }, [openGroups]);
 
   useEffect(() => {
     let active = true;
@@ -86,13 +103,20 @@ export default function Layout() {
         <nav className="sidebar-nav">
           {NAV_GROUPS.map((group) => (
             <div className="nav-group" key={group.label}>
-              <div className="nav-group-label">{group.label}</div>
-              {group.items.map((item) => (
+              <button
+                type="button"
+                className="nav-group-toggle"
+                aria-expanded={!!openGroups[group.label]}
+                onClick={() => setOpenGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}
+              >
+                <span className="nav-group-label">{group.label}</span>
+                <span className={`nav-group-chevron ${openGroups[group.label] ? 'is-open' : ''}`}>⌄</span>
+              </button>
+              {openGroups[group.label] && <div className="nav-group-items">{group.items.map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => (isActive ? 'active' : undefined)}>
-                  <Icon name={item.icon} />
-                  <span>{item.label}</span>
+                  <Icon name={item.icon} /><span>{item.label}</span>
                 </NavLink>
-              ))}
+              ))}</div>}
             </div>
           ))}
         </nav>

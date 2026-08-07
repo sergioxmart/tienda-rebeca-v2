@@ -57,6 +57,14 @@ export const api = {
     const r = await request('/api/public/page-modules');
     return { modules: r.modules || [] };
   },
+  validateCart: async (items) => {
+    const r = await request('/api/public/cart/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+    return { items: r.items || [], missing_variant_ids: r.missing_variant_ids || [] };
+  },
 };
 
 export { ApiError };

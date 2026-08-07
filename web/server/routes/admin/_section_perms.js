@@ -21,6 +21,7 @@ export const SECTION_PERMS = {
   // Operación: admin y operator escriben
   orders:   { write: ['admin', 'operator'], read: ['admin', 'operator', 'viewer'] },
   payments: { write: ['admin', 'operator'], read: ['admin', 'operator', 'viewer'] },
+  sales:   { write: ['admin', 'operator'], read: ['admin', 'operator', 'viewer'] },
 
   // Config: solo admin escribe, todos leen
   site_config: { write: ['admin'], read: ['admin', 'operator', 'viewer'] },

@@ -19,6 +19,7 @@ import { tryHandleSiteConfig } from './site-config.js';
 import { tryHandleUsers } from './users.js';
 import { tryHandlePageModules } from './page-modules.js';
 import { tryHandleThemes } from './themes.js';
+import { tryHandleOrders } from './orders.js';
 import { handleAdmin as handleAdminLegacy } from './legacy.js';
 
 // Sub-routers de TechStore. Cada uno decide si matchea o no.
@@ -34,6 +35,7 @@ const subRouters = [
   tryHandleUsers,
   tryHandlePageModules,
   tryHandleThemes,
+  tryHandleOrders,
 ];
 
 /**

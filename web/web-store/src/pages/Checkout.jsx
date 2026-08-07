@@ -5,7 +5,7 @@
 // integración con Wompi/ePayco viene en la sesión 6 (cuando Sergio
 // tenga las credenciales).
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../cart/CartContext.jsx';
 import { useSite } from '../site/SiteContext.jsx';
@@ -21,13 +21,31 @@ const EMPTY = {
 };
 
 export default function Checkout() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, revalidate } = useCart();
   const { site } = useSite();
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(8 * 60);
+  const expiryHandled = useRef(false);
+  const deadline = useRef(Date.now() + 8 * 60 * 1000);
+
+  useEffect(() => {
+    if (confirmed || items.length === 0) return undefined;
+    const tick = async () => {
+      const seconds = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
+      setRemainingSeconds(seconds);
+      if (seconds > 0 || expiryHandled.current) return;
+      expiryHandled.current = true;
+      await revalidate();
+      navigate('/', { replace: true, state: { checkoutExpired: true } });
+    };
+    const timer = window.setInterval(tick, 1000);
+    tick();
+    return () => window.clearInterval(timer);
+  }, [confirmed, items.length, navigate, revalidate]);
 
   if (items.length === 0 && !confirmed) {
     return (
@@ -71,7 +89,12 @@ export default function Checkout() {
 
   return (
     <div>
-      <h1>Checkout</h1>
+      <div className="checkout-heading">
+        <h1>Checkout</h1>
+        <div className={`checkout-timer ${remainingSeconds <= 60 ? 'is-warning' : ''}`} role="timer" aria-live="polite">
+          Tiempo restante: <strong>{String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:{String(remainingSeconds % 60).padStart(2, '0')}</strong>
+        </div>
+      </div>
       <div className="cart-page">
         <form onSubmit={handleSubmit}>
           <h3>Datos de contacto</h3>

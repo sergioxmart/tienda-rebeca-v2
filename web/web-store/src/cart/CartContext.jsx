@@ -19,15 +19,60 @@
 //   removeItem(variant_id)
 //   clear()
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { api } from '../api.js';
 import { loadCart, saveCart } from './cartStorage.js';
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
+  const location = useLocation();
   const [items, setItems] = useState(() => loadCart());
+  const itemsRef = useRef(items);
+  const validationRun = useRef(0);
+
+  useEffect(() => { itemsRef.current = items; }, [items]);
 
   useEffect(() => { saveCart(items); }, [items]);
+
+  const revalidate = useCallback(async () => {
+    const current = itemsRef.current;
+    if (current.length === 0) return { removed: 0, updated: 0 };
+    const run = ++validationRun.current;
+    try {
+      const result = await api.validateCart(current.map((item) => ({
+        variant_id: item.variant_id,
+        product_id: item.product_id,
+      })));
+      if (run !== validationRun.current) return { removed: 0, updated: 0 };
+      const latestById = new Map(result.items.map((item) => [Number(item.variant_id), item]));
+      let removed = 0;
+      let updated = 0;
+      const next = current.flatMap((item) => {
+        const latest = latestById.get(Number(item.variant_id));
+        const stock = Number(latest?.stock);
+        if (!latest || !Number.isFinite(stock) || stock <= 0) {
+          removed += 1;
+          return [];
+        }
+        const qty = Math.min(Math.max(1, Number(item.qty) || 1), stock);
+        const refreshed = { ...item, ...latest, qty };
+        if (JSON.stringify(refreshed) !== JSON.stringify(item)) updated += 1;
+        return [refreshed];
+      });
+      setItems(next);
+      return { removed, updated };
+    } catch {
+      // Un error temporal de red no destruye el carrito local.
+      return { removed: 0, updated: 0 };
+    }
+  }, []);
+
+  // Revalidar al montar (incluye F5) y cada vez que cambia la entrada de
+  // navegación. Así se detectan cambios hechos desde el admin mientras el
+  // cliente estaba recorriendo la tienda.
+  useEffect(() => { revalidate(); }, [location.key, revalidate]);
 
   const addItem = useCallback((newItem) => {
     setItems((cur) => {
@@ -77,7 +122,7 @@ export function CartProvider({ children }) {
     return { subtotal, count };
   }, [items]);
 
-  const value = { items, addItem, updateQty, removeItem, clear, ...totals };
+  const value = { items, addItem, updateQty, removeItem, clear, revalidate, ...totals };
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 

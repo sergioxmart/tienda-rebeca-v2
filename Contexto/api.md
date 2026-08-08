@@ -76,7 +76,7 @@ no tiene `section`, devuelve 403.
 | Método | Path | Body / Query | Section |
 | ------ | ---- | ------------ | ------- |
 | GET | `/api/admin/orders` | `?status=&q=` | `orders` |
-| GET | `/api/admin/orders/:id` | — | `orders` |
+| GET | `/api/admin/orders/:id` | — | `orders` + `order_items` y `shipping_location` (`lat`, `lon`, `display_name`) cuando la dirección puede geocodificarse |
 | GET | `/api/admin/sales` | `?from=&to=&payment_method=&status=` | `sales` |
 
 ### Categorías
@@ -202,7 +202,7 @@ administrador confirma la publicación.
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/orders` | `?status=&q=&from=&to=&page=&limit=` | `orders` |
-| GET | `/api/admin/orders/:id` | — | `orders` |
+| GET | `/api/admin/orders/:id` | — | `orders` + `order_items` y `shipping_location` (`lat`, `lon`, `display_name`) cuando la dirección puede geocodificarse |
 | PATCH | `/api/admin/orders/:id` | `{ status?, notes? }` (cambiar status mueve el pedido en el kanban) | `orders` |
 | POST | `/api/admin/orders/:id/refund` | `{ amount?, reason? }` (amount=null = total) | `orders` |
 

@@ -7,6 +7,7 @@ import { query } from '../../lib/db.js';
 import { json } from '../../lib/json.js';
 import { protect, notFound } from './_helpers.js';
 import { expirePendingOrders } from '../../lib/order-expiration.js';
+import { geocodeShippingAddress } from '../../lib/geocoding.js';
 
 export async function listOrders(req, res) {
   await expirePendingOrders().catch(() => {});
@@ -39,6 +40,10 @@ export async function getOrder(req, res, id) {
   await expirePendingOrders().catch(() => {});
   const { rows } = await query('SELECT * FROM orders WHERE id = $1', [id]);
   if (rows.length === 0) return notFound(res);
+  const shippingLocation = await geocodeShippingAddress({
+    ...(rows[0].shipping_address || {}),
+    notes: rows[0].notes,
+  });
   const { rows: items } = await query(
     `SELECT id, variant_id, product_name, variant_sku, quantity,
             unit_price, line_total, created_at
@@ -47,7 +52,7 @@ export async function getOrder(req, res, id) {
       ORDER BY id`,
     [id],
   );
-  return json(res, 200, { ok: true, order: { ...rows[0], items } });
+  return json(res, 200, { ok: true, order: { ...rows[0], items, shipping_location: shippingLocation } });
 }
 
 const routes = [

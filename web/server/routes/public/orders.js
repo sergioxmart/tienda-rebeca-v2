@@ -119,7 +119,9 @@ export async function createOrder(req, res) {
       const orderId = sequence[0].id;
       const orderNumber = `TS-${new Date().getFullYear()}-${String(orderId).padStart(5, '0')}`;
       const subtotal = resolved.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-      const shippingAddress = JSON.stringify({ address, city });
+      // Conservamos las notas dentro del bloque de despacho porque pueden
+      // contener el conjunto, torre y apartamento que necesita logística.
+      const shippingAddress = JSON.stringify({ address, city, notes });
       await client.query(
         `INSERT INTO orders
            (id, order_number, customer_email, customer_name, customer_phone,

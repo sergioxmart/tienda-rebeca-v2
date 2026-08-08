@@ -10,6 +10,8 @@ import { listProducts } from './products.js';
 import { getProductBySlug } from './product-detail.js';
 import { listPublicModules } from './page-modules.js';
 import { validateCart } from './cart.js';
+import { createOrder } from './orders.js';
+import { createPaymentIntent } from './payment-intent.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -23,6 +25,15 @@ export async function handlePublic(req, res) {
   // Cart validation (no auth: the cart is anonymous and client-side)
   if (pathname === '/api/public/cart/validate' && method === 'POST') {
     return validateCart(req, res);
+  }
+
+  // Checkout: crea un pedido real con estado pendiente.
+  if (pathname === '/api/public/orders' && method === 'POST') {
+    return createOrder(req, res);
+  }
+
+  if (pathname === '/api/public/checkout/payment-intent' && method === 'POST') {
+    return createPaymentIntent(req, res);
   }
 
   // Site config (path exacto)

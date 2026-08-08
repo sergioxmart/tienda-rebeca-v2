@@ -205,15 +205,14 @@ envíos (Coordinadora, Servientrega), agregamos `carrier`,
 Una fila por transacción con la pasarela. Un pedido puede tener varios
 intentos (ej: primero declined, después approved).
 
-- `provider` ∈ {'wompi', 'epayco', 'mercadopago', 'stripe', 'manual', …}.
+- `provider` ∈ {'mercadopago', 'epayco', 'stripe', 'manual', …}.
 - `provider_transaction_id` es el ID del lado de la pasarela.
 - `raw_response` guarda el body completo de la respuesta del provider
   (JSONB). Pensado para que un dev pueda pegarlo en un ticket sin
   tener que ir a la consola de la pasarela.
 
 **Esta tabla es genérica** porque la pasarela todavía no está definida.
-Cuando Sergio elija, se agrega una migration con columnas específicas:
-- Wompi: nada extra, todo viene en `raw_response`.
+Cuando se agregue una pasarela que necesite datos propios, se agrega una migration con columnas específicas:
 - ePayco: similar.
 - MercadoPago: idem, plus `payment_method_id`.
 - Stripe: `payment_intent_id`, `charge_id`.
@@ -261,7 +260,7 @@ en cada request. Cuando integremos la pasarela, agregamos acá
 
 ## Próximos pasos
 
-1. **Elegir pasarela de pago** (Wompi / ePayco / MercadoPago / Stripe)
+1. **Elegir pasarela de pago** (Mercado Pago / ePayco / Stripe)
    para implementar checkout.
 2. Implementar las rutas HTTP (`/api/public/products`, `/api/checkout`,
    `/api/admin/products`, etc.) — la lógica de stock, precios, snapshots.

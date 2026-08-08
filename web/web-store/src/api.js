@@ -65,6 +65,22 @@ export const api = {
     });
     return { items: r.items || [], missing_variant_ids: r.missing_variant_ids || [] };
   },
+  createOrder: async (payload) => {
+    const r = await request('/api/public/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return { order: r.order || null };
+  },
+  createPaymentIntent: async (payload) => {
+    const r = await request('/api/public/checkout/payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return r.payment || null;
+  },
 };
 
 export { ApiError };

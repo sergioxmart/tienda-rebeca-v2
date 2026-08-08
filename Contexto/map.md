@@ -65,11 +65,11 @@ El "Core remoto" (modo dividido con mTLS) es un plan documentado en
 | Módulo | Qué hace | Ruta | Doc |
 | ------ | -------- | ---- | --- |
 | Backend / entry | HTTP server con `node:http`, router por prefijo, security headers, static handler | [`web/server/server.js`](../web/server/server.js) | [conventions.md](./conventions.md) |
-| Rutas HTTP | `/api/public/*` (catálogo), `/api/admin/*` (panel), `/api/auth/*` (login/2FA), `/media/*` | [`web/server/routes/`](../web/server/routes/) | [api.md](./api.md) |
+| Rutas HTTP | `/api/public/*` (catálogo/checkout), `/api/admin/*` (panel), `/api/auth/*` (login/2FA), `/api/webhooks/*` (confirmaciones firmadas), `/media/*` | [`web/server/routes/`](../web/server/routes/) | [api.md](./api.md) |
 | Permisos | `SECTION_PERMS` (backend) + espejo frontend | [`web/server/routes/admin/_section_perms.js`](../web/server/routes/admin/_section_perms.js) | [conventions.md](./conventions.md#roles-y-permisos) |
 | Re-exports a `core/` | `web/server/lib/*` y `web/server/middleware/*` son 1-liners | [`web/server/lib/`](../web/server/lib/), [`web/server/middleware/`](../web/server/middleware/) | [conventions.md](./conventions.md) |
 | Scripts | `setup-db.js`, `migrate.js`, `create-admin.js` | [`web/server/scripts/`](../web/server/scripts/) | [dev-setup.md](./dev-setup.md) |
-| Migraciones SQL | 24 migrations de TechStore (forward-only, idempotentes) | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
+| Migraciones SQL | 26 migrations de TechStore (forward-only, idempotentes) | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 | Tienda pública | SPA Vite + React (catálogo, carrito, checkout) | [`web/web-store/`](../web/web-store/) | [api.md](./api.md) |
 | Panel admin | SPA Vite + React. CRUDs + kanban pedidos | [`web/web-admin/`](../web/web-admin/) | [api.md](./api.md) |
 | Uploads | Directorio de archivos subidos. Lo resuelve `env.UPLOADS_DIR`; las URLs públicas pasan por `/media` | `uploads/` (gitignored) | [conventions.md](./conventions.md) |

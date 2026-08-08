@@ -61,11 +61,13 @@ NNN_descripcion_corta.sql
 | 022 | `022_admin_background_images.sql` | Fondos con imagen para Sidebar y área principal del admin |
 | 023 | `023_login_background_crop.sql` | Encuadre de la imagen del fondo de login |
 | 024 | `024_footer_builder_module.sql` | Convierte el Footer global en un módulo configurable del Builder |
+| 025 | `025_epayco_idempotency.sql` | Evita procesar dos veces la misma referencia de ePayco |
+| 026 | `026_remove_legacy_wompi_config.sql` | Elimina la configuración antigua de la pasarela reemplazada |
 
 ## Lo que falta decidir
 
 - **Pasarela de pago**: la tabla `payments` es agnóstica (`provider TEXT`).
-  Cuando Sergio elija Wompi / ePayco / MercadoPago / Stripe, se agrega una
+  Cuando Sergio elija Mercado Pago / ePayco / Stripe, se agrega una
   migration con las columnas específicas del provider. Ver
   `Contexto/db-schema.md`.
 - **Categorías adicionales**: hoy solo hay `accesorios-telefono`. Cuando

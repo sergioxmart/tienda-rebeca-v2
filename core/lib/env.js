@@ -43,6 +43,28 @@ export const env = {
   WEBHOOK_PORT:      Number(opt('WEBHOOK_PORT', '9001')),
   WEBHOOK_SECRET:    opt('WEBHOOK_SECRET', ''),
 
+  // ePayco Smart Checkout. Las llaves privadas solo se consumen en el
+  // backend; nunca se deben exponer en el bundle de la tienda.
+  EPAYCO_TEST:             opt('EPAYCO_TEST', 'true').toLowerCase() === 'true',
+  EPAYCO_PUBLIC_KEY:       opt('EPAYCO_PUBLIC_KEY', ''),
+  EPAYCO_PRIVATE_KEY:      opt('EPAYCO_PRIVATE_KEY', ''),
+  EPAYCO_CUSTOMER_ID:      opt('EPAYCO_CUSTOMER_ID', opt('P_CUST_ID_CLIENTE', '')),
+  EPAYCO_P_KEY:            opt('EPAYCO_P_KEY', opt('P_KEY', '')),
+  EPAYCO_CHECKOUT_URL:     opt('EPAYCO_CHECKOUT_URL', 'https://checkout.epayco.co/checkout-v2.js'),
+  EPAYCO_RESPONSE_URL:     opt('EPAYCO_RESPONSE_URL', 'http://localhost:5173/pago/respuesta'),
+  EPAYCO_CONFIRMATION_URL: opt('EPAYCO_CONFIRMATION_URL', 'http://localhost:3000/api/webhooks/epayco'),
+
+  // Mercado Pago Checkout Pro. El access token y el secreto del webhook
+  // permanecen únicamente en el backend.
+  MERCADOPAGO_TEST:             opt('MERCADOPAGO_TEST', 'true').toLowerCase() === 'true',
+  MERCADOPAGO_ACCESS_TOKEN:     opt('MERCADOPAGO_ACCESS_TOKEN', ''),
+  MERCADOPAGO_PUBLIC_KEY:       opt('MERCADOPAGO_PUBLIC_KEY', ''),
+  MERCADOPAGO_WEBHOOK_SECRET:   opt('MERCADOPAGO_WEBHOOK_SECRET', ''),
+  MERCADOPAGO_SUCCESS_URL:      opt('MERCADOPAGO_SUCCESS_URL', 'http://localhost:5173/pago/respuesta'),
+  MERCADOPAGO_FAILURE_URL:      opt('MERCADOPAGO_FAILURE_URL', 'http://localhost:5173/pago/respuesta'),
+  MERCADOPAGO_PENDING_URL:      opt('MERCADOPAGO_PENDING_URL', 'http://localhost:5173/pago/respuesta'),
+  MERCADOPAGO_NOTIFICATION_URL: opt('MERCADOPAGO_NOTIFICATION_URL', 'http://localhost:3000/api/webhooks/mercadopago'),
+
   // Uploads
   MAX_UPLOAD_BYTES:  Number(opt('MAX_UPLOAD_BYTES', String(20 * 1024 * 1024))), // 20 MB
 

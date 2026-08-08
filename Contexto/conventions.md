@@ -281,7 +281,7 @@ bumpearse en el mismo commit que el cambio.
 ## Estado actual del proyecto (a agosto 2026)
 
 - ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ 24 migrations de TechStore (001_categories, 002_attributes,
+- ✅ 26 migrations de TechStore (001_categories, 002_attributes,
   003_products, 004_variants, 005_admin_auth, 006_orders,
   007_payments, 008_site_config, 009_auth_admin_extras,
   010_page_modules, 011_themes, 012_password_recovery,
@@ -290,10 +290,12 @@ bumpearse en el mismo commit que el cambio.
   017_fix_product_attributes_trigger, 018_preserve_order_history,
   019_builder_drafts, 020_media_attribute_categories,
   021_admin_theme_colors, 022_admin_background_images,
-  023_login_background_crop, 024_footer_builder_module).
+  023_login_background_crop, 024_footer_builder_module,
+  025_epayco_idempotency, 026_remove_legacy_wompi_config).
 - ✅ Backend admin completo: 8 routers con RBAC + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.
 - ✅ 25 tests verdes.
 - ⏳ Rutas públicas del catálogo (sesión 3).
 - ⏳ UI admin y UI store (sesión 4 y 5).
-- ⏳ Checkout con Wompi/ePayco (sesión 6, esperando credenciales).
+- ✅ Checkout ePayco y Mercado Pago Checkout Pro: intenciones/preferencias y
+  webhooks idempotentes; requieren credenciales Testing y una URL pública HTTPS.

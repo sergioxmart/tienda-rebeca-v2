@@ -65,7 +65,8 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
-| POST | `/api/public/checkout` | `{ items: [{ variant_id, quantity }], customer, address, payment_provider }` | Crea `order` + `payment_intent` con el provider elegido. Devuelve `checkout_url` para redirigir. |
+| POST | `/api/public/orders` | `{ customer: { name, email, phone, address, city, notes? }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`; no requiere pasarela. |
+| POST | `/api/public/checkout/payment-intent` | `{ order_number, email, provider: "mercadopago"|"epayco" }` | Recalcula el total desde el pedido pendiente y crea/reutiliza una preferencia de Mercado Pago Checkout Pro (`redirect_url`) o una sesión ePayco (`session_id`). Las llaves privadas nunca salen del backend. |
 | GET  | `/api/public/orders/:order_number` | `?email=` | Lookup de pedido por número + email (sin login). El cliente puede ver el estado de su pedido. |
 
 ## `/api/admin/*` (panel)
@@ -235,8 +236,8 @@ administrador confirma la publicación.
 
 | Método | Path | Notas |
 | ------ | ---- | ----- |
-| POST | `/api/webhooks/wompi` | Eventos de Wompi (transaction.updated). Valida firma con `wompi.events_secret`. Actualiza el `payment` correspondiente. |
-| POST | `/api/webhooks/epayco` | Eventos de ePayco. Valida firma con `epayco.secret`. Idem. |
+| GET/POST | `/api/webhooks/epayco` | Confirmación ePayco. Valida la firma SHA-256 con `EPAYCO_CUSTOMER_ID` + `EPAYCO_P_KEY`, valida factura/monto/moneda, procesa `x_ref_payco` de forma idempotente y actualiza el pedido aprobado a `paid`. |
+| POST | `/api/webhooks/mercadopago` | Notificaciones de pagos. Valida `x-signature` con el secreto de Mercado Pago, consulta el pago en server-to-server, valida referencia/monto/moneda, procesa el ID de pago de forma idempotente y actualiza el pedido aprobado a `paid`. |
 | POST | `/api/webhooks/deploy` | (futuro) Deploy desde GitHub. Cableado en `web/webhook/server.mjs`; ver [`webhook.md`](./webhook.md) para el setup cuando se deploye. |
 
 ## Lo que falta implementar
@@ -250,4 +251,4 @@ donde se documente):
 - [ ] Admin: `orders`, `payments`, `users`
 - [ ] Public: `categories`, `attributes`, `products`, `products/:slug`
 - [ ] Public: `checkout`, `orders/:order_number`
-- [ ] Webhooks: `wompi`, `epayco` (cuando Sergio tenga credenciales)
+- [x] Webhooks: `epayco` (requiere credenciales Testing y URL pública HTTPS para recibir confirmaciones)

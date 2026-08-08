@@ -1,15 +1,12 @@
-// Checkout (stub v1). Form de envío, sin pasarela de pago todavía.
-//
-// En esta versión, después de llenar el form, se "confirma" el pedido
-// localmente: vacía el carrito y muestra un mensaje de gracias. La
-// integración con Wompi/ePayco viene en la sesión 6 (cuando Sergio
-// tenga las credenciales).
+// Checkout conectado al backend. El pedido se crea como pending y la pasarela
+// elegida lo confirma únicamente mediante el webhook firmado.
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../cart/CartContext.jsx';
 import { useSite } from '../site/SiteContext.jsx';
 import { formatCOP } from '../components/Price.jsx';
+import { api } from '../api.js';
 
 const EMPTY = {
   name: '',
@@ -20,14 +17,36 @@ const EMPTY = {
   notes: '',
 };
 
+function MercadoPagoLogo() {
+  return (
+    <span className="payment-method-logo payment-method-logo-mercadopago" aria-label="Mercado Pago">
+      <span className="payment-method-logo-mark" aria-hidden="true">MP</span>
+      <span className="payment-method-logo-wordmark">mercado pago</span>
+    </span>
+  );
+}
+
+function EpaycoLogo() {
+  return (
+    <span className="payment-method-logo payment-method-logo-epayco" aria-label="ePayco">
+      <span className="payment-method-logo-mark" aria-hidden="true">e</span>
+      <span className="payment-method-logo-wordmark"><b>e</b>payco</span>
+    </span>
+  );
+}
+
 export default function Checkout() {
   const { items, subtotal, clear, revalidate } = useCart();
   const { site } = useSite();
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [paymentCheckout, setPaymentCheckout] = useState(null);
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState('mercadopago');
   const [remainingSeconds, setRemainingSeconds] = useState(8 * 60);
   const expiryHandled = useRef(false);
   const deadline = useRef(Date.now() + 8 * 60 * 1000);
@@ -63,24 +82,78 @@ export default function Checkout() {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.address || !form.city) return;
     setSubmitting(true);
-    // Stub: simular creación de orden. La sesión 6 va a llamar al backend
-    // con Wompi o ePayco.
-    await new Promise((r) => setTimeout(r, 600));
-    const fakeId = 'TS-' + Math.floor(100000 + Math.random() * 900000);
-    setOrderId(fakeId);
-    setConfirmed(true);
-    clear();
-    setSubmitting(false);
+    setSubmitError('');
+    try {
+      const data = await api.createOrder({
+        customer: form,
+        items: items.map((item) => ({
+          variant_id: item.variant_id,
+          product_id: item.product_id,
+          qty: item.qty,
+        })),
+      });
+      if (!data.order?.order_number) throw new Error('El servidor no devolvió el número del pedido.');
+      setOrderId(data.order.order_number);
+      try {
+        const payment = await api.createPaymentIntent({
+          order_number: data.order.order_number,
+          email: form.email,
+          provider: paymentProvider,
+        });
+        setPaymentCheckout(payment?.checkout || null);
+      } catch (paymentError) {
+        // El pedido sí quedó guardado. No simulamos un pago exitoso si las
+        // llaves de ePayco aún no están configuradas o la sesión falla.
+        setPaymentMessage(paymentError.message || 'El pedido quedó pendiente; no pudimos abrir el pago en línea.');
+      }
+      setConfirmed(true);
+      clear();
+    } catch (err) {
+      if (err.status === 409) await revalidate();
+      setSubmitError(err.message || 'No pudimos registrar el pedido. Intenta nuevamente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (confirmed) {
+    const openPayment = () => {
+      if (paymentCheckout?.type === 'redirect' && paymentCheckout.redirect_url) {
+        window.location.assign(paymentCheckout.redirect_url);
+        return;
+      }
+      if (!paymentCheckout?.session_id || !window.ePayco?.checkout) {
+        setPaymentMessage('No se pudo cargar la pasarela de pago. Recarga la página e inténtalo nuevamente.');
+        return;
+      }
+      const checkout = window.ePayco.checkout.configure({
+        sessionId: paymentCheckout.session_id,
+        type: paymentCheckout.type || 'onpage',
+        test: paymentCheckout.test !== false,
+      });
+      checkout.setHooks({
+        onCreated: () => setPaymentMessage('Checkout abierto. Completa el pago en la ventana.'),
+        onResponse: () => setPaymentMessage('Respuesta recibida. Estamos confirmando el pago de forma segura.'),
+        onErrors: () => setPaymentMessage('La pasarela reportó un error. Puedes intentarlo nuevamente.'),
+        onClosed: () => setPaymentMessage('Checkout cerrado. El pedido continuará pendiente hasta confirmar el pago.'),
+      });
+      checkout.open();
+    };
     return (
       <div className="center" style={{ maxWidth: 480, margin: '0 auto' }}>
-        <h1>¡Gracias por tu compra!</h1>
-        <p>Tu pedido <strong>{orderId}</strong> fue recibido. Te contactamos pronto por WhatsApp o email para confirmar el pago y envío.</p>
+        <h1>¡Pedido recibido!</h1>
+        <p>Tu pedido <strong>{orderId}</strong> quedó registrado como pendiente.</p>
+        {paymentCheckout ? (
+          <button type="button" className="btn btn-accent" onClick={openPayment}>
+            {paymentProvider === 'mercadopago' ? 'Pagar con Mercado Pago' : 'Pagar con ePayco'}
+          </button>
+        ) : (
+          <div className="alert alert-warning">{paymentMessage || 'El pedido quedó pendiente de pago.'}</div>
+        )}
+        {paymentMessage && paymentCheckout && <p className="alert alert-info" role="status">{paymentMessage}</p>}
         <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>
-          Cuando integremos la pasarela (Wompi o ePayco), vas a poder pagar
-          directamente acá sin salir de la página.
+          El pedido solo pasará a pagado cuando la pasarela confirme la
+          transacción en el servidor. La pantalla de respuesta no modifica el pedido.
         </p>
         <Link to="/" className="btn btn-primary">Volver al inicio</Link>
       </div>
@@ -128,11 +201,45 @@ export default function Checkout() {
           </div>
 
           <h3 style={{ marginTop: 16 }}>Pago</h3>
-          <div className="alert alert-info">
-            <strong>Próximamente:</strong> Vas a poder pagar con Wompi o ePayco
-            (tarjeta, PSE, Nequi, Daviplata). Por ahora, después de enviar
-            el pedido te contactamos para coordinar el pago.
+          <div className="form-group payment-method-field">
+            <span className="payment-method-label">Elige cómo quieres pagar</span>
+            <div className="payment-method-grid" role="group" aria-label="Selecciona la pasarela de pago">
+              <button
+                type="button"
+                className={`payment-method-card ${paymentProvider === 'mercadopago' ? 'is-selected' : ''}`}
+                aria-pressed={paymentProvider === 'mercadopago'}
+                onClick={() => setPaymentProvider('mercadopago')}
+              >
+                <span className="payment-method-card-top">
+                  <MercadoPagoLogo />
+                  <span className="payment-method-check" aria-hidden="true">✓</span>
+                </span>
+                <span className="payment-method-card-copy">
+                  <strong>Mercado Pago</strong>
+                  <small>Pago seguro en la plataforma</small>
+                </span>
+              </button>
+
+              <button type="button" className="payment-method-card is-disabled" disabled aria-disabled="true">
+                <span className="payment-method-card-top">
+                  <EpaycoLogo />
+                  <span className="payment-method-disabled-badge">No disponible</span>
+                </span>
+                <span className="payment-method-card-copy">
+                  <strong>ePayco</strong>
+                  <small>Próximamente</small>
+                </span>
+                <span className="payment-method-disabled-strike" aria-hidden="true">No disponible</span>
+              </button>
+            </div>
           </div>
+          <div className="alert alert-info">
+            {paymentProvider === 'mercadopago'
+              ? 'Serás redirigido a Mercado Pago para completar el pago de forma segura.'
+              : 'ePayco abrirá su Checkout para que selecciones el medio de pago disponible.'}
+          </div>
+
+          {submitError && <div className="alert alert-error" role="alert">{submitError}</div>}
 
           <button type="submit" className="btn btn-accent btn-lg btn-block" disabled={submitting}>
             {submitting ? <span className="spinner" /> : `Confirmar pedido · ${formatCOP(subtotal)}`}

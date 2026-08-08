@@ -11,7 +11,7 @@ Tienda pública (catálogo, carrito, checkout) + panel admin para
 gestionar el catálogo, los atributos, las variantes, los pedidos y
 la configuración del sitio.
 
-Pagos: checkout con **pasarela** (Wompi + ePayco). Stock por
+Pagos: checkout con **pasarela** (Mercado Pago + ePayco). Stock por
 **variante** de producto. Catálogo navegable con filtros por
 atributos (color, modelo de celular compatible, etc.).
 
@@ -21,7 +21,7 @@ atributos (color, modelo de celular compatible, etc.).
 - Modelo: variantes reales (cada combinación de color × modelo es un
   SKU distinto con su stock y precio).
 - Mercado: Colombia. Moneda: COP.
-- Decisión: pasarela con **dos providers** (Wompi + ePayco) para
+- Decisión: pasarela con **dos providers** (Mercado Pago + ePayco) para
   cobertura. El cliente puede elegir en el checkout.
 
 ## Decisiones de scope (v1)
@@ -35,7 +35,7 @@ atributos (color, modelo de celular compatible, etc.).
   mismo producto (enforced por app, 409 si choca).
 - ✅ **Stock por variante**, no por producto.
 - ✅ **Moneda**: COP, configurable vía `site_config.currency`.
-- ✅ **Cierre**: checkout con pasarela (Wompi + ePayco). Tabla
+- ✅ **Cierre**: checkout con pasarela (Mercado Pago + ePayco). Tabla
   `payments` genérica (`provider TEXT`); las columnas específicas
   del provider se agregan en una migration cuando se elija.
 - ✅ **Auth**: solo admin. Sin login de clientes (los pedidos se
@@ -53,7 +53,7 @@ atributos (color, modelo de celular compatible, etc.).
 
 ## Lo que NO está en v1 (a propósito)
 
-- ❌ Checkout con tarjeta en el sitio (Wompi/ePayco redirigen).
+- ❌ Checkout con tarjeta implementado directamente en el sitio (las pasarelas gestionan el flujo).
 - ❌ Multi-tenant (un solo cliente, TechStore).
 - ❌ Multi-sucursal (stock por tienda).
 - ❌ Customer accounts (los pedidos se hacen con email, sin login).

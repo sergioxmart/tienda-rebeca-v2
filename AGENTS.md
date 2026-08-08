@@ -65,4 +65,4 @@ cargan con `--env-file`. Si trabajás en un worktree, necesitás
 - ✅ 25 tests unitarios verdes.
 - ⏳ Rutas públicas del catálogo (sesión 3).
 - ⏳ UI admin (CRUDs React) y UI store (sesión 4 y 5).
-- ⏳ Checkout con Wompi/ePayco (sesión 6, esperando credenciales).
+- ✅ Checkout ePayco y Mercado Pago Checkout Pro en Testing.

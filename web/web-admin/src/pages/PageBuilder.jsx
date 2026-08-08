@@ -102,7 +102,6 @@ const MODULE_SCHEMAS = {
       { key: 'description', label: 'Descripción', type: 'textarea', placeholder: 'Mensaje breve de la tienda' },
       { key: 'show_categories', label: 'Mostrar categorías', type: 'checkbox', defaultValue: true },
       { key: 'show_contact', label: 'Mostrar contacto', type: 'checkbox', defaultValue: true },
-      { key: 'copyright', label: 'Texto de copyright', type: 'text', placeholder: 'Se genera automáticamente si queda vacío' },
     ],
   },
 };

@@ -22,6 +22,7 @@ import { handlePublic } from './routes/public/index.js';
 import { handleAdmin } from './routes/admin/index.js';
 import { handleAuth } from './routes/auth.js';
 import { handleMedia } from './routes/media.js';
+import { handleWebhooks } from './routes/webhooks/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Dists de store/ y admin/ viven en web/server/public/ (los copia deploy.sh).
@@ -55,6 +56,7 @@ async function main() {
       const url = req.url || '/';
 
       if (url.startsWith('/api/public/')) return handlePublic(req, res);
+      if (url.startsWith('/api/webhooks/')) return handleWebhooks(req, res);
       if (url.startsWith('/api/admin/'))  return handleAdmin(req, res);
       if (url.startsWith('/api/auth/'))   return handleAuth(req, res);
       if (url.startsWith('/media/'))      return handleMedia(req, res);

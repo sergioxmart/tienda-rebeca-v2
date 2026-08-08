@@ -20,7 +20,7 @@ const KNOWN_KEYS = [
   { key: 'tax_id',             label: 'NIT / Identificación',    type: 'text',     placeholder: '900.000.000-1' },
   { key: 'contact_instagram',  label: 'Instagram URL',           type: 'url',      placeholder: 'https://instagram.com/...' },
   { key: 'contact_facebook',   label: 'Facebook URL',            type: 'url',      placeholder: 'https://facebook.com/...' },
-  { key: 'wompi_public_key',   label: 'Wompi (public key)',      type: 'text',     placeholder: 'pub_test_...' },
+  { key: 'mercadopago_public_key', label: 'Mercado Pago (public key)', type: 'text', placeholder: 'TEST-...' },
   { key: 'epayco_public_key',  label: 'ePayco (public key)',     type: 'text',     placeholder: '...' },
   { key: 'free_shipping_min',  label: 'Envío gratis desde (COP)', type: 'number', placeholder: '150000' },
 ];

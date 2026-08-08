@@ -3,7 +3,7 @@
 Tienda de **accesorios de teléfono** (fundas, vidrios templados,
 cargadores, cables, audífonos) para Colombia. Catálogo con
 **variantes reales** (combinaciones color × modelo × capacidad),
-checkout con **pasarela de pago** (Wompi + ePayco), y panel admin
+checkout con **pasarela de pago** (Mercado Pago + ePayco), y panel admin
 para gestionar todo.
 
 ## Stack
@@ -77,7 +77,7 @@ curl http://localhost:3000/healthz
 - ✅ 25 tests verdes (`npm test`).
 - ⏳ Catálogo público (sesión 3).
 - ⏳ UI admin + UI store (sesión 4 y 5).
-- ⏳ Checkout con Wompi/ePayco (sesión 6, esperando credenciales).
+- ✅ Checkout ePayco y Mercado Pago Checkout Pro en Testing.
 
 ## Documentación
 

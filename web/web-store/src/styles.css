@@ -302,6 +302,8 @@ p { margin: 0 0 12px; }
 .delivery-location-actions .btn { min-height: 36px; padding: 0 11px; border-radius: 9px; font-size: 11px; }
 .delivery-location-map-wrap { position: relative; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: #e8eef2; }
 .delivery-location-map { width: 100%; height: 245px; z-index: 1; }
+.leaflet-delivery-pin { width: 40px !important; height: 52px !important; border: 0 !important; background: transparent !important; }
+.leaflet-delivery-pin svg { display: block; width: 40px; height: 52px; overflow: visible; filter: drop-shadow(0 3px 3px rgba(15,42,71,.35)); }
 .delivery-location-map-hint { position: absolute; z-index: 500; right: 10px; bottom: 10px; left: 10px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.75); border-radius: 8px; color: var(--color-primary); background: rgba(255,255,255,.9); box-shadow: 0 4px 12px rgba(15,42,71,.1); font-size: 10px; pointer-events: none; }
 .delivery-location-message { margin: 8px 0 0; color: var(--color-primary); font-size: 11px; }
 .delivery-location-coordinates { display: block; margin-top: 4px; color: var(--color-muted); font-size: 10px; }

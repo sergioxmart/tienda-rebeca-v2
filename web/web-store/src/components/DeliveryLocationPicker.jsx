@@ -1,18 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { api } from '../api.js';
 
 const DEFAULT_CENTER = [4.711, -74.0721];
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
+function createDeliveryPinIcon() {
+  return L.divIcon({
+    className: 'leaflet-delivery-pin',
+    html: `<svg width="40" height="52" viewBox="0 0 40 52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M20 50S4 31.8 4 20a16 16 0 1 1 32 0c0 11.8-16 30-16 30Z" fill="#ff6b35" stroke="#fff" stroke-width="2.5"/>
+      <circle cx="20" cy="20" r="6" fill="#fff"/>
+      <circle cx="20" cy="20" r="3" fill="#0f2a47"/>
+    </svg>`,
+    iconSize: [40, 52],
+    iconAnchor: [20, 50],
+    popupAnchor: [0, -46],
+  });
+}
 
 function validPoint(value) {
   const lat = Number(value?.lat);
@@ -34,7 +39,7 @@ export default function DeliveryLocationPicker({ address, city, value, onChange 
     if (!map) return;
     const point = [Number(lat), Number(lon)];
     if (!markerRef.current) {
-      markerRef.current = L.marker(point, { draggable: true }).addTo(map);
+      markerRef.current = L.marker(point, { icon: createDeliveryPinIcon(), draggable: true }).addTo(map);
       markerRef.current.on('dragend', () => {
         const position = markerRef.current.getLatLng();
         onChange({ lat: position.lat, lon: position.lng, source: 'drag' });
@@ -73,7 +78,7 @@ export default function DeliveryLocationPicker({ address, city, value, onChange 
     if (!mapRef.current || !validPoint(value)) return;
     const point = [Number(value.lat), Number(value.lon)];
     if (!markerRef.current) {
-      markerRef.current = L.marker(point, { draggable: true }).addTo(mapRef.current);
+      markerRef.current = L.marker(point, { icon: createDeliveryPinIcon(), draggable: true }).addTo(mapRef.current);
       markerRef.current.on('dragend', () => {
         const position = markerRef.current.getLatLng();
         onChange({ lat: position.lat, lon: position.lng, source: 'drag' });

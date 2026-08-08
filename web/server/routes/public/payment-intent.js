@@ -4,6 +4,7 @@
 import { query, tx } from '../../lib/db.js';
 import { readJsonBody } from '../../lib/body.js';
 import { json } from '../../lib/json.js';
+import { expirePendingOrders } from '../../lib/order-expiration.js';
 import { env } from '../../lib/env.js';
 import {
   createCheckoutSession,
@@ -141,6 +142,7 @@ async function createMercadoPagoIntent(res, orderNumber, email) {
 }
 
 export async function createPaymentIntent(req, res) {
+  await expirePendingOrders().catch(() => {});
   const body = await readJsonBody(req).catch(() => null);
   const orderNumber = typeof body?.order_number === 'string' ? body.order_number.trim() : '';
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';

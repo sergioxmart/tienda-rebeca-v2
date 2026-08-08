@@ -23,6 +23,7 @@ import { handleAdmin } from './routes/admin/index.js';
 import { handleAuth } from './routes/auth.js';
 import { handleMedia } from './routes/media.js';
 import { handleWebhooks } from './routes/webhooks/index.js';
+import { startOrderExpirationWorker } from './lib/order-expiration.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Dists de store/ y admin/ viven en web/server/public/ (los copia deploy.sh).
@@ -46,6 +47,9 @@ async function main() {
   }
 
   log.info('uploads dir', { dir: env.UPLOADS_DIR });
+
+  // Expira pedidos pendientes antiguos y mantiene limpia la cola de checkout.
+  startOrderExpirationWorker();
 
   // 3. HTTP server
   const server = createServer(async (req, res) => {

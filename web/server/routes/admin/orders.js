@@ -6,8 +6,10 @@
 import { query } from '../../lib/db.js';
 import { json } from '../../lib/json.js';
 import { protect, notFound } from './_helpers.js';
+import { expirePendingOrders } from '../../lib/order-expiration.js';
 
 export async function listOrders(req, res) {
+  await expirePendingOrders().catch(() => {});
   const url = new URL(req.url, 'http://x');
   const status = url.searchParams.get('status');
   const q = url.searchParams.get('q');
@@ -34,6 +36,7 @@ export async function listOrders(req, res) {
 }
 
 export async function getOrder(req, res, id) {
+  await expirePendingOrders().catch(() => {});
   const { rows } = await query('SELECT * FROM orders WHERE id = $1', [id]);
   if (rows.length === 0) return notFound(res);
   const { rows: items } = await query(

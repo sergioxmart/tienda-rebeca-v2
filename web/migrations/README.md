@@ -1,6 +1,6 @@
 # Migrations — TechStore
 
-> **Última actualización: 2026-08-06**
+> **Última actualización: 2026-08-08**
 
 ## Estado actual
 
@@ -63,6 +63,8 @@ NNN_descripcion_corta.sql
 | 024 | `024_footer_builder_module.sql` | Convierte el Footer global en un módulo configurable del Builder |
 | 025 | `025_epayco_idempotency.sql` | Evita procesar dos veces la misma referencia de ePayco |
 | 026 | `026_remove_legacy_wompi_config.sql` | Elimina la configuración antigua de la pasarela reemplazada |
+| 027 | `027_order_expiration.sql` | Agrega expiración de pedidos pendientes y el estado `expired` |
+| 028 | `028_order_stock_reservations.sql` | Reserva, liberación y consolidación transaccional de inventario por pedido |
 
 ## Lo que falta decidir
 
@@ -76,3 +78,6 @@ NNN_descripcion_corta.sql
   variante y los videos se guardan como enlaces HTTPS embebidos.
 - **Inventario separado**: desde `014` `product_variants` es el padre y
   `inventory_movements` registra las unidades como módulo hijo.
+- **Expiración de pedidos**: los pedidos `pending` vencen después de 15 minutos
+  por defecto; se puede cambiar con `ORDER_PENDING_TTL_MINUTES`. Al vencer se
+  libera la reserva de inventario.

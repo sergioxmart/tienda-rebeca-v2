@@ -5,6 +5,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { tx } from '../../lib/db.js';
 import { json } from '../../lib/json.js';
 import { env } from '../../lib/env.js';
+import { commitOrderStock } from '../../lib/order-stock.js';
 
 const FINAL_PAYMENT_STATUSES = new Set(['approved', 'declined', 'error', 'refunded', 'voided']);
 
@@ -138,6 +139,7 @@ export async function handleEpaycoWebhook(req, res) {
         );
       }
       if (status === 'approved' && order.status === 'pending') {
+        await commitOrderStock(client, order.id);
         await client.query(`UPDATE orders SET status = 'paid' WHERE id = $1`, [order.id]);
       }
       return { duplicate: false, status };

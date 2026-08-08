@@ -17,11 +17,12 @@ const EMPTY = {
   notes: '',
 };
 
+const MERCADO_PAGO_LOGO = '/assets/payment-methods/Mercado%20Pago%20Uso%20digital%20-%20RGB/SVGs/MP_RGB_HANDSHAKE_color_horizontal.svg';
+
 function MercadoPagoLogo() {
   return (
-    <span className="payment-method-logo payment-method-logo-mercadopago" aria-label="Mercado Pago">
-      <span className="payment-method-logo-mark" aria-hidden="true">MP</span>
-      <span className="payment-method-logo-wordmark">mercado pago</span>
+    <span className="payment-method-logo payment-method-logo-mercadopago">
+      <img className="payment-method-logo-image" src={MERCADO_PAGO_LOGO} alt="Mercado Pago" />
     </span>
   );
 }

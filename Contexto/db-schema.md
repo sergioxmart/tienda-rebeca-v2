@@ -194,7 +194,14 @@ después se edita o elimina el producto, el pedido NO se altera. Desde
 la variante siga existiendo.
 
 Status del pedido (kanban admin): `pending` → `paid` → `processing` →
-`shipped` → `delivered`. Más `cancelled` y `refunded`.
+`shipped` → `delivered`. Más `cancelled`, `expired` y `refunded`.
+
+Los pedidos nuevos tienen `expires_at` y permanecen en `pending` durante
+15 minutos por defecto (`ORDER_PENDING_TTL_MINUTES`). Un worker del backend
+los cambia a `expired`, libera las reservas y anula sus intentos de pago
+pendientes. Al crear el pedido, cada variante se descuenta de forma
+transaccional y la reserva se marca como `committed` cuando el webhook aprueba
+el pago.
 
 `shipping_address` es JSONB en v1. Cuando integremos un proveedor de
 envíos (Coordinadora, Servientrega), agregamos `carrier`,
@@ -221,6 +228,14 @@ Si después queremos validar firmas de webhook o sincronizar estados,
 esa lógica vive en código de la app (`web/server/routes/payments.js`),
 NO en SQL.
 
+### `order_stock_reservations` (`028_order_stock_reservations.sql`)
+
+Registra las unidades descontadas temporalmente por cada pedido pendiente.
+`reserved` significa que la cantidad está retenida, `committed` que el pago
+la consolidó y `released` que el pedido expiró y la cantidad fue devuelta.
+Los movimientos `out` e `in` de `inventory_movements` conservan la auditoría
+del descuento y de la liberación.
+
 ### `site_config` (`008_site_config.sql`)
 
 Pares `key → JSONB`. Globals operacionales del sitio (nombre, contacto,
@@ -239,9 +254,10 @@ en cada request. Cuando integremos la pasarela, agregamos acá
 - **Media híbrida**: las fotos generales siguen en el template y las
   imágenes/videos específicos se asocian a una variante mediante
   `product_media.variant_id`.
-- **`stock` se descuenta en checkout, no al agregar al carrito**: el
-  carrito es efímero (sessionStorage). El stock se mueve recién cuando
-  el pago se aprueba.
+- **El stock se reserva al crear el pedido pendiente**: el carrito es efímero
+  (`sessionStorage`), pero las unidades se descuentan dentro de la transacción
+  del checkout. Si el pedido expira se restituyen; si se paga, la reserva se
+  consolida.
 - **Sin tabla `customers`**: los pedidos se hacen con email, sin login.
   Si después el cliente quiere cuenta, agregamos `customers` + FK desde
   `orders`.

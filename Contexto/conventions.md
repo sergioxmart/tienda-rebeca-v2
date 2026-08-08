@@ -281,7 +281,7 @@ bumpearse en el mismo commit que el cambio.
 ## Estado actual del proyecto (a agosto 2026)
 
 - ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ 26 migrations de TechStore (001_categories, 002_attributes,
+- ✅ 28 migrations de TechStore (001_categories, 002_attributes,
   003_products, 004_variants, 005_admin_auth, 006_orders,
   007_payments, 008_site_config, 009_auth_admin_extras,
   010_page_modules, 011_themes, 012_password_recovery,
@@ -291,7 +291,8 @@ bumpearse en el mismo commit que el cambio.
   019_builder_drafts, 020_media_attribute_categories,
   021_admin_theme_colors, 022_admin_background_images,
   023_login_background_crop, 024_footer_builder_module,
-  025_epayco_idempotency, 026_remove_legacy_wompi_config).
+  025_epayco_idempotency, 026_remove_legacy_wompi_config,
+  027_order_expiration, 028_order_stock_reservations).
 - ✅ Backend admin completo: 8 routers con RBAC + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.
 - ✅ 25 tests verdes.

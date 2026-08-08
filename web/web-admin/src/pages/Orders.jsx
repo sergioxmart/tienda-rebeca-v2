@@ -8,7 +8,7 @@ function formatCOP(value) {
 
 const STATUS_LABELS = {
   pending: 'Pendiente', paid: 'Pagado', processing: 'En preparación',
-  shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado', refunded: 'Reembolsado',
+  shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado', expired: 'Expirado', refunded: 'Reembolsado',
 };
 
 export default function Orders() {

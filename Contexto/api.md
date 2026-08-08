@@ -65,7 +65,7 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
-| POST | `/api/public/orders` | `{ customer: { name, email, phone, address, city, notes? }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`; no requiere pasarela. |
+| POST | `/api/public/orders` | `{ customer: { name, email, phone, address, city, notes? }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`, reserva las unidades de forma transaccional y asigna expiración configurable (15 minutos por defecto); no requiere pasarela. |
 | POST | `/api/public/checkout/payment-intent` | `{ order_number, email, provider: "mercadopago"|"epayco" }` | Recalcula el total desde el pedido pendiente y crea/reutiliza una preferencia de Mercado Pago Checkout Pro (`redirect_url`) o una sesión ePayco (`session_id`). Las llaves privadas nunca salen del backend. |
 | GET  | `/api/public/orders/:order_number` | `?email=` | Lookup de pedido por número + email (sin login). El cliente puede ver el estado de su pedido. |
 

@@ -301,6 +301,7 @@ p { margin: 0 0 12px; }
 .payment-method-card.is-selected { border-color: var(--color-primary); background: #f6faff; box-shadow: 0 0 0 3px rgba(15, 42, 71, .1), var(--shadow-sm); }
 .payment-method-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 34px; }
 .payment-method-logo { display: inline-flex; align-items: center; gap: 7px; min-width: 0; letter-spacing: -.045em; white-space: nowrap; }
+.payment-method-logo-image { display: block; width: min(174px, 100%); height: 52px; object-fit: contain; object-position: left center; }
 .payment-method-logo-mark { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; border-radius: 50%; color: #fff; font-size: 10px; font-weight: 850; letter-spacing: -.08em; }
 .payment-method-logo-wordmark { font-size: 16px; font-weight: 850; }
 .payment-method-logo-mercadopago .payment-method-logo-mark { background: #009ee3; font-size: 9px; }

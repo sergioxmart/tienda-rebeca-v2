@@ -7,6 +7,8 @@
 import { tx } from '../../lib/db.js';
 import { readJsonBody } from '../../lib/body.js';
 import { json } from '../../lib/json.js';
+import { expirePendingOrders, ORDER_PENDING_TTL_MINUTES } from '../../lib/order-expiration.js';
+import { reserveOrderStock, InsufficientReservationError } from '../../lib/order-stock.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,6 +27,7 @@ function cleanString(value, max = 500) {
 }
 
 export async function createOrder(req, res) {
+  await expirePendingOrders().catch(() => {});
   const body = await readJsonBody(req).catch(() => null);
   const customer = body?.customer;
   const rawItems = body?.items;
@@ -120,9 +123,10 @@ export async function createOrder(req, res) {
       await client.query(
         `INSERT INTO orders
            (id, order_number, customer_email, customer_name, customer_phone,
-            status, subtotal, shipping, tax, total, shipping_address, notes)
-         VALUES ($1, $2, $3, $4, $5, 'pending', $6, 0, 0, $6, $7::jsonb, $8)`,
-        [orderId, orderNumber, customerEmail, customerName, customerPhone, subtotal, shippingAddress, notes],
+            status, subtotal, shipping, tax, total, shipping_address, notes, expires_at)
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6, 0, 0, $6, $7::jsonb, $8,
+                 NOW() + ($9::integer * INTERVAL '1 minute'))`,
+        [orderId, orderNumber, customerEmail, customerName, customerPhone, subtotal, shippingAddress, notes, ORDER_PENDING_TTL_MINUTES],
       );
       for (const item of resolved) {
         await client.query(
@@ -132,7 +136,20 @@ export async function createOrder(req, res) {
           [orderId, item.variantId, item.productName, item.sku, item.quantity, item.unitPrice, item.unitPrice * item.quantity],
         );
       }
-      return { order: { id: orderId, order_number: orderNumber, status: 'pending', total: subtotal } };
+      await reserveOrderStock(client, {
+        orderId,
+        orderNumber,
+        items: resolved,
+      });
+      return {
+        order: {
+          id: orderId,
+          order_number: orderNumber,
+          status: 'pending',
+          total: subtotal,
+          expires_at: new Date(Date.now() + ORDER_PENDING_TTL_MINUTES * 60 * 1000).toISOString(),
+        },
+      };
     });
 
     if (result.error === 'cart_changed') {
@@ -143,6 +160,14 @@ export async function createOrder(req, res) {
     }
     return json(res, 201, { ok: true, order: result.order });
   } catch (error) {
+    if (error instanceof InsufficientReservationError) {
+      return json(res, 409, {
+        ok: false,
+        error: 'insufficient_stock',
+        message: 'Una o más cantidades ya no están disponibles. Actualiza el carrito.',
+        items: error.items,
+      });
+    }
     return json(res, 500, { ok: false, error: 'order_creation_failed', message: 'No pudimos registrar el pedido. Intenta nuevamente.' });
   }
 }

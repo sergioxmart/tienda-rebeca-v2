@@ -39,6 +39,10 @@ export const env = {
   ACCESS_TTL_MIN:    Number(opt('ACCESS_TTL_MIN', '15')),
   REFRESH_TTL_DAYS:  Number(opt('REFRESH_TTL_DAYS', '7')),
 
+  // Checkout: un pedido sin pago confirmado no queda abierto para siempre.
+  ORDER_PENDING_TTL_MINUTES:      Number(opt('ORDER_PENDING_TTL_MINUTES', '15')),
+  ORDER_EXPIRATION_SWEEP_SECONDS: Number(opt('ORDER_EXPIRATION_SWEEP_SECONDS', '60')),
+
   // Webhook
   WEBHOOK_PORT:      Number(opt('WEBHOOK_PORT', '9001')),
   WEBHOOK_SECRET:    opt('WEBHOOK_SECRET', ''),

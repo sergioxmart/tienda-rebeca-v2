@@ -53,6 +53,14 @@ const SITE_CONFIG_KEYS_THAT_MATTER = [
   'navbar_show_cart',
   'navbar_show_categories',
   'navbar_links',
+  'store_accent_color',
+  'store_primary_color',
+  'store_surface_color',
+  'store_background_color',
+  'store_heading_color',
+  'store_product_name_color',
+  'store_price_color',
+  'store_body_text_color',
 ];
 
 // --- Helpers ---------------------------------------------------------------

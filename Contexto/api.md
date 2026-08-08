@@ -198,6 +198,12 @@ administrador confirma la publicación.
 | DELETE | `/api/admin/builder/draft` | Descarta el borrador | `site_config` |
 | POST | `/api/admin/builder/publish` | Copia el borrador al estado publicado y lo elimina | `site_config` |
 
+Las claves de paleta global del `site_config_subset` son:
+`store_accent_color`, `store_primary_color`, `store_surface_color`,
+`store_background_color`, `store_heading_color`,
+`store_product_name_color`, `store_price_color` y
+`store_body_text_color`.
+
 ### Pedidos (admin)
 
 | Método | Path | Body | Section |

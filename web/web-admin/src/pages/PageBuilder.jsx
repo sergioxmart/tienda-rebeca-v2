@@ -22,6 +22,7 @@ import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
+import { STORE_THEME_DEFAULTS, STORE_THEME_FIELDS, normalizeStoreTheme } from '../storeTheme.js';
 
 // Schema de los settings por tipo. Cada setting tiene key, label y type.
 const MODULE_SCHEMAS = {
@@ -154,6 +155,63 @@ function normalizeNavLinks(value) {
     .filter((link) => link.label || link.href);
 }
 
+function GlobalColorField({ field, value, onChange }) {
+  return (
+    <div className="builder-global-color-field">
+      <div className="builder-global-color-copy">
+        <label htmlFor={`builder-${field.key}`}>{field.label}</label>
+        <span>{field.description}</span>
+      </div>
+      <div className="builder-global-color-control">
+        <input
+          id={`builder-${field.key}`}
+          className="builder-global-color-picker"
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+          aria-label={`Elegir ${field.label.toLowerCase()}`}
+        />
+        <code>{value}</code>
+      </div>
+    </div>
+  );
+}
+
+function GlobalStoreStyles({ values, onChange }) {
+  const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
+  const typographyFields = STORE_THEME_FIELDS.slice(4);
+  return (
+    <div className="builder-global-styles">
+      <div className="builder-global-styles-intro">
+        <span className="builder-kicker">Sistema de diseño de 5173</span>
+        <p>Personaliza la apariencia general de la tienda. Estos cambios se guardan en el borrador y se publican junto con el resto del Builder.</p>
+      </div>
+      <section className="builder-global-style-section">
+        <div className="builder-global-style-heading"><h3>Paleta de colores</h3><span>Fondos, botones y elementos destacados</span></div>
+        <div className="builder-global-color-grid">
+          {paletteFields.map((field) => <GlobalColorField key={field.key} field={field} value={values[field.key]} onChange={(value) => onChange(field.key, value)} />)}
+        </div>
+      </section>
+      <section className="builder-global-style-section">
+        <div className="builder-global-style-heading"><h3>Tipografía</h3><span>Colores independientes para cada nivel de contenido</span></div>
+        <div className="builder-global-color-grid">
+          {typographyFields.map((field) => <GlobalColorField key={field.key} field={field} value={values[field.key]} onChange={(value) => onChange(field.key, value)} />)}
+        </div>
+      </section>
+      <div className="builder-global-styles-preview" aria-hidden="true">
+        <span style={{ background: values.store_accent_color }} />
+        <span style={{ background: values.store_primary_color }} />
+        <span style={{ background: values.store_surface_color }} />
+        <span style={{ background: values.store_background_color }} />
+        <strong style={{ color: values.store_heading_color }}>Aa</strong>
+        <strong style={{ color: values.store_product_name_color }}>Producto</strong>
+        <strong style={{ color: values.store_price_color }}>$ 99.000</strong>
+        <small style={{ color: values.store_body_text_color }}>Texto base</small>
+      </div>
+    </div>
+  );
+}
+
 function normalizeModules(value) {
   if (!Array.isArray(value)) return [];
   return value.map((module, index) => ({
@@ -186,9 +244,9 @@ function getStorePreviewUrl() {
   return url.toString();
 }
 
-function LiveStorePreview({ modules, navSettings, title = 'Vista previa real de la tienda' }) {
+function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista previa real de la tienda' }) {
   const frameRef = useRef(null);
-  const payload = { modules: modules || [], site_config_subset: navSettings || {} };
+  const payload = { modules: modules || [], site_config_subset: { ...(navSettings || {}), ...(globalStyles || {}) } };
 
   const sendDraft = () => {
     frameRef.current?.contentWindow?.postMessage({ type: 'techstore-builder-preview', draft: payload }, '*');
@@ -279,6 +337,10 @@ export default function PageBuilder() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [modalTab, setModalTab] = useState('edit');
   const [navbarExpanded, setNavbarExpanded] = useState(false);
+  const [globalStylesOpen, setGlobalStylesOpen] = useState(false);
+  const [globalStyles, setGlobalStyles] = useState(STORE_THEME_DEFAULTS);
+  const [savedGlobalStyles, setSavedGlobalStyles] = useState(STORE_THEME_DEFAULTS);
+  const [globalStylesSaving, setGlobalStylesSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -287,7 +349,11 @@ export default function PageBuilder() {
       const draft = data.draft || {};
       setModules(normalizeModules(draft.modules));
       setHasDraft(Boolean(data.has_draft));
-      setNavSettings((current) => ({ ...current, ...(draft.site_config_subset || {}), navbar_links: normalizeNavLinks(draft.site_config_subset?.navbar_links ?? current.navbar_links) }));
+      const config = draft.site_config_subset || {};
+      const normalizedStyles = normalizeStoreTheme(config);
+      setNavSettings((current) => ({ ...current, ...config, navbar_links: normalizeNavLinks(config.navbar_links ?? current.navbar_links) }));
+      setGlobalStyles(normalizedStyles);
+      setSavedGlobalStyles(normalizedStyles);
       setReorderDirty(false);
     } catch (err) {
       toast.error('No se pudieron cargar los módulos', err.message);
@@ -305,7 +371,8 @@ export default function PageBuilder() {
   const persistDraft = async (nextModules, nextNavSettings) => {
     setDraftSaving(true);
     try {
-      await api.post('/api/admin/builder/draft', { modules: nextModules, site_config_subset: nextNavSettings });
+      const siteConfigSubset = { ...navSettings, ...globalStyles, ...(nextNavSettings || {}) };
+      await api.post('/api/admin/builder/draft', { modules: nextModules, site_config_subset: siteConfigSubset });
       setHasDraft(true);
       return true;
     } catch (err) {
@@ -380,6 +447,29 @@ export default function PageBuilder() {
       toast.error('No se pudo guardar el navbar', err.message);
     } finally {
       setNavSaving(false);
+    }
+  };
+
+  const closeGlobalStyles = () => {
+    if (globalStylesSaving) return;
+    setGlobalStyles(savedGlobalStyles);
+    setGlobalStylesOpen(false);
+  };
+
+  const saveGlobalStyles = async () => {
+    const nextStyles = normalizeStoreTheme(globalStyles);
+    setGlobalStyles(nextStyles);
+    setGlobalStylesSaving(true);
+    try {
+      if (await persistDraft(modules, nextStyles)) {
+        setSavedGlobalStyles(nextStyles);
+        setGlobalStylesOpen(false);
+        toast.success('Estilos globales guardados', 'Quedaron en el borrador de la tienda.');
+      }
+    } catch (err) {
+      toast.error('No se pudieron guardar los estilos', err.message);
+    } finally {
+      setGlobalStylesSaving(false);
     }
   };
 
@@ -466,6 +556,9 @@ export default function PageBuilder() {
             <button className="btn btn-primary" onClick={saveOrder}>Guardar orden</button>
           )}
           <button className="btn" onClick={() => setPreviewOpen(true)}>Vista previa</button>
+          <button className="btn builder-global-settings-button" type="button" onClick={() => setGlobalStylesOpen(true)} title="Configurar estilos globales" aria-label="Configurar estilos globales">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z" /><path d="m19.4 13.5 1.2.9-1.8 3.1-1.4-.6a7.8 7.8 0 0 1-1.7 1l-.2 1.5h-3.6l-.2-1.5a7.8 7.8 0 0 1-1.7-1l-1.4.6-1.8-3.1 1.2-.9a7.6 7.6 0 0 1 0-2l-1.2-.9 1.8-3.1 1.4.6a7.8 7.8 0 0 1 1.7-1l.2-1.5h3.6l.2 1.5a7.8 7.8 0 0 1 1.7 1l1.4-.6 1.8 3.1-1.2.9a7.6 7.6 0 0 1 0 2Z" /></svg>
+          </button>
           {hasDraft && <button className="btn btn-danger" onClick={discardDraft} disabled={draftSaving}>Descartar borrador</button>}
           {hasDraft && <button className="btn btn-primary" onClick={publishDraft} disabled={draftSaving}>Publicar</button>}
           <button className="btn btn-accent" onClick={openNew}>+ Nuevo módulo</button>
@@ -522,6 +615,22 @@ export default function PageBuilder() {
         Tip: el store público lee los módulos activos en orden desde <code>/api/public/page-modules</code>.
         Cambios se ven al refrescar el browser (cache de 60s).
       </p>
+
+      <Modal
+        open={globalStylesOpen}
+        onClose={closeGlobalStyles}
+        size="lg"
+        title="Estilos globales de la tienda"
+        footer={
+          <>
+            <button className="btn" type="button" onClick={() => setGlobalStyles(STORE_THEME_DEFAULTS)} disabled={globalStylesSaving}>Restaurar valores</button>
+            <button className="btn" type="button" onClick={closeGlobalStyles} disabled={globalStylesSaving}>Cancelar</button>
+            <button className="btn btn-primary" type="button" onClick={saveGlobalStyles} disabled={globalStylesSaving}>{globalStylesSaving ? <span className="spinner" /> : 'Guardar en borrador'}</button>
+          </>
+        }
+      >
+        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} />
+      </Modal>
 
       <Modal
         open={!!editing}
@@ -612,7 +721,7 @@ export default function PageBuilder() {
                 )}
               </div>;
             })}
-          </form> : <LiveStorePreview modules={[editing]} navSettings={navSettings} title="Vista previa real del módulo" />}
+          </form> : <LiveStorePreview modules={[editing]} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
           </>
         )}
       </Modal>
@@ -624,7 +733,7 @@ export default function PageBuilder() {
         title="Vista previa del borrador"
         footer={<button className="btn" onClick={() => setPreviewOpen(false)}>Cerrar</button>}
       >
-        <LiveStorePreview modules={modules} navSettings={navSettings} />
+        <LiveStorePreview modules={modules} navSettings={navSettings} globalStyles={globalStyles} />
       </Modal>
 
       <Confirm

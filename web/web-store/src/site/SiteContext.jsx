@@ -3,9 +3,10 @@
 // En la primera carga, los trae en paralelo. Las pages que los necesitan
 // los consumen con useSite().
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import { useBuilderPreview } from '../preview/BuilderPreviewContext.jsx';
+import { applyStoreTheme } from './storeTheme.js';
 
 const SiteContext = createContext(null);
 
@@ -26,9 +27,15 @@ export function SiteProvider({ children }) {
     })();
   }, []);
 
-  const visibleSite = preview.active && preview.draft?.site_config_subset
-    ? { ...site, ...preview.draft.site_config_subset }
-    : site;
+  const visibleSite = useMemo(() => (
+    preview.active && preview.draft?.site_config_subset
+      ? { ...site, ...preview.draft.site_config_subset }
+      : site
+  ), [preview.active, preview.draft, site]);
+
+  useEffect(() => {
+    if (visibleSite) applyStoreTheme(visibleSite);
+  }, [visibleSite]);
 
   return (
     <SiteContext.Provider value={{ site: visibleSite, categories }}>

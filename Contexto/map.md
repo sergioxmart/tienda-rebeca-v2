@@ -53,8 +53,8 @@ El "Core remoto" (modo dividido con mTLS) es un plan documentado en
 | File | `serveFile({...})` — usado por static y media | [`core/lib/file.js`](../core/lib/file.js) | [conventions.md](./conventions.md) |
 | Uploads | `multer` + `writeUploadFile` + `deleteUploadFile` | [`core/lib/uploads.js`](../core/lib/uploads.js) | [conventions.md](./conventions.md) |
 | Barrel lib | `core/lib/index.js` re-exporta todo lo público | [`core/lib/index.js`](../core/lib/index.js) | — |
-| Middleware | `requireAuth`/`optionalAuth`/`requireRole` + `csrf` + `rateLimit` | [`core/middleware/{auth,csrf,rate-limit}.js`](../core/middleware/) | [conventions.md](./conventions.md) |
-| Security headers | `securityHeaders` | [`core/middleware/security-headers.js`](../core/middleware/security-headers.js) | [conventions.md](./conventions.md) |
+| Middleware | `requireAuth`/`optionalAuth`/`requireRole` + `csrf` + `rateLimit` + `createFailureLimiter` | [`core/middleware/{auth,csrf,rate-limit}.js`](../core/middleware/) | [conventions.md](./conventions.md) |
+| Security headers | `securityHeaders` con CSP, políticas de origen, permisos y HSTS en producción | [`core/middleware/security-headers.js`](../core/middleware/security-headers.js) | [conventions.md](./conventions.md) |
 | Barrel middleware | `core/middleware/index.js` re-exporta todo | [`core/middleware/index.js`](../core/middleware/index.js) | — |
 | Webhook receptor | `createWebhookServer({ path, secret, onPush, log })` genérico | [`core/webhook/server.js`](../core/webhook/server.js) | [conventions.md](./conventions.md) |
 | Migrate runner | `runMigrations({ migrationsDir, query, log, tableName })` genérico | [`core/scripts/migrate.js`](../core/scripts/migrate.js) | [conventions.md](./conventions.md) |

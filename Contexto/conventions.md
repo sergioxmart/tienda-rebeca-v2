@@ -136,8 +136,13 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
   `node --watch` mata y arranca procesos, no hace HMR in-memory).
 - Auth: bcryptjs para passwords, JWT 15 min, refresh 7 d en cookie
   httpOnly, CSRF double-submit.
-- Rate limit: en memoria con lockout progresivo (5/15min, 10/1h,
-  20/24h). Por agregar a TechStore cuando se necesite.
+- Rate limit: `createFailureLimiter` aplica 5 fallos por IP o cuenta en
+  15 minutos al login y recuperación; el estado actual es en memoria y
+  requiere Redis/almacenamiento compartido si se despliegan varias instancias.
+- Cabeceras de seguridad: `securityHeaders` emite CSP, `nosniff`,
+  `Referrer-Policy`, `Permissions-Policy`, políticas de origen y HSTS en
+  producción. `CSP_FRAME_ANCESTORS` limita los orígenes que pueden cargar la
+  vista previa del Builder.
 - Uploads: `multer` con `memoryStorage`, validar MIME y tamaño,
   escribir a `uploads/<subdir>/<yyyy>/<mm>/<uuid>.<ext>` y servir siempre
   las URLs públicas mediante `/media` (por ejemplo, el logo en

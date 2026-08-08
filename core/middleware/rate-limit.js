@@ -3,6 +3,54 @@
 
 const buckets = new Map(); // key -> { count, resetAt, lockedUntil }
 
+// Guard separado para intentos fallidos de autenticación. A diferencia de
+// rateLimit(), este contador solo avanza cuando el handler confirma un fallo;
+// así no penaliza el primer paso válido del login con 2FA.
+export function createFailureLimiter({ limit = 5, windowMs = 15 * 60 * 1000, lockoutMs = windowMs } = {}) {
+  const failures = new Map();
+
+  function cleanup(now) {
+    for (const [key, bucket] of failures) {
+      if (bucket.lockedUntil <= now && bucket.resetAt <= now) failures.delete(key);
+    }
+  }
+
+  function check(keys) {
+    const now = Date.now();
+    cleanup(now);
+    let retryAfterSec = 0;
+    for (const key of new Set(keys.filter(Boolean))) {
+      const bucket = failures.get(key);
+      if (bucket?.lockedUntil > now) {
+        retryAfterSec = Math.max(retryAfterSec, Math.ceil((bucket.lockedUntil - now) / 1000));
+      }
+    }
+    return { blocked: retryAfterSec > 0, retryAfterSec };
+  }
+
+  function fail(keys) {
+    const now = Date.now();
+    cleanup(now);
+    for (const key of new Set(keys.filter(Boolean))) {
+      const current = failures.get(key);
+      const bucket = !current || current.resetAt <= now
+        ? { count: 0, resetAt: now + windowMs, lockedUntil: 0 }
+        : current;
+      bucket.count += 1;
+      // El quinto fallo todavía recibe su respuesta normal; los siguientes
+      // intentos quedan bloqueados durante la ventana configurada.
+      if (bucket.count >= limit) bucket.lockedUntil = now + lockoutMs;
+      failures.set(key, bucket);
+    }
+  }
+
+  function clear(keys) {
+    for (const key of new Set(keys.filter(Boolean))) failures.delete(key);
+  }
+
+  return { check, fail, clear };
+}
+
 export function rateLimit({ keyFn, limit, windowMs, lockoutMs, maxLockouts }) {
   return (req, res, next) => {
     const k = keyFn(req);

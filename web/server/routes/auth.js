@@ -48,6 +48,7 @@ import { clientIp } from '../lib/client-ip.js';
 import { readJsonBody } from '../lib/body.js';
 import { json } from '../lib/json.js';
 import { isValidEmail } from '../lib/email.js';
+import { createFailureLimiter } from '../../../core/middleware/rate-limit.js';
 
 // --- Helpers --------------------------------------------------------------
 
@@ -68,6 +69,42 @@ async function recordAudit(userId, action, ip, meta) {
 // desde Usuarios. Todas las demás cuentas deben completar el enrolamiento
 // antes de recibir una sesión.
 export const BOOTSTRAP_USER_ID = 1;
+
+const AUTH_FAILURE_LIMIT = 5;
+const AUTH_FAILURE_WINDOW_MS = 15 * 60 * 1000;
+const authFailureLimiter = createFailureLimiter({
+  limit: AUTH_FAILURE_LIMIT,
+  windowMs: AUTH_FAILURE_WINDOW_MS,
+  lockoutMs: AUTH_FAILURE_WINDOW_MS,
+});
+
+function authKeys(req, scope, email = '') {
+  const ip = clientIp(req) || 'unknown';
+  const keys = [`${scope}:ip:${ip}`];
+  if (email) keys.push(`${scope}:user:${email}`);
+  return keys;
+}
+
+function rejectIfBlocked(res, keys) {
+  const state = authFailureLimiter.check(keys);
+  if (!state.blocked) return false;
+  res.setHeader('Retry-After', String(state.retryAfterSec));
+  json(res, 429, {
+    ok: false,
+    error: 'rate_limited',
+    message: 'Demasiados intentos. Espera unos minutos e inténtalo nuevamente.',
+    retryAfterSec: state.retryAfterSec,
+  });
+  return true;
+}
+
+function registerFailure(keys) {
+  authFailureLimiter.fail(keys);
+}
+
+function clearFailures(keys) {
+  authFailureLimiter.clear(keys);
+}
 
 export async function createTwoFactorSetup(userId, email) {
   const secret = generateTotpSecret();
@@ -169,17 +206,25 @@ async function issueSession(req, res, user) {
 // --- POST /api/auth/login ------------------------------------------------
 
 async function handleLogin(req, res) {
+  const ipKeys = authKeys(req, 'login');
+  if (rejectIfBlocked(res, ipKeys)) return;
   let body;
   try { body = await readJsonBody(req); }
-  catch { return json(res, 400, { ok: false, error: 'invalid_json' }); }
+  catch {
+    registerFailure(ipKeys);
+    return json(res, 400, { ok: false, error: 'invalid_json' });
+  }
 
   const { email, password, totp_code: totpCode } = body;
+  const emailLower = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const keys = authKeys(req, 'login', emailLower);
+  if (rejectIfBlocked(res, keys)) return;
   if (!isValidEmail(email) || typeof password !== 'string' || !password) {
+    registerFailure(keys);
     return json(res, 400, { ok: false, error: 'invalid_input' });
   }
 
   const ip = clientIp(req);
-  const emailLower = email.toLowerCase();
 
   const { rows } = await query(
     `SELECT id, email, password_hash, name, role, active,
@@ -190,17 +235,20 @@ async function handleLogin(req, res) {
   const user = rows[0];
 
   if (!user || !user.active) {
+    registerFailure(keys);
     return json(res, 401, { ok: false, error: 'invalid_credentials' });
   }
 
   const passOk = await verifyPassword(password, user.password_hash);
   if (!passOk) {
+    registerFailure(keys);
     await recordAudit(user.id, 'login_failed', ip, { reason: 'bad_password' });
     return json(res, 401, { ok: false, error: 'invalid_credentials' });
   }
 
   // User #1 es la única cuenta exenta del enrolamiento automático.
   if (!user.totp_enabled && Number(user.id) !== BOOTSTRAP_USER_ID) {
+    clearFailures(keys);
     return json(res, 403, {
       ok: false,
       error: 'two_factor_setup_required',
@@ -213,12 +261,19 @@ async function handleLogin(req, res) {
 
   // Si 2FA está activo, exigir TOTP o código de respaldo.
   if (user.totp_enabled) {
-    if (!totpCode || !(await verifySecondFactor(user.id, user.totp_secret_enc, totpCode))) {
+    // La primera petición del flujo solo valida correo + contraseña. No se
+    // cuenta como fallo que todavía no traiga el TOTP.
+    if (!totpCode) {
+      return json(res, 401, { ok: false, error: 'two_factor_required' });
+    }
+    if (!(await verifySecondFactor(user.id, user.totp_secret_enc, totpCode))) {
+      registerFailure(keys);
       await recordAudit(user.id, 'login_failed', ip, { reason: 'bad_totp' });
       return json(res, 401, { ok: false, error: 'two_factor_required' });
     }
   }
 
+  clearFailures(keys);
   return issueSession(req, res, user);
 }
 
@@ -226,12 +281,20 @@ async function handleLogin(req, res) {
 // El navegador solo recibe un token opaco para la siguiente etapa. Cada
 // token se guarda hasheado, expira en 10 minutos y se consume una sola vez.
 async function handlePasswordRecoveryStart(req, res) {
+  const ipKeys = authKeys(req, 'recovery');
+  if (rejectIfBlocked(res, ipKeys)) return;
   let body;
   try { body = await readJsonBody(req); }
-  catch { return json(res, 400, { ok: false, error: 'invalid_json' }); }
+  catch {
+    registerFailure(ipKeys);
+    return json(res, 400, { ok: false, error: 'invalid_json' });
+  }
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const keys = authKeys(req, 'recovery', email);
+  if (rejectIfBlocked(res, keys)) return;
   if (!isValidEmail(email)) {
+    registerFailure(keys);
     return json(res, 400, { ok: false, error: 'invalid_input' });
   }
 
@@ -242,6 +305,7 @@ async function handlePasswordRecoveryStart(req, res) {
   );
   const user = rows[0];
   if (!user || !user.active || !user.totp_enabled) {
+    registerFailure(keys);
     return json(res, 401, { ok: false, error: 'recovery_email_not_available' });
   }
 
@@ -251,14 +315,23 @@ async function handlePasswordRecoveryStart(req, res) {
      VALUES ($1, $2, 'email', NOW() + INTERVAL '10 minutes', $3)`,
     [user.id, hashRefreshToken(token), clientIp(req)],
   );
+  clearFailures(keys);
   return json(res, 200, { ok: true, data: { recovery_token: token } });
 }
 
 async function handlePasswordRecoveryVerify(req, res) {
+  const ipKeys = authKeys(req, 'recovery');
+  if (rejectIfBlocked(res, ipKeys)) return;
   let body;
   try { body = await readJsonBody(req); }
-  catch { return json(res, 400, { ok: false, error: 'invalid_json' }); }
+  catch {
+    registerFailure(ipKeys);
+    return json(res, 400, { ok: false, error: 'invalid_json' });
+  }
+  const keys = authKeys(req, 'recovery');
+  if (rejectIfBlocked(res, keys)) return;
   if (typeof body.recovery_token !== 'string' || typeof body.totp_code !== 'string') {
+    registerFailure(keys);
     return json(res, 400, { ok: false, error: 'invalid_input' });
   }
 
@@ -273,6 +346,7 @@ async function handlePasswordRecoveryVerify(req, res) {
   const recovery = rows[0];
   if (!recovery || !recovery.active || !recovery.totp_enabled ||
       !(await verifySecondFactor(recovery.user_id, recovery.totp_secret_enc, body.totp_code))) {
+    registerFailure(keys);
     if (recovery) await recordAudit(recovery.user_id, 'password_recovery_failed', clientIp(req), { stage: 'two_factor' });
     return json(res, 401, { ok: false, error: 'invalid_recovery_code' });
   }
@@ -294,16 +368,28 @@ async function handlePasswordRecoveryVerify(req, res) {
     );
     return true;
   });
-  if (!promoted) return json(res, 401, { ok: false, error: 'invalid_recovery_code' });
+  if (!promoted) {
+    registerFailure(keys);
+    return json(res, 401, { ok: false, error: 'invalid_recovery_code' });
+  }
+  clearFailures(keys);
   return json(res, 200, { ok: true, data: { password_token: passwordToken } });
 }
 
 async function handlePasswordRecoveryComplete(req, res) {
+  const ipKeys = authKeys(req, 'recovery');
+  if (rejectIfBlocked(res, ipKeys)) return;
   let body;
   try { body = await readJsonBody(req); }
-  catch { return json(res, 400, { ok: false, error: 'invalid_json' }); }
+  catch {
+    registerFailure(ipKeys);
+    return json(res, 400, { ok: false, error: 'invalid_json' });
+  }
+  const keys = authKeys(req, 'recovery');
+  if (rejectIfBlocked(res, keys)) return;
   if (typeof body.password_token !== 'string' ||
       typeof body.new_password !== 'string' || body.new_password.length < 8) {
+    registerFailure(keys);
     return json(res, 400, { ok: false, error: 'invalid_input' });
   }
 
@@ -328,7 +414,11 @@ async function handlePasswordRecoveryComplete(req, res) {
     );
     return token.user_id;
   });
-  if (!result) return json(res, 401, { ok: false, error: 'invalid_recovery_token' });
+  if (!result) {
+    registerFailure(keys);
+    return json(res, 401, { ok: false, error: 'invalid_recovery_token' });
+  }
+  clearFailures(keys);
   await recordAudit(result, 'password_recovered', clientIp(req), {});
   return json(res, 200, { ok: true });
 }

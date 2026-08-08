@@ -149,7 +149,7 @@ export default function Inventory() {
     <div>
       <div className="page-header">
         <div><span className="eyebrow">Operación · existencias</span><h1>Inventario</h1><p className="page-subtitle">Controla entradas, salidas y saldos por variante.</p></div>
-        <div className="inventory-actions">
+        <div className="inventory-actions" role="group" aria-label="Ajustes de stock">
           {canWrite && <>
             <button className="btn btn-sm" disabled={!selectedId} onClick={() => openMovement('out')}>− Salida</button>
             <button className="btn btn-primary btn-sm" disabled={!selectedId} onClick={() => openMovement('in')}>＋ Entrada</button>

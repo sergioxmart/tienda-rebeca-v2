@@ -15,6 +15,7 @@ import { api, ApiError } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Empty from '../components/Empty.jsx';
 import Confirm from '../components/Confirm.jsx';
+import Modal from '../components/Modal.jsx';
 
 function mediaUrl(url) {
   if (!url) return '';
@@ -184,26 +185,24 @@ export default function Media() {
       )}
 
       {editingAlt && (
-        <div className="modal-backdrop" onClick={() => setEditingAlt(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Editar alt text</h2>
-              <button className="modal-close" onClick={() => setEditingAlt(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Alt (texto alternativo)</label>
-                <input className="input" maxLength={300}
-                       value={altText} onChange={(e) => setAltText(e.target.value)} />
-                <div className="help">Descripción corta para accesibilidad y SEO.</div>
-              </div>
-            </div>
-            <div className="modal-footer">
+        <Modal
+          open
+          onClose={() => setEditingAlt(null)}
+          title="Editar alt text"
+          footer={(
+            <>
               <button className="btn" onClick={() => setEditingAlt(null)}>Cancelar</button>
               <button className="btn btn-primary" onClick={saveAlt}>Guardar</button>
-            </div>
+            </>
+          )}
+        >
+          <div className="form-group">
+            <label>Alt (texto alternativo)</label>
+            <input className="input" maxLength={300}
+                   value={altText} onChange={(e) => setAltText(e.target.value)} />
+            <div className="help">Descripción corta para accesibilidad y SEO.</div>
           </div>
-        </div>
+        </Modal>
       )}
 
       <Confirm

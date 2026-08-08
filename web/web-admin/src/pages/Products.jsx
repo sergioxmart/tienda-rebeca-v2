@@ -115,6 +115,7 @@ export default function Products() {
           <button className="btn btn-primary" onClick={() => navigate('/products/new')}>+ Nuevo producto</button>
         } />
       ) : (
+        <div className="products-table-wrap">
         <table className="data-table products-table">
           <thead>
             <tr>
@@ -140,13 +141,16 @@ export default function Products() {
                     : <span className="badge inactive">Inactivo</span>}
                   {p.featured && <span className="badge featured" style={{ marginLeft: 4 }}>Destacado</span>}
                 </td>
-                <td className="table-actions">
-                  <Link className="btn btn-sm" to={`/products/${p.id}`} onClick={(e) => e.stopPropagation()}>Editar</Link>
+                <td className="products-actions-cell">
+                  <div className="table-actions">
+                    <Link className="btn btn-sm" to={`/products/${p.id}`} onClick={(e) => e.stopPropagation()}>Editar</Link>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

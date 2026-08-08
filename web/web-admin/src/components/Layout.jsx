@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext.jsx';
 import { applyAdminTheme } from '../adminTheme.js';
 
 const SIDEBAR_STORAGE_KEY = 'techstore.admin.sidebar.groups.v1';
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'techstore.admin.sidebar.collapsed.v1';
 
 const NAV_GROUPS = [
   {
@@ -67,10 +68,17 @@ export default function Layout() {
     } catch { return defaults; }
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'; } catch { return false; }
+  });
 
   useEffect(() => {
     try { localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(openGroups)); } catch { /* ignore */ }
   }, [openGroups]);
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(sidebarCollapsed)); } catch { /* ignore */ }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -105,7 +113,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="brand-mark">
@@ -115,6 +123,16 @@ export default function Layout() {
             <strong>{site.site_name}</strong>
             <small>Panel de administración</small>
           </span>
+          <button
+            className="sidebar-collapse-toggle"
+            type="button"
+            aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+            aria-pressed={sidebarCollapsed}
+            title={sidebarCollapsed ? 'Expandir barra lateral' : 'Colapsar barra lateral'}
+            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d={sidebarCollapsed ? 'm9 6 6 6-6 6' : 'm15 6-6 6 6 6'} /></svg>
+          </button>
         </div>
         <nav className="sidebar-nav">
           {NAV_GROUPS.map((group) => (

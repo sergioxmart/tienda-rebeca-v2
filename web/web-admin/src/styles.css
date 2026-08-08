@@ -271,6 +271,10 @@ p { margin: 0 0 12px; }
 .login-link-button { padding: 0; border: 0; background: none; cursor: pointer; font: inherit; }
 .login-link-button:hover { color: var(--color-accent); text-decoration: underline; }
 .code-input { text-align: center; font-size: 19px; font-weight: 700; letter-spacing: 0.18em; }
+.two-factor-step { margin: -4px 0 20px; padding: 13px 14px; border: 1px solid #bfdbfe; border-radius: 11px; color: #1d4ed8; background: #eff6ff; text-align: center; }
+.two-factor-step p { margin: 0 0 5px; font-size: 13px; font-weight: 700; }
+.two-factor-step span { color: #64748b; font-size: 11px; }
+.two-factor-step strong { color: #1e3a8a; font-weight: 800; letter-spacing: .02em; }
 .two-factor-setup { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 18px; text-align: center; }
 .two-factor-setup p { margin: 0; color: var(--color-muted); font-size: 12px; line-height: 1.5; }
 .two-factor-setup label { align-self: stretch; margin-top: 4px; text-align: left; font-size: 13px; font-weight: 600; }

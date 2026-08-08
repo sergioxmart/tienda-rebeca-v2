@@ -13,6 +13,17 @@ function errorMessage(err, fallback) {
   return err instanceof ApiError ? (err.message || fallback) : fallback;
 }
 
+function maskEmail(value) {
+  const [local = '', domain = ''] = String(value || '').split('@');
+  if (!local || !domain) return '***';
+  const domainParts = domain.split('.');
+  const domainName = domainParts.shift() || '';
+  const suffix = domainParts.length > 0 ? `.${domainParts.join('.')}` : '';
+  const visibleLocal = local.slice(0, Math.min(3, local.length));
+  const visibleDomain = domainName.slice(0, Math.min(2, domainName.length));
+  return `${visibleLocal}${'*'.repeat(Math.max(3, local.length - visibleLocal.length))}@${visibleDomain}${'*'.repeat(Math.max(3, domainName.length - visibleDomain.length))}${suffix}`;
+}
+
 export default function Login() {
   const { login, completeFirstTwoFactor, status } = useAuth();
   const navigate = useNavigate();
@@ -102,9 +113,14 @@ export default function Login() {
       goToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.code === 'two_factor_required') {
-        setStep('totp');
-        setTotpCode('');
-        setError('Ingresa el código de tu aplicación autenticadora.');
+        if (step === 'credentials') {
+          setStep('totp');
+          setTotpCode('');
+          setError(null);
+          setNotice(null);
+        } else {
+          setError('El código de autenticación no es válido. Intenta nuevamente.');
+        }
       } else if (err instanceof ApiError && err.code === 'two_factor_setup_required') {
         const token = err.details?.data?.setup_token;
         if (!token) {
@@ -120,6 +136,8 @@ export default function Login() {
             setError(errorMessage(setupError, 'No se pudo preparar la configuración del segundo factor.'));
           }
         }
+      } else if (err instanceof ApiError && (err.code === 'invalid_credentials' || err.code === 'unauthorized' || err.status === 401)) {
+        setError('Correo o clave incorrecta');
       } else {
         setError(errorMessage(err, 'No se pudo iniciar sesión.'));
       }
@@ -275,13 +293,24 @@ export default function Login() {
             </>
           )}
 
-          {(step === 'credentials' || step === 'totp') && (
+          {step === 'credentials' && (
             <>
               <div className="form-group"><label htmlFor="email">Correo</label><input id="email" className="input" type="email" required autoComplete="username" autoFocus={step === 'credentials'} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <div className="form-group"><label htmlFor="password">Contraseña</label><input id="password" className="input" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-              {step === 'totp' && <div className="form-group"><label htmlFor="totp">Código de autenticación</label><input id="totp" className="input code-input" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required autoComplete="one-time-code" autoFocus value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))} /></div>}
-              <button className="btn btn-primary btn-block" type="submit" disabled={loading}>{loading ? <span className="spinner" /> : step === 'totp' ? 'Verificar e ingresar' : 'Iniciar sesión'}</button>
-              <div className="login-actions"><button type="button" className="login-link login-link-button" onClick={() => { setStep('recovery_email'); setRecoveryToken(null); setPasswordToken(null); setError(null); setNotice(null); }}>¿Olvidaste tu contraseña?</button>{step === 'totp' && <button type="button" className="login-link login-link-button" onClick={() => { setStep('credentials'); setTotpCode(''); setError(null); }}>Cambiar cuenta</button>}</div>
+              <button className="btn btn-primary btn-block" type="submit" disabled={loading}>{loading ? <span className="spinner" /> : 'Siguiente'}</button>
+              <div className="login-actions"><button type="button" className="login-link login-link-button" onClick={() => { setStep('recovery_email'); setRecoveryToken(null); setPasswordToken(null); setError(null); setNotice(null); }}>¿Olvidaste tu contraseña?</button></div>
+            </>
+          )}
+
+          {step === 'totp' && (
+            <>
+              <div className="two-factor-step">
+                <p>Ingresa el código de tu aplicación autenticadora.</p>
+                <span>Cuenta: <strong>{maskEmail(email)}</strong></span>
+              </div>
+              <div className="form-group"><label htmlFor="totp">Código de autenticación</label><input id="totp" className="input code-input" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required autoComplete="one-time-code" autoFocus value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))} /></div>
+              <button className="btn btn-primary btn-block" type="submit" disabled={loading}>{loading ? <span className="spinner" /> : 'Verificar e ingresar'}</button>
+              <div className="login-actions"><button type="button" className="login-link login-link-button" onClick={() => { setStep('credentials'); setEmail(''); setPassword(''); setTotpCode(''); setError(null); setNotice(null); }}>Cambiar cuenta</button></div>
             </>
           )}
           <div className="login-footer">Acceso protegido · TechStore</div>

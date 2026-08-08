@@ -69,6 +69,13 @@ export const env = {
   MERCADOPAGO_PENDING_URL:      opt('MERCADOPAGO_PENDING_URL', 'http://localhost:5173/pago/respuesta'),
   MERCADOPAGO_NOTIFICATION_URL: opt('MERCADOPAGO_NOTIFICATION_URL', 'http://localhost:3000/api/webhooks/mercadopago'),
 
+  // Resend. La API key solo vive en el backend y se deja vacía para que el
+  // desarrollo local pueda funcionar sin configurar todavía el proveedor.
+  RESEND_ENABLED:     opt('RESEND_ENABLED', 'true').toLowerCase() === 'true',
+  RESEND_API_KEY:     opt('RESEND_API_KEY', ''),
+  RESEND_FROM_EMAIL:  opt('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+  RESEND_FROM_NAME:   opt('RESEND_FROM_NAME', 'TechStore'),
+
   // Uploads
   MAX_UPLOAD_BYTES:  Number(opt('MAX_UPLOAD_BYTES', String(20 * 1024 * 1024))), // 20 MB
 

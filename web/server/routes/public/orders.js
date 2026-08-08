@@ -7,8 +7,10 @@
 import { tx } from '../../lib/db.js';
 import { readJsonBody } from '../../lib/body.js';
 import { json } from '../../lib/json.js';
+import { log } from '../../lib/logger.js';
 import { expirePendingOrders, ORDER_PENDING_TTL_MINUTES } from '../../lib/order-expiration.js';
 import { reserveOrderStock, InsufficientReservationError } from '../../lib/order-stock.js';
+import { sendOrderConfirmationEmail } from '../../lib/resend.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -164,6 +166,17 @@ export async function createOrder(req, res) {
           total: subtotal,
           expires_at: new Date(Date.now() + ORDER_PENDING_TTL_MINUTES * 60 * 1000).toISOString(),
         },
+        email: {
+          order: {
+            order_number: orderNumber,
+            customer_email: customerEmail,
+            customer_name: customerName,
+            total: subtotal,
+            notes,
+          },
+          items: resolved,
+          shippingAddress: { address, city, notes },
+        },
       };
     });
 
@@ -172,6 +185,16 @@ export async function createOrder(req, res) {
     }
     if (result.error === 'insufficient_stock') {
       return json(res, 409, { ok: false, error: result.error, message: 'Una o más cantidades ya no están disponibles. Actualiza el carrito.', items: result.insufficient });
+    }
+    try {
+      await sendOrderConfirmationEmail(result.email);
+    } catch (error) {
+      // El correo es una notificación secundaria: nunca anulamos un pedido
+      // válido porque el proveedor de email esté temporalmente caído.
+      log.error('order confirmation email failed', {
+        order_number: result.order.order_number,
+        message: error.message,
+      });
     }
     return json(res, 201, { ok: true, order: result.order });
   } catch (error) {

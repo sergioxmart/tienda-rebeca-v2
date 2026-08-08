@@ -4,6 +4,14 @@
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const cache = new Map();
+let nextNominatimRequestAt = 0;
+
+async function waitForNominatimSlot() {
+  const now = Date.now();
+  const wait = Math.max(0, nextNominatimRequestAt - now);
+  nextNominatimRequestAt = Math.max(now, nextNominatimRequestAt) + 1000;
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+}
 
 function addressQueries(shippingAddress) {
   if (!shippingAddress || typeof shippingAddress !== 'object') return [];
@@ -34,6 +42,7 @@ export async function geocodeShippingAddress(shippingAddress) {
     endpoint.searchParams.set('q', query);
 
     try {
+      await waitForNominatimSlot();
       const response = await fetch(endpoint, {
         headers: {
           Accept: 'application/json',

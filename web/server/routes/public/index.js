@@ -12,6 +12,7 @@ import { listPublicModules } from './page-modules.js';
 import { validateCart } from './cart.js';
 import { createOrder } from './orders.js';
 import { createPaymentIntent } from './payment-intent.js';
+import { geocodeAddress } from './geocode.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -34,6 +35,10 @@ export async function handlePublic(req, res) {
 
   if (pathname === '/api/public/checkout/payment-intent' && method === 'POST') {
     return createPaymentIntent(req, res);
+  }
+
+  if (pathname === '/api/public/geocode' && method === 'GET') {
+    return geocodeAddress(req, res);
   }
 
   // Site config (path exacto)

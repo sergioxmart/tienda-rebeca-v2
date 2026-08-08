@@ -81,6 +81,11 @@ export const api = {
     });
     return r.payment || null;
   },
+  geocodeAddress: async (address, city) => {
+    const params = new URLSearchParams({ address: address || '', city: city || '' });
+    const r = await request(`/api/public/geocode?${params.toString()}`);
+    return r.location || null;
+  },
 };
 
 export { ApiError };

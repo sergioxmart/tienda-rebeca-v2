@@ -7,6 +7,7 @@ import { useCart } from '../cart/CartContext.jsx';
 import { useSite } from '../site/SiteContext.jsx';
 import { formatCOP } from '../components/Price.jsx';
 import { api } from '../api.js';
+import DeliveryLocationPicker from '../components/DeliveryLocationPicker.jsx';
 
 const EMPTY = {
   name: '',
@@ -48,6 +49,7 @@ export default function Checkout() {
   const [paymentCheckout, setPaymentCheckout] = useState(null);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentProvider, setPaymentProvider] = useState('mercadopago');
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
   const [remainingSeconds, setRemainingSeconds] = useState(8 * 60);
   const expiryHandled = useRef(false);
   const deadline = useRef(Date.now() + 8 * 60 * 1000);
@@ -86,7 +88,7 @@ export default function Checkout() {
     setSubmitError('');
     try {
       const data = await api.createOrder({
-        customer: form,
+        customer: { ...form, delivery_location: deliveryLocation },
         items: items.map((item) => ({
           variant_id: item.variant_id,
           product_id: item.product_id,
@@ -200,6 +202,12 @@ export default function Checkout() {
             <label>Notas <span style={{ color: 'var(--color-muted)' }}>(opcional)</span></label>
             <textarea className="textarea" value={form.notes} onChange={(e) => setField('notes', e.target.value)} placeholder="Barrio, referencias, indicaciones especiales..." />
           </div>
+          <DeliveryLocationPicker
+            address={form.address}
+            city={form.city}
+            value={deliveryLocation}
+            onChange={setDeliveryLocation}
+          />
 
           <h3 style={{ marginTop: 16 }}>Pago</h3>
           <div className="form-group payment-method-field">

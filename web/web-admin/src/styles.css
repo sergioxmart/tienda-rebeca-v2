@@ -521,6 +521,7 @@ p { margin: 0 0 12px; }
 .order-contact-notes dd { white-space: pre-wrap; }
 .order-detail-map-card { overflow: hidden; padding-bottom: 12px; }
 .order-detail-map { width: 100%; height: 206px; display: block; border: 0; border-radius: 10px; background: #edf2f5; }
+.order-detail-map.leaflet-container { z-index: 0; font: inherit; }
 .order-map-link { display: inline-block; margin-top: 9px; color: var(--color-primary); font-size: 11px; font-weight: 750; }
 .order-map-link:hover { color: var(--color-accent); }
 .order-map-empty { min-height: 206px; display: grid; place-content: center; gap: 5px; padding: 20px; border-radius: 10px; color: var(--color-muted); background: #f4f7f9; text-align: center; }

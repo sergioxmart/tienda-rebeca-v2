@@ -292,6 +292,19 @@ p { margin: 0 0 12px; }
 .input, .select, .textarea { width: 100%; min-height: 44px; padding: 0 13px; border: 1px solid var(--color-border); border-radius: 11px; color: var(--color-text); background: #fff; font-size: 14px; }
 .input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 4px rgba(15,42,71,0.09); }
 .textarea { min-height: 90px; padding-top: 11px; resize: vertical; }
+.delivery-location-picker { margin: 6px 0 20px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: #f8fafc; }
+.delivery-location-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.delivery-location-heading strong { display: block; color: var(--color-primary); font-size: 13px; }
+.delivery-location-heading strong span { color: var(--color-muted); font-size: 11px; font-weight: 500; }
+.delivery-location-heading p { margin: 4px 0 0; color: var(--color-muted); font-size: 11px; }
+.delivery-location-pin { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--color-accent); background: #fff0e9; font-size: 21px; line-height: 1; }
+.delivery-location-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0 11px; }
+.delivery-location-actions .btn { min-height: 36px; padding: 0 11px; border-radius: 9px; font-size: 11px; }
+.delivery-location-map-wrap { position: relative; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: #e8eef2; }
+.delivery-location-map { width: 100%; height: 245px; z-index: 1; }
+.delivery-location-map-hint { position: absolute; z-index: 500; right: 10px; bottom: 10px; left: 10px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.75); border-radius: 8px; color: var(--color-primary); background: rgba(255,255,255,.9); box-shadow: 0 4px 12px rgba(15,42,71,.1); font-size: 10px; pointer-events: none; }
+.delivery-location-message { margin: 8px 0 0; color: var(--color-primary); font-size: 11px; }
+.delivery-location-coordinates { display: block; margin-top: 4px; color: var(--color-muted); font-size: 10px; }
 .payment-method-field { margin-top: 2px; }
 .payment-method-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 750; }
 .payment-method-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -403,6 +416,8 @@ p { margin: 0 0 12px; }
   .header-actions { gap: 6px; }
   .hero { padding: 36px 21px 17px; }
   .hero h1 { font-size: 42px; }
+  .delivery-location-actions { display: grid; grid-template-columns: 1fr; }
+  .delivery-location-actions .btn { width: 100%; }
   .hero-actions { align-items: stretch; flex-direction: column; gap: 13px; }
   .hero-actions .btn { width: 100%; }
   .hero-secondary-link { text-align: center; }

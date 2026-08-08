@@ -40,7 +40,15 @@ export async function getOrder(req, res, id) {
   await expirePendingOrders().catch(() => {});
   const { rows } = await query('SELECT * FROM orders WHERE id = $1', [id]);
   if (rows.length === 0) return notFound(res);
-  const shippingLocation = await geocodeShippingAddress({
+  const storedLatitude = Number(rows[0].shipping_address?.latitude);
+  const storedLongitude = Number(rows[0].shipping_address?.longitude);
+  const hasStoredLocation = Number.isFinite(storedLatitude) && storedLatitude >= -90 && storedLatitude <= 90
+    && Number.isFinite(storedLongitude) && storedLongitude >= -180 && storedLongitude <= 180;
+  const shippingLocation = hasStoredLocation ? {
+    lat: storedLatitude,
+    lon: storedLongitude,
+    display_name: 'Ubicación exacta indicada por el cliente',
+  } : await geocodeShippingAddress({
     ...(rows[0].shipping_address || {}),
     notes: rows[0].notes,
   });

@@ -42,6 +42,14 @@ export async function createOrder(req, res) {
   const address = cleanString(customer.address, 300);
   const city = cleanString(customer.city, 120);
   const notes = cleanString(customer.notes, 1000);
+  const requestedLocation = customer.delivery_location;
+  const latitude = Number(requestedLocation?.lat);
+  const longitude = Number(requestedLocation?.lon);
+  const hasLatitude = Number.isFinite(latitude) && latitude >= -90 && latitude <= 90;
+  const hasLongitude = Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+  if (requestedLocation && (hasLatitude !== hasLongitude)) {
+    return json(res, 400, { ok: false, error: 'invalid_delivery_location', message: 'La ubicación de entrega está incompleta.' });
+  }
   if (!customerName || !customerEmail || !EMAIL_RE.test(customerEmail) || !customerPhone || !address || !city) {
     return json(res, 400, { ok: false, error: 'invalid_customer', message: 'Revisa nombre, correo, teléfono, dirección y ciudad.' });
   }
@@ -121,7 +129,12 @@ export async function createOrder(req, res) {
       const subtotal = resolved.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       // Conservamos las notas dentro del bloque de despacho porque pueden
       // contener el conjunto, torre y apartamento que necesita logística.
-      const shippingAddress = JSON.stringify({ address, city, notes });
+      const shippingAddress = JSON.stringify({
+        address,
+        city,
+        notes,
+        ...(hasLatitude && hasLongitude ? { latitude, longitude } : {}),
+      });
       await client.query(
         `INSERT INTO orders
            (id, order_number, customer_email, customer_name, customer_phone,

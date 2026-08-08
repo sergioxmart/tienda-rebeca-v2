@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import OrderLocationMap from '../components/OrderLocationMap.jsx';
 import Empty from '../components/Empty.jsx';
 
 function formatCOP(value) {
@@ -97,13 +98,10 @@ export default function Orders() {
   );
 }
 
-function mapEmbedUrl(location) {
+function hasMapLocation(location) {
   const lat = Number(location?.lat);
   const lon = Number(location?.lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
-  const delta = 0.012;
-  const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].map((value) => value.toFixed(6)).join('%2C');
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat.toFixed(6)}%2C${lon.toFixed(6)}`;
+  return Number.isFinite(lat) && Number.isFinite(lon);
 }
 
 function OrderDetail({ order, loading, error }) {
@@ -118,7 +116,7 @@ function OrderDetail({ order, loading, error }) {
   const tax = Number(order.tax) || 0;
   const total = Number(order.total) || 0;
   const discount = Math.max(0, subtotal + shipping + tax - total);
-  const mapUrl = mapEmbedUrl(order.shipping_location);
+  const hasLocation = hasMapLocation(order.shipping_location);
 
   return (
     <div className="order-detail-panel">
@@ -171,9 +169,9 @@ function OrderDetail({ order, loading, error }) {
 
         <section className="order-detail-card order-detail-map-card">
           <div className="order-detail-card-heading"><h3>Ubicación de entrega</h3><span>Geolocalización</span></div>
-          {mapUrl ? (
+          {hasLocation ? (
             <>
-              <iframe className="order-detail-map" title={`Mapa de entrega del pedido ${order.order_number}`} src={mapUrl} loading="lazy" />
+              <OrderLocationMap location={order.shipping_location} orderNumber={order.order_number} />
               <a className="order-map-link" href={`https://www.openstreetmap.org/?mlat=${order.shipping_location.lat}&mlon=${order.shipping_location.lon}#map=16/${order.shipping_location.lat}/${order.shipping_location.lon}`} target="_blank" rel="noreferrer">Abrir mapa completo ↗</a>
             </>
           ) : (

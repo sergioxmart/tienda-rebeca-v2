@@ -4,8 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import Empty from '../components/Empty.jsx';
+import CustomCode from './CustomCode.jsx';
 
 export default function FeaturedProducts({ settings = {} }) {
+  if (settings.custom_code_enabled && settings.custom_code) {
+    return <CustomCode code={settings.custom_code} className="featured-products-custom-code" />;
+  }
   const { title = 'Destacados', limit = 8 } = settings;
   const [items, setItems] = useState(null);
   const [error, setError] = useState(null);

@@ -53,6 +53,8 @@ const SITE_CONFIG_KEYS_THAT_MATTER = [
   'navbar_show_cart',
   'navbar_show_categories',
   'navbar_links',
+  'navbar_custom_code_enabled',
+  'navbar_custom_code',
   'store_accent_color',
   'store_primary_color',
   'store_surface_color',

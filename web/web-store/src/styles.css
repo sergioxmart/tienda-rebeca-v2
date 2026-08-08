@@ -138,6 +138,10 @@ p { margin: 0 0 12px; }
 .footer-social-signature svg { display: block; width: 17px; height: 17px; fill: currentColor; }
 .footer-social-signature svg[viewBox="0 0 24 24"] rect, .footer-social-signature svg[viewBox="0 0 24 24"] circle:not(.footer-social-dot) { fill: none; stroke: currentColor; stroke-width: 1.7; }
 .footer-social-signature .footer-social-dot { fill: currentColor; }
+.store-custom-code { width: 100%; }
+.store-custom-code > style { display: none; }
+.navbar-custom-code { width: 100%; }
+.footer-custom-code { width: 100%; margin-top: 22px; }
 
 /* ---------- Hero ---------- */
 

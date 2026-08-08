@@ -6,6 +6,7 @@ import { useSite } from '../site/SiteContext.jsx';
 import { useCart } from '../cart/CartContext.jsx';
 import { api } from '../api.js';
 import { formatCOP } from './Price.jsx';
+import CustomCode from '../modules/CustomCode.jsx';
 
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>;
@@ -41,6 +42,10 @@ export default function Header() {
         { label: 'Tienda', href: '/categoria', featured: true },
         ...(showCategories ? visibleCategories.map((c) => ({ label: c.name, href: `/categoria/${c.slug}` })) : []),
       ];
+
+  if (site?.navbar_custom_code_enabled && site.navbar_custom_code) {
+    return <CustomCode code={site.navbar_custom_code} className="navbar-custom-code" />;
+  }
 
   useEffect(() => {
     setMenuOpen(false);

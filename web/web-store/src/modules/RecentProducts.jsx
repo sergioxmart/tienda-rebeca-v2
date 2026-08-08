@@ -3,8 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
+import CustomCode from './CustomCode.jsx';
 
 export default function RecentProducts({ settings = {} }) {
+  if (settings.custom_code_enabled && settings.custom_code) {
+    return <CustomCode code={settings.custom_code} className="recent-products-custom-code" />;
+  }
   const { title = 'Lo más nuevo', limit = 8 } = settings;
   const [items, setItems] = useState(null);
 

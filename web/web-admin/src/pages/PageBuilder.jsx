@@ -107,7 +107,22 @@ const MODULE_SCHEMAS = {
   },
 };
 
-const HERO_TEMPLATE = `<!-- Hero personalizado de TechStore -->
+const CUSTOM_CODE_TEMPLATES = {
+  navbar: `<!-- Navbar personalizado de TechStore -->
+<style>
+  .techstore-custom-navbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 6%; color: #fff; background: #0f2a47; }
+  .techstore-custom-navbar nav { display: flex; gap: 18px; flex-wrap: wrap; }
+  .techstore-custom-navbar a { color: #fff; font-weight: 700; text-decoration: none; }
+</style>
+<header class="techstore-custom-navbar">
+  <strong>Nombre de tu tienda</strong>
+  <nav aria-label="Navegación personalizada">
+    <a href="/">Inicio</a>
+    <a href="/categoria">Tienda</a>
+    <a href="/carrito">Carrito</a>
+  </nav>
+</header>`,
+  hero: `<!-- Hero personalizado de TechStore -->
 <style>
   .techstore-custom-hero {
     padding: 64px 8%;
@@ -124,16 +139,75 @@ const HERO_TEMPLATE = `<!-- Hero personalizado de TechStore -->
   <h1>Tu título personalizado</h1>
   <p>Escribe aquí el mensaje principal de tu Hero.</p>
   <a href="/categoria" class="btn btn-accent">Ver catálogo</a>
-</section>`;
+</section>`,
+  banner: `<!-- Banner personalizado de TechStore -->
+<style>
+  .techstore-custom-banner { display: block; overflow: hidden; border-radius: 24px; background: #eef3f7; }
+  .techstore-custom-banner img { display: block; width: 100%; height: auto; }
+</style>
+<a class="techstore-custom-banner" href="/categoria">
+  <img src="/media/tu-banner.jpg" alt="Describe aquí tu banner" />
+</a>`,
+  categories: `<!-- Chips de categorías personalizados de TechStore -->
+<style>
+  .techstore-custom-categories { display: flex; flex-wrap: wrap; gap: 10px; padding: 20px 0; }
+  .techstore-custom-categories a { padding: 10px 16px; border-radius: 999px; color: #0f2a47; background: #eef3f7; font-weight: 700; text-decoration: none; }
+</style>
+<section class="techstore-custom-categories" aria-label="Categorías">
+  <a href="/categoria">Categoría principal</a>
+  <a href="/categoria/ofertas">Ofertas</a>
+</section>`,
+  categories_grid: `<!-- Grid de categorías personalizado de TechStore -->
+<style>
+  .techstore-custom-categories-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+  .techstore-custom-categories-grid a { padding: 28px 20px; border-radius: 20px; color: #0f2a47; background: #fff; box-shadow: 0 8px 24px rgba(15,42,71,.08); font-weight: 800; text-decoration: none; }
+</style>
+<section class="techstore-custom-categories-grid" aria-label="Categorías">
+  <a href="/categoria">Categoría principal</a>
+  <a href="/categoria/ofertas">Ofertas</a>
+</section>`,
+  featured_products: `<!-- Productos destacados personalizados de TechStore -->
+<section class="techstore-custom-products">
+  <h2>Productos destacados</h2>
+  <p>Este bloque es tu punto de partida para diseñar una sección personalizada.</p>
+</section>`,
+  recent_products: `<!-- Productos recientes personalizados de TechStore -->
+<section class="techstore-custom-products">
+  <h2>Lo más nuevo</h2>
+  <p>Este bloque es tu punto de partida para diseñar una sección personalizada.</p>
+</section>`,
+  footer: `<!-- Footer personalizado de TechStore -->
+<style>
+  .techstore-custom-footer { padding: 40px 6%; color: #fff; background: #0c2036; }
+  .techstore-custom-footer a { color: #fff; }
+</style>
+<footer class="techstore-custom-footer">
+  <strong>Nombre de tu tienda</strong>
+  <p>Escribe aquí tu información de contacto.</p>
+  <a href="/categoria">Ir a la tienda</a>
+</footer>`,
+};
 
-function downloadHeroTemplate() {
-  const blob = new Blob([HERO_TEMPLATE], { type: 'text/html;charset=utf-8' });
+const CUSTOM_CODE_SETTINGS = [
+  { key: 'custom_code_enabled', label: 'Código Personalizado', type: 'checkbox', defaultValue: false },
+  { key: 'custom_code', label: 'HTML/CSS personalizado', type: 'custom_code', placeholder: 'Pega aquí el HTML y CSS de este módulo.' },
+];
+
+for (const schema of Object.values(MODULE_SCHEMAS)) {
+  schema.settings.push(...CUSTOM_CODE_SETTINGS.map((field) => ({ ...field })));
+}
+
+function downloadModuleTemplate(type) {
+  const template = CUSTOM_CODE_TEMPLATES[type] || CUSTOM_CODE_TEMPLATES.hero;
+  const blob = new Blob([template], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'techstore-hero-personalizado.html';
+  link.download = `techstore-${type}-personalizado.html`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 const EMPTY_NEW = { type: 'hero', settings: {}, active: true };
@@ -145,6 +219,8 @@ const NAV_DEFAULTS = {
   navbar_show_cart: true,
   navbar_show_categories: true,
   navbar_links: [],
+  navbar_custom_code_enabled: false,
+  navbar_custom_code: '',
 };
 
 function normalizeNavLinks(value) {
@@ -291,13 +367,39 @@ function BuilderModuleRow({ icon, label, description, active, onMoveUp, onMoveDo
   );
 }
 
+function CustomCodeEditor({ value, onChange, moduleType, moduleLabel, idPrefix = 'builder-custom-code' }) {
+  return <div className="form-group builder-custom-code-editor">
+    <label htmlFor={idPrefix}>{`HTML/CSS personalizado de ${moduleLabel || MODULE_SCHEMAS[moduleType]?.label || 'este módulo'}`}</label>
+    <textarea id={idPrefix} className="textarea" rows={16}
+              value={value || ''}
+              placeholder="Pega aquí HTML y CSS. Las etiquetas script no se ejecutan."
+              onChange={(e) => onChange(e.target.value)} />
+    <div className="builder-custom-code-help">
+      <span>El código personalizado reemplaza la configuración estándar de este módulo.</span>
+      <button className="btn btn-sm" type="button" onClick={() => downloadModuleTemplate(moduleType)}>Descargar plantilla</button>
+    </div>
+  </div>;
+}
+
 function NavbarSettings({ navSettings, navSaving, setNavValue, updateNavLink, addNavLink, removeNavLink, saveNavSettings }) {
+  const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   return (
     <div className="builder-module-details builder-navbar-settings">
       <div className="builder-navbar-settings-heading">
         <div><span className="builder-kicker">Configuración del módulo</span><h3>Nav Bar de la tienda</h3><p>Estos cambios se guardan en el borrador y solo llegan a 5173 al publicar.</p></div>
         <button className="btn btn-primary btn-sm" type="button" onClick={saveNavSettings} disabled={navSaving}>{navSaving ? <span className="spinner" /> : 'Guardar Navbar'}</button>
       </div>
+      <label className="builder-checkbox-field builder-navbar-custom-toggle">
+        <input type="checkbox" checked={customCodeEnabled} onChange={(e) => setNavValue('navbar_custom_code_enabled', e.target.checked)} />
+        <span>Código Personalizado</span>
+      </label>
+      {customCodeEnabled ? <CustomCodeEditor
+        value={navSettings.navbar_custom_code}
+        onChange={(value) => setNavValue('navbar_custom_code', value)}
+        moduleType="navbar"
+        moduleLabel="Nav Bar"
+        idPrefix="builder-navbar-custom-code"
+      /> : <>
       <div className="form-row">
         <div className="form-group"><label>Mensaje superior</label><input className="input" value={navSettings.navbar_announcement} onChange={(e) => setNavValue('navbar_announcement', e.target.value)} placeholder="Envíos a toda Colombia · Compra fácil y segura" /></div>
         <div className="form-group"><label>Mostrar categorías automáticas</label><select className="select" value={String(navSettings.navbar_show_categories)} onChange={(e) => setNavValue('navbar_show_categories', e.target.value === 'true')}><option value="true">Sí, usar categorías del catálogo</option><option value="false">No</option></select></div>
@@ -317,6 +419,7 @@ function NavbarSettings({ navSettings, navSaving, setNavValue, updateNavLink, ad
           <button className="btn btn-sm btn-danger" type="button" onClick={() => removeNavLink(index)} aria-label={`Eliminar enlace ${link.label || index + 1}`}>×</button>
         </div>)}
       </div>}
+      </>}
     </div>
   );
 }
@@ -675,28 +778,22 @@ export default function PageBuilder() {
             </div>
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '12px 0' }} />
             {schema.settings.map((f) => {
-              const heroCustomEnabled = editing.type === 'hero' && Boolean(editing.settings.custom_code_enabled);
-              if (editing.type === 'hero' && heroCustomEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
-              if (f.type === 'custom_code' && !heroCustomEnabled) return null;
+              const customCodeEnabled = Boolean(editing.settings.custom_code_enabled);
+              if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
+              if (f.type === 'custom_code' && !customCodeEnabled) return null;
               if (f.type === 'checkbox') {
                 return <label className="builder-checkbox-field" key={f.key}>
                   <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
                   <span>{f.label}</span>
                 </label>;
               }
-              if (f.type === 'custom_code') {
-                return <div className="form-group builder-custom-code-editor" key={f.key}>
-                  <label htmlFor="builder-hero-custom-code">{f.label}</label>
-                  <textarea id="builder-hero-custom-code" className="textarea" rows={16}
-                            value={editing.settings[f.key] ?? ''}
-                            placeholder={f.placeholder || ''}
-                            onChange={(e) => setSetting(f.key, e.target.value)} />
-                  <div className="builder-custom-code-help">
-                    <span>Usa HTML y CSS. Por seguridad, las etiquetas <code>&lt;script&gt;</code> no se ejecutan.</span>
-                    <button className="btn btn-sm" type="button" onClick={downloadHeroTemplate}>Descargar plantilla</button>
-                  </div>
-                </div>;
-              }
+              if (f.type === 'custom_code') return <CustomCodeEditor
+                key={f.key}
+                value={editing.settings[f.key]}
+                onChange={(value) => setSetting(f.key, value)}
+                moduleType={editing.type}
+                idPrefix={`builder-${editing.type}-custom-code`}
+              />;
               return <div className="form-group" key={f.key}>
                 <label>{f.label}</label>
                 {f.type === 'textarea' ? (

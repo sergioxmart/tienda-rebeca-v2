@@ -3,8 +3,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useSite } from '../site/SiteContext.jsx';
+import CustomCode from './CustomCode.jsx';
 
 export default function CategoriesGrid({ settings = {} }) {
+  if (settings.custom_code_enabled && settings.custom_code) {
+    return <CustomCode code={settings.custom_code} className="categories-grid-custom-code" />;
+  }
   const { title = 'Categorías' } = settings;
   const { categories } = useSite();
   if (!Array.isArray(categories) || categories.length === 0) return null;

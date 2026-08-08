@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Price from '../components/Price.jsx';
+import CustomCode from './CustomCode.jsx';
 
 export default function Hero({ settings = {} }) {
   const {
@@ -46,9 +47,7 @@ export default function Hero({ settings = {} }) {
     ? { backgroundImage: `linear-gradient(rgba(15,42,71,0.55), rgba(15,42,71,0.7)), url(${image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : undefined;
   if (custom_code_enabled && custom_code) {
-    // El Hero personalizado acepta HTML/CSS, pero nunca ejecuta JavaScript.
-    const safeMarkup = String(custom_code).replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '');
-    return <div className="hero-custom-code" dangerouslySetInnerHTML={{ __html: safeMarkup }} />;
+    return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
     <section className="hero" style={style}>

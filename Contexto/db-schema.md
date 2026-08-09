@@ -218,9 +218,12 @@ con expiración de 5 minutos, límite de intentos y consumo de un solo uso.
 `customer_sessions` guarda el hash de un token opaco que se entrega en una
 cookie `httpOnly`; la sesión dura 30 días y se puede revocar.
 
-`customer_addresses` es la libreta de direcciones, con ciudad, notas y
+`customer_addresses` es la libreta de direcciones, con departamento, ciudad, notas y
 coordenadas opcionales. `orders.client_id` es nullable y usa `ON DELETE SET
 NULL` para que eliminar una cuenta nunca borre ni modifique el historial.
+Desde `030_colombia_departments.sql`, los nuevos pedidos guardan también el
+departamento dentro de `shipping_address` para que admin muestre la ubicación
+normalizada.
 
 ### `payments` (`007_payments.sql`)
 

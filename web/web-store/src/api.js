@@ -86,6 +86,10 @@ export const api = {
     const r = await request(`/api/public/geocode?${params.toString()}`);
     return r.location || null;
   },
+  colombiaLocations: async () => {
+    const r = await request('/api/public/locations/colombia');
+    return r.departments || [];
+  },
   customerLookup: async (email) => {
     const r = await request('/api/public/customer/lookup', {
       method: 'POST',

@@ -37,8 +37,8 @@ export function createFailureLimiter({ limit = 5, windowMs = 15 * 60 * 1000, loc
         ? { count: 0, resetAt: now + windowMs, lockedUntil: 0 }
         : current;
       bucket.count += 1;
-      // El quinto fallo todavía recibe su respuesta normal; los siguientes
-      // intentos quedan bloqueados durante la ventana configurada.
+      // El fallo que alcanza el límite todavía recibe su respuesta normal;
+      // los siguientes intentos quedan bloqueados durante la ventana configurada.
       if (bucket.count >= limit) bucket.lockedUntil = now + lockoutMs;
       failures.set(key, bucket);
     }

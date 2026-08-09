@@ -53,7 +53,7 @@ El "Core remoto" (modo dividido con mTLS) es un plan documentado en
 | File | `serveFile({...})` — usado por static y media | [`core/lib/file.js`](../core/lib/file.js) | [conventions.md](./conventions.md) |
 | Uploads | `multer` + `writeUploadFile` + `deleteUploadFile` | [`core/lib/uploads.js`](../core/lib/uploads.js) | [conventions.md](./conventions.md) |
 | Barrel lib | `core/lib/index.js` re-exporta todo lo público | [`core/lib/index.js`](../core/lib/index.js) | — |
-| Middleware | `requireAuth`/`optionalAuth`/`requireRole` + `csrf` + `rateLimit` + `createFailureLimiter` | [`core/middleware/{auth,csrf,rate-limit}.js`](../core/middleware/) | [conventions.md](./conventions.md) |
+| Middleware | `requireAuth`/`optionalAuth`/`requireRole` + `csrf` + `rateLimit` + `createFailureLimiter` (`check()` devuelve `blocked` y `retryAfterSec`) | [`core/middleware/{auth,csrf,rate-limit}.js`](../core/middleware/) | [conventions.md](./conventions.md) |
 | Security headers | `securityHeaders` con CSP, políticas de origen, permisos y HSTS en producción | [`core/middleware/security-headers.js`](../core/middleware/security-headers.js) | [conventions.md](./conventions.md) |
 | Barrel middleware | `core/middleware/index.js` re-exporta todo | [`core/middleware/index.js`](../core/middleware/index.js) | — |
 | Webhook receptor | `createWebhookServer({ path, secret, onPush, log })` genérico | [`core/webhook/server.js`](../core/webhook/server.js) | [conventions.md](./conventions.md) |
@@ -69,7 +69,7 @@ El "Core remoto" (modo dividido con mTLS) es un plan documentado en
 | Permisos | `SECTION_PERMS` (backend) + espejo frontend | [`web/server/routes/admin/_section_perms.js`](../web/server/routes/admin/_section_perms.js) | [conventions.md](./conventions.md#roles-y-permisos) |
 | Re-exports a `core/` | `web/server/lib/*` y `web/server/middleware/*` son 1-liners | [`web/server/lib/`](../web/server/lib/), [`web/server/middleware/`](../web/server/middleware/) | [conventions.md](./conventions.md) |
 | Scripts | `setup-db.js`, `migrate.js`, `create-admin.js` | [`web/server/scripts/`](../web/server/scripts/) | [dev-setup.md](./dev-setup.md) |
-| Migraciones SQL | 29 migrations de TechStore (forward-only, idempotentes) | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
+| Migraciones SQL | 30 migrations de TechStore (forward-only, idempotentes) | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 | Tienda pública | SPA Vite + React (catálogo, carrito, checkout, portal de cliente OTP) | [`web/web-store/`](../web/web-store/) | [api.md](./api.md) |
 | Panel admin | SPA Vite + React. CRUDs + kanban pedidos | [`web/web-admin/`](../web/web-admin/) | [api.md](./api.md) |
 | Uploads | Directorio de archivos subidos. Lo resuelve `env.UPLOADS_DIR`; las URLs públicas pasan por `/media` | `uploads/` (gitignored) | [conventions.md](./conventions.md) |

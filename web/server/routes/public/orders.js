@@ -41,6 +41,7 @@ export async function createOrder(req, res) {
   const customerName = cleanString(customer.name, 160);
   const customerEmail = cleanString(customer.email, 254).toLowerCase();
   const customerPhone = cleanString(customer.phone, 40);
+  const department = cleanString(customer.department, 100);
   const address = cleanString(customer.address, 300);
   const city = cleanString(customer.city, 120);
   const notes = cleanString(customer.notes, 1000);
@@ -52,8 +53,8 @@ export async function createOrder(req, res) {
   if (requestedLocation && (hasLatitude !== hasLongitude)) {
     return json(res, 400, { ok: false, error: 'invalid_delivery_location', message: 'La ubicación de entrega está incompleta.' });
   }
-  if (!customerName || !customerEmail || !EMAIL_RE.test(customerEmail) || !customerPhone || !address || !city) {
-    return json(res, 400, { ok: false, error: 'invalid_customer', message: 'Revisa nombre, correo, teléfono, dirección y ciudad.' });
+  if (!customerName || !customerEmail || !EMAIL_RE.test(customerEmail) || !customerPhone || !department || !address || !city) {
+    return json(res, 400, { ok: false, error: 'invalid_customer', message: 'Revisa nombre, correo, teléfono, departamento, ciudad y dirección.' });
   }
 
   const items = [];
@@ -143,6 +144,7 @@ export async function createOrder(req, res) {
       // contener el conjunto, torre y apartamento que necesita logística.
       const shippingAddress = JSON.stringify({
         address,
+        department,
         city,
         notes,
         ...(hasLatitude && hasLongitude ? { latitude, longitude } : {}),

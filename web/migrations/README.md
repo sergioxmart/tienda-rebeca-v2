@@ -66,6 +66,7 @@ NNN_descripcion_corta.sql
 | 027 | `027_order_expiration.sql` | Agrega expiración de pedidos pendientes y el estado `expired` |
 | 028 | `028_order_stock_reservations.sql` | Reserva, liberación y consolidación transaccional de inventario por pedido |
 | 029 | `029_customer_portal_otp.sql` | Cuentas de clientes, login OTP sin contraseña, sesiones, direcciones y vínculo opcional con pedidos |
+| 030 | `030_colombia_departments.sql` | Departamento en la libreta de direcciones e integración del snapshot de ubicación de Colombia |
 
 ## Lo que falta decidir
 

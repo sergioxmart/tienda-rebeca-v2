@@ -8,12 +8,14 @@ import { useSite } from '../site/SiteContext.jsx';
 import { formatCOP } from '../components/Price.jsx';
 import { api } from '../api.js';
 import DeliveryLocationPicker from '../components/DeliveryLocationPicker.jsx';
+import ColombiaLocationFields from '../components/ColombiaLocationFields.jsx';
 import { useCustomer } from '../customer/CustomerContext.jsx';
 
 const EMPTY = {
   name: '',
   email: '',
   phone: '',
+  department: '',
   address: '',
   city: '',
   notes: '',
@@ -142,7 +144,7 @@ export default function Checkout() {
       if (result.addresses?.length > 0) {
         setSelectedAddressId(String(result.addresses[0].id));
         const address = result.addresses[0];
-        setForm((current) => ({ ...current, name: result.customer?.name || current.name, phone: address.phone || result.customer?.phone || current.phone, address: address.address, city: address.city, notes: address.notes || current.notes }));
+        setForm((current) => ({ ...current, name: result.customer?.name || current.name, phone: address.phone || result.customer?.phone || current.phone, department: address.department || current.department, address: address.address, city: address.city, notes: address.notes || current.notes }));
         setDeliveryLocation(address.latitude !== null && address.longitude !== null ? { lat: address.latitude, lon: address.longitude } : null);
       }
       setCustomerOtpSent(false);
@@ -156,7 +158,7 @@ export default function Checkout() {
     setSelectedAddressId(value);
     const address = addresses.find((item) => String(item.id) === String(value));
     if (!address) return;
-    setForm((current) => ({ ...current, phone: address.phone || current.phone, address: address.address, city: address.city, notes: address.notes || '' }));
+    setForm((current) => ({ ...current, phone: address.phone || current.phone, department: address.department || current.department, address: address.address, city: address.city, notes: address.notes || '' }));
     setDeliveryLocation(address.latitude !== null && address.longitude !== null ? { lat: address.latitude, lon: address.longitude } : null);
   };
 
@@ -294,13 +296,14 @@ export default function Checkout() {
               </select>
             </div>
           )}
+          <ColombiaLocationFields
+            department={form.department}
+            city={form.city}
+            onChange={({ department, city }) => setForm((current) => ({ ...current, department, city }))}
+          />
           <div className="form-group">
             <label>Dirección *</label>
             <input className="input" required value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder="Calle 100 #15-20, Apto 301" />
-          </div>
-          <div className="form-group">
-            <label>Ciudad *</label>
-            <input className="input" required value={form.city} onChange={(e) => setField('city', e.target.value)} placeholder="Bogotá" />
           </div>
           <div className="form-group">
             <label>Notas <span style={{ color: 'var(--color-muted)' }}>(opcional)</span></label>

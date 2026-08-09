@@ -357,6 +357,7 @@ p { margin: 0 0 12px; }
 .account-secondary-action { margin-left: 8px; }
 .account-page { display: grid; gap: 24px; }
 .account-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.account-heading-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .account-heading h1 { margin-bottom: 8px; }
 .account-heading p { color: var(--color-muted); }
 .account-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 24px; }
@@ -365,6 +366,7 @@ p { margin: 0 0 12px; }
 .account-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
 .account-section-heading h2 { margin-bottom: 0; }
 .account-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.colombia-location-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .account-address-form { padding: 16px; margin-bottom: 18px; border: 1px solid var(--color-border); border-radius: 14px; background: #f8fafc; }
 .account-address-actions, .account-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .account-address-list { display: grid; gap: 10px; }
@@ -473,6 +475,7 @@ p { margin: 0 0 12px; }
   .payment-method-grid { grid-template-columns: 1fr; }
   .cart-summary { position: static; }
   .account-heading { align-items: flex-start; flex-direction: column; }
+  .account-heading-actions { width: 100%; justify-content: flex-start; }
   .account-grid, .account-order-list { grid-template-columns: 1fr; }
   .account-address-card { flex-direction: column; }
   .account-card-actions { width: 100%; }
@@ -489,6 +492,7 @@ p { margin: 0 0 12px; }
   .header-actions { gap: 6px; }
   .panel { padding: 18px; }
   .account-form-grid { grid-template-columns: 1fr; gap: 0; }
+  .colombia-location-fields { grid-template-columns: 1fr; gap: 0; }
   .account-checkout-invite { align-items: flex-start; flex-direction: column; }
   .account-checkout-invite .btn { width: 100%; }
   .hero { padding: 36px 21px 17px; }

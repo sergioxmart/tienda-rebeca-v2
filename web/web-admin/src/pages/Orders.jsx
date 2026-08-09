@@ -162,7 +162,9 @@ function OrderDetail({ order, loading, error }) {
             <div><dt>Nombre</dt><dd>{order.customer_name || '—'}</dd></div>
             <div><dt>Correo</dt><dd>{order.customer_email || '—'}</dd></div>
             <div><dt>Teléfono</dt><dd>{order.customer_phone || '—'}</dd></div>
-            <div><dt>Dirección</dt><dd>{[shippingAddress.address, shippingAddress.city].filter(Boolean).join(' · ') || '—'}</dd></div>
+            <div><dt>Departamento</dt><dd>{shippingAddress.department || '—'}</dd></div>
+            <div><dt>Ciudad / municipio</dt><dd>{shippingAddress.city || '—'}</dd></div>
+            <div><dt>Dirección</dt><dd>{shippingAddress.address || '—'}</dd></div>
             <div className="order-contact-notes"><dt>Notas</dt><dd>{order.notes || shippingAddress.notes || '—'}</dd></div>
           </dl>
         </section>

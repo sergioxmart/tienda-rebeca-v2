@@ -14,6 +14,7 @@ import { createOrder } from './orders.js';
 import { createPaymentIntent } from './payment-intent.js';
 import { geocodeAddress } from './geocode.js';
 import { handleCustomer } from './customer.js';
+import { listColombiaLocations } from './locations.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -45,6 +46,10 @@ export async function handlePublic(req, res) {
 
   if (pathname === '/api/public/geocode' && method === 'GET') {
     return geocodeAddress(req, res);
+  }
+
+  if (pathname === '/api/public/locations/colombia' && method === 'GET') {
+    return listColombiaLocations(req, res);
   }
 
   // Site config (path exacto)

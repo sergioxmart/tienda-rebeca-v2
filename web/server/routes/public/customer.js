@@ -23,9 +23,9 @@ import {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_TTL_MINUTES = 5;
-const OTP_MAX_ATTEMPTS = 5;
+const OTP_MAX_ATTEMPTS = 8;
 const otpLimiter = createFailureLimiter({
-  limit: 5,
+  limit: 8,
   windowMs: 15 * 60 * 1000,
   lockoutMs: 15 * 60 * 1000,
 });
@@ -70,6 +70,7 @@ function addressPayload(row) {
     label: row.label || 'Casa',
     recipient_name: row.recipient_name || '',
     phone: row.phone || '',
+    department: row.department || '',
     address: row.address,
     city: row.city,
     notes: row.notes || '',
@@ -80,7 +81,7 @@ function addressPayload(row) {
 
 async function listAddresses(customerId) {
   const { rows } = await query(
-    `SELECT id, label, recipient_name, phone, address, city, notes, latitude, longitude
+    `SELECT id, label, recipient_name, phone, department, address, city, notes, latitude, longitude
        FROM customer_addresses
       WHERE customer_id = $1
       ORDER BY created_at DESC, id DESC`,
@@ -133,7 +134,7 @@ async function requestOtp(req, res) {
   if (!email) return json(res, 400, { ok: false, error: 'invalid_email', message: 'Ingresa un correo válido.' });
 
   const rateKeys = keys(req, email);
-  if (otpLimiter.check(rateKeys)) return blocked(res);
+  if (otpLimiter.check(rateKeys).blocked) return blocked(res);
   const customer = await findCustomerByEmail(email);
 
   // Respuesta genérica: no revelamos si un correo está registrado. En la
@@ -198,7 +199,7 @@ async function verifyOtp(req, res) {
   const email = validateEmail(body?.email);
   const code = typeof body?.code === 'string' ? body.code.trim() : String(body?.code || '').trim();
   const rateKeys = keys(req, email);
-  if (otpLimiter.check(rateKeys)) return blocked(res);
+  if (otpLimiter.check(rateKeys).blocked) return blocked(res);
   if (!email || !/^\d{6}$/.test(code)) {
     otpLimiter.fail(rateKeys);
     return json(res, 401, { ok: false, error: 'invalid_otp', message: 'El código no es válido.' });
@@ -324,17 +325,19 @@ async function listOrders(req, res) {
 }
 
 function addressInput(body) {
+  const department = cleanCustomerString(body?.department, 100);
   const address = cleanCustomerString(body?.address, 300);
   const city = cleanCustomerString(body?.city, 120);
   const latitude = body?.latitude === null || body?.latitude === undefined || body?.latitude === '' ? null : Number(body.latitude);
   const longitude = body?.longitude === null || body?.longitude === undefined || body?.longitude === '' ? null : Number(body.longitude);
   const locationValid = (latitude === null && longitude === null)
     || (Number.isFinite(latitude) && latitude >= -90 && latitude <= 90 && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180);
-  if (!address || !city || !locationValid) return null;
+  if (!department || !address || !city || !locationValid) return null;
   return {
     label: cleanCustomerString(body?.label, 80) || 'Casa',
     recipientName: cleanCustomerString(body?.recipient_name, 160),
     phone: cleanCustomerString(body?.phone, 40),
+    department,
     address,
     city,
     notes: cleanCustomerString(body?.notes, 1000),
@@ -348,13 +351,13 @@ async function createAddress(req, res) {
   if (!customer) return;
   const body = await readJsonBody(req).catch(() => null);
   const input = addressInput(body);
-  if (!input) return json(res, 400, { ok: false, error: 'invalid_address', message: 'Completa dirección y ciudad, y revisa las coordenadas.' });
+  if (!input) return json(res, 400, { ok: false, error: 'invalid_address', message: 'Completa departamento, ciudad y dirección, y revisa las coordenadas.' });
   const { rows } = await query(
     `INSERT INTO customer_addresses
-       (customer_id, label, recipient_name, phone, address, city, notes, latitude, longitude)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING id, label, recipient_name, phone, address, city, notes, latitude, longitude`,
-    [customer.id, input.label, input.recipientName, input.phone, input.address, input.city, input.notes, input.latitude, input.longitude],
+       (customer_id, label, recipient_name, phone, department, address, city, notes, latitude, longitude)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id, label, recipient_name, phone, department, address, city, notes, latitude, longitude`,
+    [customer.id, input.label, input.recipientName, input.phone, input.department, input.address, input.city, input.notes, input.latitude, input.longitude],
   );
   return json(res, 201, { ok: true, address: addressPayload(rows[0]) });
 }
@@ -364,14 +367,14 @@ async function updateAddress(req, res, addressId) {
   if (!customer) return;
   const body = await readJsonBody(req).catch(() => null);
   const input = addressInput(body);
-  if (!input) return json(res, 400, { ok: false, error: 'invalid_address', message: 'Completa dirección y ciudad, y revisa las coordenadas.' });
+  if (!input) return json(res, 400, { ok: false, error: 'invalid_address', message: 'Completa departamento, ciudad y dirección, y revisa las coordenadas.' });
   const { rows } = await query(
     `UPDATE customer_addresses
-        SET label = $1, recipient_name = $2, phone = $3, address = $4,
-            city = $5, notes = $6, latitude = $7, longitude = $8
-      WHERE id = $9 AND customer_id = $10
-      RETURNING id, label, recipient_name, phone, address, city, notes, latitude, longitude`,
-    [input.label, input.recipientName, input.phone, input.address, input.city, input.notes, input.latitude, input.longitude, addressId, customer.id],
+        SET label = $1, recipient_name = $2, phone = $3, department = $4,
+            address = $5, city = $6, notes = $7, latitude = $8, longitude = $9
+      WHERE id = $10 AND customer_id = $11
+      RETURNING id, label, recipient_name, phone, department, address, city, notes, latitude, longitude`,
+    [input.label, input.recipientName, input.phone, input.department, input.address, input.city, input.notes, input.latitude, input.longitude, addressId, customer.id],
   );
   if (!rows[0]) return json(res, 404, { ok: false, error: 'address_not_found', message: 'No encontramos esa dirección.' });
   return json(res, 200, { ok: true, address: addressPayload(rows[0]) });

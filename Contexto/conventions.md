@@ -139,6 +139,8 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 - Rate limit: `createFailureLimiter` aplica 5 fallos por IP o cuenta en
   15 minutos al login y recuperación; el estado actual es en memoria y
   requiere Redis/almacenamiento compartido si se despliegan varias instancias.
+  Su método `check(keys)` devuelve `{ blocked, retryAfterSec }`; el llamador
+  debe evaluar explícitamente `blocked`.
 - Cabeceras de seguridad: `securityHeaders` emite CSP, `nosniff`,
   `Referrer-Policy`, `Permissions-Policy`, políticas de origen y HSTS en
   producción. `CSP_FRAME_ANCESTORS` limita los orígenes que pueden cargar la

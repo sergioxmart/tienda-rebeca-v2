@@ -66,7 +66,8 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
 | GET | `/api/public/geocode` | `?address=&city=` | Geocodifica una dirección del checkout para ubicar el pin opcional. Está limitado por cliente. |
-| POST | `/api/public/orders` | `{ customer: { name, email, phone, address, city, notes?, delivery_location?: { lat, lon } }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`, reserva las unidades de forma transaccional, conserva las coordenadas opcionales y asigna expiración configurable (15 minutos por defecto); no requiere pasarela. |
+| GET | `/api/public/locations/colombia` | — | Lista departamentos y municipios de Colombia para los selectores dependientes de envío. Se cachea en el backend y tiene fallback local. |
+| POST | `/api/public/orders` | `{ customer: { name, email, phone, department, city, address, notes?, delivery_location?: { lat, lon } }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`, reserva las unidades de forma transaccional, conserva las coordenadas opcionales y asigna expiración configurable (15 minutos por defecto); no requiere pasarela. |
 | POST | `/api/public/checkout/payment-intent` | `{ order_number, email, provider: "mercadopago"|"epayco" }` | Recalcula el total desde el pedido pendiente y crea/reutiliza una preferencia de Mercado Pago Checkout Pro (`redirect_url`) o una sesión ePayco (`session_id`). Las llaves privadas nunca salen del backend. |
 | GET  | `/api/public/orders/:order_number` | `?email=` | Lookup de pedido por número + email (sin login). El cliente puede ver el estado de su pedido. |
 
@@ -82,8 +83,8 @@ no tiene `section`, devuelve 403.
 | PATCH | `/api/public/customer/profile` | `{ name, phone? }` | Actualiza los datos personales del cliente autenticado. |
 | GET | `/api/public/customer/orders` | — | Historial del cliente con líneas, totales, estado y datos de entrega. Requiere sesión OTP. |
 | GET | `/api/public/customer/addresses` | — | Lista la libreta de direcciones. Requiere sesión OTP. |
-| POST | `/api/public/customer/addresses` | `{ label?, recipient_name?, phone?, address, city, notes?, latitude?, longitude? }` | Crea una dirección guardada. Requiere sesión OTP. |
-| PATCH | `/api/public/customer/addresses/:id` | Mismo body parcial no; se envía el objeto completo | Edita una dirección propia. Requiere sesión OTP. |
+| POST | `/api/public/customer/addresses` | `{ label?, recipient_name?, phone?, department, city, address, notes?, latitude?, longitude? }` | Crea una dirección guardada. Requiere sesión OTP. |
+| PATCH | `/api/public/customer/addresses/:id` | Mismo body completo | Edita una dirección propia. Requiere sesión OTP. |
 | DELETE | `/api/public/customer/addresses/:id` | — | Elimina una dirección propia. Requiere sesión OTP. |
 
 ## `/api/admin/*` (panel)

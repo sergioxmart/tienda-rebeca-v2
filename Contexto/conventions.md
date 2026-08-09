@@ -178,7 +178,7 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 │  │  └─ scripts/           # migrate.js, setup-db.js, create-admin.js
 │  ├─ web-store/            # Vite + React tienda pública
 │  ├─ web-admin/            # Vite + React admin
-│  ├─ migrations/           # 001-017 schema de TechStore
+│  ├─ migrations/           # baseline 001_initial_schema + cambios nuevos
 │  └─ webhook/             # server.mjs (cableado a TechStore) + deploy.sh
 │
 ├─ uploads/                # Archivos subidos (gitignored, en la RAÍZ del repo)
@@ -204,8 +204,8 @@ rotos):
 
 1. **Worktree**: `git worktree add -b feature/<nombre>
    .worktrees/<nombre> main`.
-2. **Migraciones**: ¿necesitas una? Créala con el siguiente número
-   (la última es `009_auth_admin_extras.sql`).
+2. **Migraciones**: ¿necesitas una? Créala con el siguiente número después
+   de `001_initial_schema.sql`; el baseline no se edita una vez aplicado.
 3. **Auth**: si el endpoint toca data del cliente o del admin, va
    detrás de auth. Mutaciones requieren CSRF.
 4. **Doc**: si agregas un endpoint, agrégalo a [`api.md`](./api.md)
@@ -288,18 +288,7 @@ bumpearse en el mismo commit que el cambio.
 ## Estado actual del proyecto (a agosto 2026)
 
 - ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ 28 migrations de TechStore (001_categories, 002_attributes,
-  003_products, 004_variants, 005_admin_auth, 006_orders,
-  007_payments, 008_site_config, 009_auth_admin_extras,
-  010_page_modules, 011_themes, 012_password_recovery,
-  013_variant_media_colors, 014_inventory_movements,
-  015_prices_without_decimals, 016_media_variant_links,
-  017_fix_product_attributes_trigger, 018_preserve_order_history,
-  019_builder_drafts, 020_media_attribute_categories,
-  021_admin_theme_colors, 022_admin_background_images,
-  023_login_background_crop, 024_footer_builder_module,
-  025_epayco_idempotency, 026_remove_legacy_wompi_config,
-  027_order_expiration, 028_order_stock_reservations).
+- ✅ Baseline de base de datos consolidado en `001_initial_schema.sql`.
 - ✅ Backend admin completo: 8 routers con RBAC + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.
 - ✅ 25 tests verdes.

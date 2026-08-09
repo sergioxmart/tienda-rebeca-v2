@@ -79,12 +79,12 @@ runner, ver `Contexto/dev-setup.md`.
 
 ## Tablas
 
-### `categories` (`001_categories.sql`)
+### `categories` (`001_initial_schema.sql`)
 
 Taxonomía del catálogo. v1 tiene 1 fila seed (`accesorios-telefono`).
 El admin puede sumar más desde el panel (sin migration).
 
-### `attributes` + `attribute_values` (`002_attributes.sql`)
+### `attributes` + `attribute_values` (`001_initial_schema.sql`)
 
 **Atributos configurables** (color, modelo-telefono, tipo-conexion,
 largo, capacidad-carga) con sus valores posibles. Los atributos son
@@ -96,7 +96,7 @@ globales y los valores los crea el admin.
 - `attribute_values.hex` guarda opcionalmente el color visual en formato `#RRGGBB`.
 - `attribute_values(attribute_id, value)` es UNIQUE.
 
-### `products` (`003_products.sql`, `015_prices_without_decimals.sql`)
+### `products` (`001_initial_schema.sql`)
 
 **Template** del producto. "Funda iPhone transparente" — sin color ni
 modelo. El precio default es `base_price`; cada variante puede override.
@@ -107,7 +107,7 @@ modelo. El precio default es `base_price`; cada variante puede override.
 - `featured` aparece en el carrusel del home.
 - Foto: en v1, las fotos son DEL PRODUCTO (template), no por variante.
 
-### `product_attributes` (`003_products.sql`)
+### `product_attributes` (`001_initial_schema.sql`)
 
 M2M `products ↔ attributes` con `is_required`. Define **qué atributos
 aplican a este producto** y si el cliente DEBE elegir un valor.
@@ -115,7 +115,7 @@ aplican a este producto** y si el cliente DEBE elegir un valor.
 Ej: "Funda iPhone" tiene `color` (required) + `modelo-telefono` (required).
 "Cable USB-C" tiene `tipo-conexion` (required) + `largo` (required).
 
-### `product_media` + `product_media_variants` (`003_products.sql`, `016_media_variant_links.sql`)
+### `product_media` + `product_media_variants` (`001_initial_schema.sql`)
 
 Galería de fotos y embeds de video. Misma lógica que usamos
 para media: `kind ∈ {image, video_embed}`, `variant_id` conserva asociaciones
@@ -125,7 +125,7 @@ varias combinaciones, soft-delete con
 eliminaciones actuales desde la biblioteca son definitivas y las huérfanas
 antiguas se limpian con un cron (no en SQL).
 
-### `product_variants` (`004_variants.sql`, `013_variant_media_colors.sql`)
+### `product_variants` (`001_initial_schema.sql`)
 
 **Las combinaciones vendibles.** Cada fila es un SKU concreto con su
 stock y (opcionalmente) su precio override.
@@ -139,7 +139,7 @@ stock y (opcionalmente) su precio override.
   atributos debe ser única dentro del mismo `product_id`. Ver
   `variant_attribute_values` abajo.
 
-### `variant_attribute_values` (`004_variants.sql`)
+### `variant_attribute_values` (`001_initial_schema.sql`)
 
 M2M `product_variants ↔ attribute_values`. Una variante tiene **un valor
 por atributo aplicable**.
@@ -152,14 +152,14 @@ por atributo aplicable**.
   No se hace en SQL porque la comparación depende del conjunto de
   atributos aplicables (no de los presentes).
 
-### `inventory_movements` (`014_inventory_movements.sql`)
+### `inventory_movements` (`001_initial_schema.sql`)
 
 Libro mayor hijo de `product_variants`. Cada movimiento es una entrada o
 salida positiva y conserva `stock_before` y `stock_after`; el saldo vigente
 continúa viviendo en `product_variants.stock` para que catálogo y checkout
 puedan consultarlo rápidamente.
 
-### `auth_users` + `auth_refresh_tokens` + `auth_totp_backup_codes` (`005_admin_auth.sql`)
+### `auth_users` + `auth_refresh_tokens` + `auth_totp_backup_codes` (`001_initial_schema.sql`)
 
 Login admin con bcrypt + JWT + refresh + 2FA TOTP, patrón
 compartido con otros proyectos del estilo. Salvo el usuario bootstrap
@@ -177,14 +177,14 @@ Los mismos del proyecto (`admin` / `operator` / `viewer`); la
 lógica común de `SECTION_PERMS` vive en
 `web/server/routes/admin/_section_perms.js`.
 
-### `auth_password_recovery_tokens` (`012_password_recovery.sql`)
+### `auth_password_recovery_tokens` (`001_initial_schema.sql`)
 
 Tokens opacos y temporales para el asistente de recuperación: primero se
 valida el correo, luego TOTP o un código de respaldo, y finalmente se
 permite definir la nueva contraseña. Solo se guarda el hash del token;
 cada token expira en 10 minutos y se puede consumir una sola vez.
 
-### `orders` + `order_items` (`006_orders.sql`)
+### `orders` + `order_items` (`001_initial_schema.sql`)
 
 Pedidos. **Snapshot en cada línea**: `product_name`, `variant_sku`,
 `unit_price`, `line_total` se guardan al momento de la compra. Si
@@ -207,7 +207,7 @@ el pago.
 envíos (Coordinadora, Servientrega), agregamos `carrier`,
 `tracking_number`, `label_url` en una migration.
 
-### `customer_accounts`, OTP, sesiones y `customer_addresses` (`029_customer_portal_otp.sql`)
+### `customer_accounts`, OTP, sesiones y `customer_addresses` (`001_initial_schema.sql`)
 
 `customer_accounts` identifica al comprador por email y conserva nombre,
 teléfono y último acceso. Se crea al registrar el primer pedido, pero no
@@ -221,11 +221,11 @@ cookie `httpOnly`; la sesión dura 30 días y se puede revocar.
 `customer_addresses` es la libreta de direcciones, con departamento, ciudad, notas y
 coordenadas opcionales. `orders.client_id` es nullable y usa `ON DELETE SET
 NULL` para que eliminar una cuenta nunca borre ni modifique el historial.
-Desde `030_colombia_departments.sql`, los nuevos pedidos guardan también el
+El baseline incluye el departamento y los nuevos pedidos guardan también el
 departamento dentro de `shipping_address` para que admin muestre la ubicación
 normalizada.
 
-### `payments` (`007_payments.sql`)
+### `payments` (`001_initial_schema.sql`)
 
 Una fila por transacción con la pasarela. Un pedido puede tener varios
 intentos (ej: primero declined, después approved).
@@ -246,7 +246,7 @@ Si después queremos validar firmas de webhook o sincronizar estados,
 esa lógica vive en código de la app (`web/server/routes/payments.js`),
 NO en SQL.
 
-### `order_stock_reservations` (`028_order_stock_reservations.sql`)
+### `order_stock_reservations` (`001_initial_schema.sql`)
 
 Registra las unidades descontadas temporalmente por cada pedido pendiente.
 `reserved` significa que la cantidad está retenida, `committed` que el pago
@@ -254,7 +254,7 @@ la consolidó y `released` que el pedido expiró y la cantidad fue devuelta.
 Los movimientos `out` e `in` de `inventory_movements` conservan la auditoría
 del descuento y de la liberación.
 
-### `site_config` (`008_site_config.sql`)
+### `site_config` (`001_initial_schema.sql`)
 
 Pares `key → JSONB`. Globals operacionales del sitio (nombre, contacto,
 moneda, branding). El admin los edita desde el panel; el público los lee

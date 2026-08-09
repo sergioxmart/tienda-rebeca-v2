@@ -420,9 +420,8 @@ export async function deleteVariant(req, res, id) {
   }
 
   await tx(async (client) => {
-    // product_media.variant_id tiene ON DELETE CASCADE para otros flujos,
-    // pero al borrar una variante desde el admin la multimedia central debe
-    // sobrevivir: primero quitamos ambas formas de asociación.
+    // La multimedia central debe sobrevivir al borrar una variante: primero
+    // quitamos ambas formas de asociación para dejar el archivo disponible.
     await client.query('UPDATE product_media SET variant_id = NULL WHERE variant_id = $1', [id]);
     await client.query('DELETE FROM product_media_variants WHERE variant_id = $1', [id]);
     await client.query('DELETE FROM product_variants WHERE id = $1', [id]);

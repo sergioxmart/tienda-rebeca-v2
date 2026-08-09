@@ -38,7 +38,7 @@ existen. Es idempotente: correrlo 2 veces no rompe nada.
 npm run db:setup
 ```
 
-Output esperado (primera vez):
+Output esperado en una base limpia:
 
 ```
 Setup DB: techstore@localhost:5432/techstore
@@ -92,19 +92,8 @@ correr en cada boot sin miedo.
 Output esperado (primera vez):
 
 ```
-[techstore:info] applying migration 001_categories.sql
-[techstore:info] applying migration 002_attributes.sql
-[techstore:info] applying migration 003_products.sql
-[techstore:info] applying migration 004_variants.sql
-[techstore:info] applying migration 005_admin_auth.sql
-[techstore:info] applying migration 006_orders.sql
-[techstore:info] applying migration 007_payments.sql
-[techstore:info] applying migration 008_site_config.sql
-[techstore:info] applying migration 009_auth_admin_extras.sql
-[techstore:info] applying migration 010_page_modules.sql
-[techstore:info] applying migration 011_themes.sql
-[techstore:info] applying migration 012_password_recovery.sql
-[techstore:info] migrations done {"applied":12,"total":12}
+[techstore:info] applying migration 001_initial_schema.sql
+[techstore:info] migrations done {"applied":1,"total":1}
 ```
 
 Verificar que las tablas se crearon:
@@ -113,9 +102,8 @@ Verificar que las tablas se crearon:
 PGPASSWORD=$PGPASSWORD psql -U techstore -d techstore -c "\dt"
 ```
 
-Deberías ver 14 tablas: `_migrations`, `auth_*` (4), `collections`,
-`products`, `sizes`, `product_sizes`, `product_media`, `reservations`,
-`shop_closures`, `page_modules`, `site_config`.
+Deberías ver `_migrations` y las tablas de catálogo, variantes, multimedia,
+autenticación, clientes, pedidos, pagos, inventario, temas y builder.
 
 ## 6. Levantar el server
 

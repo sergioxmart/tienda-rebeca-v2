@@ -11,6 +11,7 @@ import ProductPage from './pages/ProductPage.jsx';
 import Cart from './pages/Cart.jsx';
 import Checkout from './pages/Checkout.jsx';
 import PaymentResponse from './pages/PaymentResponse.jsx';
+import CustomerAccount from './pages/CustomerAccount.jsx';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/carrito" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/pago/respuesta" element={<PaymentResponse />} />
+          <Route path="/cuenta" element={<CustomerAccount />} />
           <Route path="*" element={<div className="center"><h1>404</h1><p>No encontramos esa página.</p></div>} />
         </Routes>
       </main>

@@ -129,6 +129,16 @@ export async function createOrder(req, res) {
       const orderId = sequence[0].id;
       const orderNumber = `TS-${new Date().getFullYear()}-${String(orderId).padStart(5, '0')}`;
       const subtotal = resolved.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      const { rows: customerRows } = await client.query(
+        `INSERT INTO customer_accounts (email, name, phone)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (email) DO UPDATE
+           SET name = CASE WHEN EXCLUDED.name <> '' THEN EXCLUDED.name ELSE customer_accounts.name END,
+               phone = CASE WHEN EXCLUDED.phone <> '' THEN EXCLUDED.phone ELSE customer_accounts.phone END
+         RETURNING id`,
+        [customerEmail, customerName, customerPhone],
+      );
+      const customerId = customerRows[0].id;
       // Conservamos las notas dentro del bloque de despacho porque pueden
       // contener el conjunto, torre y apartamento que necesita logística.
       const shippingAddress = JSON.stringify({
@@ -139,11 +149,11 @@ export async function createOrder(req, res) {
       });
       await client.query(
         `INSERT INTO orders
-           (id, order_number, customer_email, customer_name, customer_phone,
+           (id, order_number, client_id, customer_email, customer_name, customer_phone,
             status, subtotal, shipping, tax, total, shipping_address, notes, expires_at)
-         VALUES ($1, $2, $3, $4, $5, 'pending', $6, 0, 0, $6, $7::jsonb, $8,
-                 NOW() + ($9::integer * INTERVAL '1 minute'))`,
-        [orderId, orderNumber, customerEmail, customerName, customerPhone, subtotal, shippingAddress, notes, ORDER_PENDING_TTL_MINUTES],
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, 0, 0, $7, $8::jsonb, $9,
+                 NOW() + ($10::integer * INTERVAL '1 minute'))`,
+        [orderId, orderNumber, customerId, customerEmail, customerName, customerPhone, subtotal, shippingAddress, notes, ORDER_PENDING_TTL_MINUTES],
       );
       for (const item of resolved) {
         await client.query(

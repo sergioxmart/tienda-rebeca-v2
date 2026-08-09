@@ -8,6 +8,7 @@ import { useSite } from '../site/SiteContext.jsx';
 import { formatCOP } from '../components/Price.jsx';
 import { api } from '../api.js';
 import DeliveryLocationPicker from '../components/DeliveryLocationPicker.jsx';
+import { useCustomer } from '../customer/CustomerContext.jsx';
 
 const EMPTY = {
   name: '',
@@ -40,6 +41,7 @@ function EpaycoLogo() {
 export default function Checkout() {
   const { items, subtotal, clear, revalidate } = useCart();
   const { site } = useSite();
+  const { customer, addresses, login } = useCustomer();
   const navigate = useNavigate();
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
@@ -50,9 +52,44 @@ export default function Checkout() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentProvider, setPaymentProvider] = useState('mercadopago');
   const [deliveryLocation, setDeliveryLocation] = useState(null);
+  const [accountHint, setAccountHint] = useState(false);
+  const [accountLookupLoading, setAccountLookupLoading] = useState(false);
+  const [customerOtpSent, setCustomerOtpSent] = useState(false);
+  const [customerOtp, setCustomerOtp] = useState('');
+  const [customerAuthBusy, setCustomerAuthBusy] = useState(false);
+  const [customerAuthMessage, setCustomerAuthMessage] = useState('');
+  const [customerAuthError, setCustomerAuthError] = useState('');
+  const [selectedAddressId, setSelectedAddressId] = useState('');
   const [remainingSeconds, setRemainingSeconds] = useState(8 * 60);
   const expiryHandled = useRef(false);
   const deadline = useRef(Date.now() + 8 * 60 * 1000);
+
+  useEffect(() => {
+    if (!customer || form.name) return;
+    setForm((current) => ({ ...current, name: customer.name || current.name, phone: customer.phone || current.phone }));
+  }, [customer]);
+
+  useEffect(() => {
+    const email = form.email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || customer || customerOtpSent) {
+      setAccountHint(false);
+      setAccountLookupLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setAccountLookupLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.customerLookup(email);
+        if (!cancelled) setAccountHint(Boolean(result.has_history && result.can_login));
+      } catch {
+        if (!cancelled) setAccountHint(false);
+      } finally {
+        if (!cancelled) setAccountLookupLoading(false);
+      }
+    }, 350);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [form.email, customer, customerOtpSent]);
 
   useEffect(() => {
     if (confirmed || items.length === 0) return undefined;
@@ -80,6 +117,48 @@ export default function Checkout() {
   }
 
   const setField = (k, v) => setForm((cur) => ({ ...cur, [k]: v }));
+
+  const requestCustomerLogin = async () => {
+    setCustomerAuthBusy(true); setCustomerAuthError(''); setCustomerAuthMessage('');
+    try {
+      const result = await api.requestCustomerOtp(form.email);
+      if (!result.sent) {
+        setCustomerAuthMessage('No encontramos una cuenta para ese correo. Puedes continuar como invitado.');
+      } else {
+        setCustomerOtpSent(true);
+        setAccountHint(false);
+        setCustomerAuthMessage('Te enviamos un PIN de 6 dígitos. Revisa tu correo.');
+      }
+    } catch (error) { setCustomerAuthError(error.message || 'No pudimos enviar el PIN.'); }
+    finally { setCustomerAuthBusy(false); }
+  };
+
+  const verifyCustomerLogin = async () => {
+    setCustomerAuthBusy(true); setCustomerAuthError('');
+    try {
+      const result = await api.verifyCustomerOtp(form.email, customerOtp);
+      login(result);
+      setForm((current) => ({ ...current, name: result.customer?.name || current.name, phone: result.customer?.phone || current.phone }));
+      if (result.addresses?.length > 0) {
+        setSelectedAddressId(String(result.addresses[0].id));
+        const address = result.addresses[0];
+        setForm((current) => ({ ...current, name: result.customer?.name || current.name, phone: address.phone || result.customer?.phone || current.phone, address: address.address, city: address.city, notes: address.notes || current.notes }));
+        setDeliveryLocation(address.latitude !== null && address.longitude !== null ? { lat: address.latitude, lon: address.longitude } : null);
+      }
+      setCustomerOtpSent(false);
+      setCustomerOtp('');
+      setCustomerAuthMessage('Sesión iniciada. Puedes usar tus datos o continuar como invitado.');
+    } catch (error) { setCustomerAuthError(error.message || 'El PIN no es válido.'); }
+    finally { setCustomerAuthBusy(false); }
+  };
+
+  const selectSavedAddress = (value) => {
+    setSelectedAddressId(value);
+    const address = addresses.find((item) => String(item.id) === String(value));
+    if (!address) return;
+    setForm((current) => ({ ...current, phone: address.phone || current.phone, address: address.address, city: address.city, notes: address.notes || '' }));
+    setDeliveryLocation(address.latitude !== null && address.longitude !== null ? { lat: address.latitude, lon: address.longitude } : null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,6 +261,22 @@ export default function Checkout() {
             <div className="form-group">
               <label>Email *</label>
               <input className="input" type="email" required value={form.email} onChange={(e) => setField('email', e.target.value)} />
+              {!customer && accountLookupLoading && <small className="account-inline-hint">Revisando si puedes usar tus datos guardados…</small>}
+              {!customer && accountHint && !customerOtpSent && (
+                <div className="account-checkout-invite">
+                  <div><strong>Ya has comprado con nosotros</strong><small>¿Quieres recibir un PIN y autocompletar tus datos?</small></div>
+                  <button type="button" className="btn btn-primary" onClick={requestCustomerLogin} disabled={customerAuthBusy}>{customerAuthBusy ? 'Enviando…' : 'Enviar PIN'}</button>
+                </div>
+              )}
+              {!customer && customerOtpSent && (
+                <div className="account-checkout-otp">
+                  <label htmlFor="checkout-customer-otp">PIN de 6 dígitos</label>
+                  <div className="account-checkout-otp-row"><input id="checkout-customer-otp" className="input" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={customerOtp} onChange={(e) => setCustomerOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} /><button type="button" className="btn btn-primary" onClick={verifyCustomerLogin} disabled={customerAuthBusy || customerOtp.length !== 6}>{customerAuthBusy ? 'Validando…' : 'Ingresar'}</button></div>
+                  <button type="button" className="account-continue-guest" onClick={() => { setCustomerOtpSent(false); setCustomerOtp(''); setCustomerAuthMessage(''); }}>Continuar como invitado</button>
+                </div>
+              )}
+              {customerAuthMessage && <small className="account-inline-message" role="status">{customerAuthMessage}</small>}
+              {customerAuthError && <small className="account-inline-error" role="alert">{customerAuthError}</small>}
             </div>
             <div className="form-group">
               <label>Teléfono / WhatsApp *</label>
@@ -190,6 +285,15 @@ export default function Checkout() {
           </div>
 
           <h3 style={{ marginTop: 16 }}>Envío</h3>
+          {customer && addresses.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="saved-address">Usar una dirección guardada <span style={{ color: 'var(--color-muted)' }}>(opcional)</span></label>
+              <select id="saved-address" className="input" value={selectedAddressId} onChange={(event) => selectSavedAddress(event.target.value)}>
+                <option value="">Elegir dirección…</option>
+                {addresses.map((address) => <option key={address.id} value={address.id}>{address.label} · {address.address}, {address.city}</option>)}
+              </select>
+            </div>
+          )}
           <div className="form-group">
             <label>Dirección *</label>
             <input className="input" required value={form.address} onChange={(e) => setField('address', e.target.value)} placeholder="Calle 100 #15-20, Apto 301" />

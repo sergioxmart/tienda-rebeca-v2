@@ -1,6 +1,6 @@
 # TechStore — Modelo de datos
 
-> **Última actualización: 2026-08-06**
+> **Última actualización: 2026-08-09**
 
 Documento de referencia del schema de TechStore v1. Para los archivos
 SQL exactos ver `web/migrations/`. Para el orden de aplicación y el
@@ -17,8 +17,8 @@ runner, ver `Contexto/dev-setup.md`.
 - **Moneda**: COP. Configurable vía `site_config.currency`.
 - **Cierre**: checkout con pasarela (a definir). Tabla `payments`
   genérica.
-- **Auth**: solo admin. Sin login de clientes (los pedidos se hacen
-  con email, sin cuenta).
+- **Auth**: admin con JWT/TOTP y clientes con PIN OTP por email. El checkout
+  sigue permitiendo compra como invitado.
 
 ## Diagrama de entidades
 
@@ -206,6 +206,21 @@ el pago.
 `shipping_address` es JSONB en v1. Cuando integremos un proveedor de
 envíos (Coordinadora, Servientrega), agregamos `carrier`,
 `tracking_number`, `label_url` en una migration.
+
+### `customer_accounts`, OTP, sesiones y `customer_addresses` (`029_customer_portal_otp.sql`)
+
+`customer_accounts` identifica al comprador por email y conserva nombre,
+teléfono y último acceso. Se crea al registrar el primer pedido, pero no
+obliga al cliente a iniciar sesión: el checkout invitado sigue disponible.
+
+`customer_otp_challenges` guarda únicamente el hash del PIN de 6 dígitos,
+con expiración de 5 minutos, límite de intentos y consumo de un solo uso.
+`customer_sessions` guarda el hash de un token opaco que se entrega en una
+cookie `httpOnly`; la sesión dura 30 días y se puede revocar.
+
+`customer_addresses` es la libreta de direcciones, con ciudad, notas y
+coordenadas opcionales. `orders.client_id` es nullable y usa `ON DELETE SET
+NULL` para que eliminar una cuenta nunca borre ni modifique el historial.
 
 ### `payments` (`007_payments.sql`)
 

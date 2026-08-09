@@ -91,3 +91,27 @@ export async function sendOrderConfirmationEmail({ order, items, shippingAddress
   return { sent: true, id: data?.id || null };
 }
 
+export async function sendCustomerOtpEmail({ email, code }) {
+  const resend = getClient();
+  if (!resend) return { sent: false, skipped: true };
+
+  const { data, error } = await resend.emails.send({
+    from: `${env.RESEND_FROM_NAME} <${env.RESEND_FROM_EMAIL}>`,
+    to: [email],
+    subject: 'Tu código de acceso a TechStore',
+    html: `<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:24px;background:#f7f8fa;font-family:Arial,sans-serif;color:#172536;">
+    <div style="max-width:520px;margin:0 auto;padding:28px;border:1px solid #e2e8ef;border-radius:18px;background:#fff;text-align:center;">
+      <p style="margin:0 0 8px;color:#ff6b35;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">TechStore</p>
+      <h1 style="margin:0 0 12px;color:#0f2a47;font-size:26px;">Tu código de acceso</h1>
+      <p style="line-height:1.6;">Usa este PIN para ingresar a tu cuenta. Es válido durante 5 minutos.</p>
+      <div style="margin:24px 0;padding:18px;border-radius:14px;color:#0f2a47;background:#edf6ff;font-size:34px;font-weight:800;letter-spacing:.22em;">${code}</div>
+      <p style="margin:0;color:#6d7a88;font-size:12px;line-height:1.5;">Si no solicitaste este código, puedes ignorar este mensaje.</p>
+    </div>
+  </body>
+</html>`,
+  });
+  if (error) throw new Error(error.message || 'Resend no pudo enviar el código.');
+  return { sent: true, id: data?.id || null };
+}

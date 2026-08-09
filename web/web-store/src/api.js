@@ -86,6 +86,64 @@ export const api = {
     const r = await request(`/api/public/geocode?${params.toString()}`);
     return r.location || null;
   },
+  customerLookup: async (email) => {
+    const r = await request('/api/public/customer/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return { has_history: Boolean(r.has_history), can_login: Boolean(r.can_login) };
+  },
+  requestCustomerOtp: async (email) => {
+    const r = await request('/api/public/customer/auth/request-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    return { sent: Boolean(r.sent), expires_in_seconds: Number(r.expires_in_seconds || 0), message: r.message || '' };
+  },
+  verifyCustomerOtp: async (email, code) => {
+    const r = await request('/api/public/customer/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    return { customer: r.customer || null, addresses: r.addresses || [] };
+  },
+  customerMe: async () => {
+    const r = await request('/api/public/customer/me');
+    return { authenticated: Boolean(r.authenticated), customer: r.customer || null, addresses: r.addresses || [] };
+  },
+  customerLogout: async () => {
+    await request('/api/public/customer/auth/logout', { method: 'POST' });
+  },
+  updateCustomerProfile: async (payload) => {
+    const r = await request('/api/public/customer/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return r.customer || null;
+  },
+  customerOrders: async () => {
+    const r = await request('/api/public/customer/orders');
+    return r.orders || [];
+  },
+  customerAddressCreate: async (payload) => {
+    const r = await request('/api/public/customer/addresses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    return r.address || null;
+  },
+  customerAddressUpdate: async (id, payload) => {
+    const r = await request(`/api/public/customer/addresses/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+    });
+    return r.address || null;
+  },
+  customerAddressDelete: async (id) => {
+    await request(`/api/public/customer/addresses/${id}`, { method: 'DELETE' });
+  },
 };
 
 export { ApiError };

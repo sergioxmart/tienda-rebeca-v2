@@ -13,6 +13,7 @@ import { validateCart } from './cart.js';
 import { createOrder } from './orders.js';
 import { createPaymentIntent } from './payment-intent.js';
 import { geocodeAddress } from './geocode.js';
+import { handleCustomer } from './customer.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -21,6 +22,11 @@ export async function handlePublic(req, res) {
   // Health
   if (pathname === '/api/public/health') {
     return json(res, 200, { ok: true, scope: 'public' });
+  }
+
+  if (pathname.startsWith('/api/public/customer/')) {
+    const handled = await handleCustomer(req, res);
+    if (handled !== false) return handled;
   }
 
   // Cart validation (no auth: the cart is anonymous and client-side)

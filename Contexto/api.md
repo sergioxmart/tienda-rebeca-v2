@@ -10,7 +10,7 @@ cambio (regla del proyecto).
 
 - **Prefijos**:
   - `/api/auth/*`   → login, refresh, me. Sin auth requerida.
-  - `/api/public/*` → cliente final (catálogo, checkout, etc). Sin auth.
+  - `/api/public/*` → cliente final (catálogo, checkout, portal OTP, etc). Sin auth JWT; las rutas privadas usan cookie de sesión de cliente.
   - `/api/admin/*`  → panel admin. Requiere JWT + CSRF en mutaciones.
   - `/api/webhooks/*` → webhooks entrantes (pagos, deploy). Sin auth JWT,
     validados por firma HMAC.
@@ -69,6 +69,22 @@ no tiene `section`, devuelve 403.
 | POST | `/api/public/orders` | `{ customer: { name, email, phone, address, city, notes?, delivery_location?: { lat, lon } }, items: [{ variant_id, product_id, qty }] }` | Recalcula precios y valida stock en el servidor. Crea `orders` + `order_items` con estado `pending`, reserva las unidades de forma transaccional, conserva las coordenadas opcionales y asigna expiración configurable (15 minutos por defecto); no requiere pasarela. |
 | POST | `/api/public/checkout/payment-intent` | `{ order_number, email, provider: "mercadopago"|"epayco" }` | Recalcula el total desde el pedido pendiente y crea/reutiliza una preferencia de Mercado Pago Checkout Pro (`redirect_url`) o una sesión ePayco (`session_id`). Las llaves privadas nunca salen del backend. |
 | GET  | `/api/public/orders/:order_number` | `?email=` | Lookup de pedido por número + email (sin login). El cliente puede ver el estado de su pedido. |
+
+### Portal del cliente y OTP
+
+| Método | Path | Body / Respuesta | Notas |
+| ------ | ---- | ---------------- | ----- |
+| POST | `/api/public/customer/lookup` | `{ email }` | Indica si el correo tiene historial para mostrar la invitación opcional en checkout. No revela datos personales. |
+| POST | `/api/public/customer/auth/request-otp` | `{ email }` | Envía un PIN de 6 dígitos, válido durante 5 minutos, si el correo tiene una cuenta. Respuesta genérica para evitar enumeración. |
+| POST | `/api/public/customer/auth/verify-otp` | `{ email, code }` | Consume el PIN y crea una sesión de cliente en cookie `httpOnly` durante 30 días. |
+| POST | `/api/public/customer/auth/logout` | — | Revoca la sesión de cliente actual. |
+| GET | `/api/public/customer/me` | — | Devuelve la sesión, datos básicos y direcciones guardadas; sin sesión devuelve `authenticated: false`. |
+| PATCH | `/api/public/customer/profile` | `{ name, phone? }` | Actualiza los datos personales del cliente autenticado. |
+| GET | `/api/public/customer/orders` | — | Historial del cliente con líneas, totales, estado y datos de entrega. Requiere sesión OTP. |
+| GET | `/api/public/customer/addresses` | — | Lista la libreta de direcciones. Requiere sesión OTP. |
+| POST | `/api/public/customer/addresses` | `{ label?, recipient_name?, phone?, address, city, notes?, latitude?, longitude? }` | Crea una dirección guardada. Requiere sesión OTP. |
+| PATCH | `/api/public/customer/addresses/:id` | Mismo body parcial no; se envía el objeto completo | Edita una dirección propia. Requiere sesión OTP. |
+| DELETE | `/api/public/customer/addresses/:id` | — | Elimina una dirección propia. Requiere sesión OTP. |
 
 ## `/api/admin/*` (panel)
 
@@ -257,5 +273,5 @@ donde se documente):
 - [ ] Admin: `categories`, `products`, `variants`, `media`, `site_config`
 - [ ] Admin: `orders`, `payments`, `users`
 - [ ] Public: `categories`, `attributes`, `products`, `products/:slug`
-- [ ] Public: `checkout`, `orders/:order_number`
+- [x] Public: checkout, portal de cliente OTP, historial y libreta de direcciones
 - [x] Webhooks: `epayco` (requiere credenciales Testing y URL pública HTTPS para recibir confirmaciones)

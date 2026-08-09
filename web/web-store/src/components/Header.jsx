@@ -7,6 +7,7 @@ import { useCart } from '../cart/CartContext.jsx';
 import { api } from '../api.js';
 import { formatCOP } from './Price.jsx';
 import CustomCode from '../modules/CustomCode.jsx';
+import { useCustomer } from '../customer/CustomerContext.jsx';
 
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>;
@@ -19,6 +20,7 @@ function CartIcon() {
 export default function Header() {
   const { site, categories } = useSite();
   const { count } = useCart();
+  const { customer } = useCustomer();
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState('');
@@ -158,6 +160,7 @@ export default function Header() {
         </Link>
         {showSearch && searchForm('header-search-desktop')}
         <div className="header-actions">
+          <Link to="/cuenta" className="account-header-link">{customer ? 'Mi cuenta' : 'Ingresar'}</Link>
           {showSearch && <button className="mobile-search-button" type="button" aria-label="Buscar" onClick={() => setMenuOpen(true)}><SearchIcon /></button>}
           {showCart && <button className="cart-button" onClick={() => navigate('/carrito')} aria-label={`Ver carrito${count > 0 ? `, ${count} productos` : ''}`}>
             <CartIcon /><span className="cart-label">Carrito</span>
@@ -185,6 +188,7 @@ export default function Header() {
             ))}
           </nav>
           {showCart && <Link to="/carrito" className="mobile-cart-link"><CartIcon /> Ver carrito {count > 0 && <strong>({count})</strong>}</Link>}
+          <Link to="/cuenta" className="mobile-account-link">{customer ? 'Mi cuenta' : 'Ingresar a mi cuenta'} <span>→</span></Link>
         </div>
       </div>
     </header>

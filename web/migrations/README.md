@@ -65,6 +65,7 @@ NNN_descripcion_corta.sql
 | 026 | `026_remove_legacy_wompi_config.sql` | Elimina la configuración antigua de la pasarela reemplazada |
 | 027 | `027_order_expiration.sql` | Agrega expiración de pedidos pendientes y el estado `expired` |
 | 028 | `028_order_stock_reservations.sql` | Reserva, liberación y consolidación transaccional de inventario por pedido |
+| 029 | `029_customer_portal_otp.sql` | Cuentas de clientes, login OTP sin contraseña, sesiones, direcciones y vínculo opcional con pedidos |
 
 ## Lo que falta decidir
 

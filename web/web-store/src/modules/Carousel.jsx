@@ -47,7 +47,7 @@ export default function Carousel({ settings = {} }) {
       <div className="editorial-carousel__frame">
         <Link to={`/producto/${product.slug}`} className="editorial-carousel__slide">
           {image ? <img src={image} alt={product.name} /> : <span>{product.name.slice(0, 1)}</span>}
-          <div className="editorial-carousel__caption"><strong>{product.name}</strong><small>{product.brand || product.category_name || 'TechStore'}</small></div>
+          <div className="editorial-carousel__caption"><strong>{product.name}</strong><small>{product.brand || product.category_name || 'Rebeca Andrade'}</small></div>
         </Link>
       </div>
       <div className="editorial-carousel__controls">

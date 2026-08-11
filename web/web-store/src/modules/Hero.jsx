@@ -71,7 +71,7 @@ export default function Hero({ settings = {} }) {
         {visualImage
           ? <div className="hero-device hero-device-product"><img src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
           : <><div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" /><div className="hero-device"><span>TS</span></div></>}
-        <div className="hero-floating-card hero-floating-card-top"><span className="floating-dot" />{product ? product.name : 'Selección TechStore'}</div>
+        <div className="hero-floating-card hero-floating-card-top"><span className="floating-dot" />{product ? product.name : 'Selección Rebeca Andrade'}</div>
         {product
           ? <div className="hero-floating-card hero-floating-card-bottom"><strong><Price value={product.base_price} /></strong><span>{product.brand || 'Producto destacado'}</span></div>
           : <div className="hero-floating-card hero-floating-card-bottom"><strong>+ calidad</strong><span>+ estilo</span></div>}

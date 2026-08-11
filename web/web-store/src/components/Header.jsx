@@ -27,7 +27,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const name = site?.site_name || 'TechStore';
+  const name = site?.site_name || 'Rebeca Andrade';
   const logoUrl = site?.logo_url;
   const visibleCategories = Array.isArray(categories) ? categories.slice(0, 5) : [];
   const customLinks = Array.isArray(site?.navbar_links)

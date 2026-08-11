@@ -60,7 +60,14 @@ export async function getOrder(req, res, id) {
       ORDER BY id`,
     [id],
   );
-  return json(res, 200, { ok: true, order: { ...rows[0], items, shipping_location: shippingLocation } });
+  const { rows: payments } = await query(
+    `SELECT id, provider, status, amount, currency, payment_method, created_at
+       FROM payments
+      WHERE order_id = $1
+      ORDER BY created_at DESC, id DESC`,
+    [id],
+  );
+  return json(res, 200, { ok: true, order: { ...rows[0], items, payments, shipping_location: shippingLocation } });
 }
 
 const routes = [

@@ -14,6 +14,16 @@ import VariantSelector from '../components/VariantSelector.jsx';
 import QuantitySelector from '../components/QuantitySelector.jsx';
 import Empty from '../components/Empty.jsx';
 
+function normalizeLabel(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function formatReservationDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
 export default function ProductPage() {
   const { slug } = useParams();
   const { site } = useSite();
@@ -26,6 +36,11 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [activeImageId, setActiveImageId] = useState(null);
   const [zoom, setZoom] = useState({ visible: false, imageLeft: 0, imageTop: 0, left: 0, top: 0 });
+  const [reservationModalOpen, setReservationModalOpen] = useState(false);
+  const [reservationSaving, setReservationSaving] = useState(false);
+  const [reservationError, setReservationError] = useState('');
+  const [reservationLead, setReservationLead] = useState(null);
+  const [reservationForm, setReservationForm] = useState({ use_date: '', pickup_date: '', name: '', email: '', phone: '' });
   const onlinePurchasesEnabled = site?.online_purchases_enabled !== false;
 
   useEffect(() => {
@@ -106,11 +121,26 @@ export default function ProductPage() {
   const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
   const image = selectedGalleryImage?.url || product?.image_url || product?.thumb_url;
   const variantDescription = displayVariant?.description || product?.description;
+  const availabilityAttribute = attributes.find((attribute) => normalizeLabel(attribute.slug) === 'disponibilidad');
+  const availabilityValue = availabilityAttribute
+    ? availabilityAttribute.values.find((value) => Number(value.id) === Number(selected[availabilityAttribute.id]))
+    : null;
+  const requestedType = normalizeLabel(availabilityValue?.value) === 'alquiler como nuevo'
+    ? 'alquiler_nuevo'
+    : normalizeLabel(availabilityValue?.value) === 'alquiler' ? 'alquiler' : null;
+  const rentalSelected = Boolean(requestedType);
 
   useEffect(() => {
     setActiveImageId(null);
     setZoom((current) => ({ ...current, visible: false }));
   }, [displayVariant?.id, product?.id]);
+
+  useEffect(() => {
+    if (!rentalSelected) {
+      setReservationModalOpen(false);
+      setReservationLead(null);
+    }
+  }, [rentalSelected]);
 
   const handleGalleryMove = (event) => {
     if (!image) return;
@@ -141,6 +171,28 @@ export default function ProductPage() {
   const handleSelectionChange = (nextSelected) => {
     setSelected(nextSelected);
     setQty(1);
+    setReservationLead(null);
+  };
+
+  const handleReservationSubmit = async (event) => {
+    event.preventDefault();
+    if (!product || !matchedVariant || !requestedType) return;
+    setReservationSaving(true);
+    setReservationError('');
+    try {
+      const result = await api.createReservationLead({
+        product_id: product.id,
+        variant_id: matchedVariant.id,
+        requested_type: requestedType,
+        ...reservationForm,
+      });
+      setReservationLead(result.reservation);
+      setReservationModalOpen(false);
+    } catch (error) {
+      setReservationError(error.message || 'No pudimos guardar los datos de la reserva.');
+    } finally {
+      setReservationSaving(false);
+    }
   };
 
   const handleAdd = () => {
@@ -200,6 +252,18 @@ export default function ProductPage() {
       '',
       'Quedo atento(a) a la cotización. ¡Gracias!',
     ];
+    if (reservationLead || (rentalSelected && reservationForm.use_date)) {
+      lines.splice(lines.length - 2, 0,
+        '',
+        `Datos de reserva (${requestedType === 'alquiler_nuevo' ? 'Alquiler como nuevo' : 'Alquiler'}):`,
+        `Fecha de uso: ${formatReservationDate(reservationForm.use_date)}`,
+        `Fecha de recogida: ${formatReservationDate(reservationForm.pickup_date)}`,
+        `Nombre: ${reservationForm.name}`,
+        `Correo: ${reservationForm.email}`,
+        `Teléfono: ${reservationForm.phone}`,
+        ...(reservationLead?.reservation_number ? [`Solicitud: ${reservationLead.reservation_number}`] : []),
+      );
+    }
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
@@ -284,6 +348,27 @@ export default function ProductPage() {
             />
           )}
 
+          {rentalSelected && hasSelectedVariant && (
+            <div className="reservation-opt-in">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={Boolean(reservationLead)}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      setReservationError('');
+                      setReservationModalOpen(true);
+                    } else {
+                      setReservationLead(null);
+                    }
+                  }}
+                />
+                <span><strong>Quiero agendar esta reserva</strong><small>Déjanos las fechas y tus datos para preparar la cotización.</small></span>
+              </label>
+              {reservationLead && <button type="button" className="reservation-edit-link" onClick={() => setReservationModalOpen(true)}>Editar datos</button>}
+            </div>
+          )}
+
           {hasSelectedVariant && (
             <div className="stock-status-line" style={{ color: selectedStock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
               <span>{selectedStock > 0 ? `✓ ${selectedStock} en stock` : '✗ Sin stock'}</span>
@@ -315,6 +400,30 @@ export default function ProductPage() {
           )}
         </div>
       </div>
+
+      {reservationModalOpen && (
+        <div className="account-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setReservationModalOpen(false)}>
+          <section className="account-modal reservation-modal" role="dialog" aria-modal="true" aria-labelledby="reservation-modal-title">
+            <span className="account-modal-icon account-modal-icon-success">⌁</span>
+            <h2 id="reservation-modal-title">Agenda tu reserva</h2>
+            <p>Completa estos datos para que Rebeca pueda confirmar disponibilidad y prepararte una cotización.</p>
+            <form onSubmit={handleReservationSubmit}>
+              <div className="reservation-form-grid">
+                <label>Fecha de uso<input className="input" type="date" required value={reservationForm.use_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_date: event.target.value }))} /></label>
+                <label>Fecha de recogida<input className="input" type="date" required value={reservationForm.pickup_date} onChange={(event) => setReservationForm((current) => ({ ...current, pickup_date: event.target.value }))} /></label>
+                <label>Nombre completo<input className="input" type="text" required maxLength={160} value={reservationForm.name} onChange={(event) => setReservationForm((current) => ({ ...current, name: event.target.value }))} /></label>
+                <label>Correo electrónico<input className="input" type="email" required maxLength={254} value={reservationForm.email} onChange={(event) => setReservationForm((current) => ({ ...current, email: event.target.value }))} /></label>
+                <label>Teléfono<input className="input" type="tel" required maxLength={40} value={reservationForm.phone} onChange={(event) => setReservationForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+              </div>
+              {reservationError && <div className="alert alert-error" role="alert">{reservationError}</div>}
+              <div className="account-modal-actions">
+                <button className="btn" type="button" onClick={() => setReservationModalOpen(false)} disabled={reservationSaving}>Cancelar</button>
+                <button className="btn btn-primary" type="submit" disabled={reservationSaving}>{reservationSaving ? 'Guardando…' : 'Guardar reserva'}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -73,6 +73,14 @@ export const api = {
     });
     return { order: r.order || null };
   },
+  createReservationLead: async (payload) => {
+    const r = await request('/api/public/reservation-leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return { reservation: r.reservation || null };
+  },
   createPaymentIntent: async (payload) => {
     const r = await request('/api/public/checkout/payment-intent', {
       method: 'POST',

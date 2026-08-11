@@ -20,6 +20,7 @@ import { tryHandleUsers } from './users.js';
 import { tryHandlePageModules } from './page-modules.js';
 import { tryHandleThemes } from './themes.js';
 import { tryHandleOrders } from './orders.js';
+import { tryHandleManualOrders } from './manual-orders.js';
 import { tryHandleSales } from './sales.js';
 import { tryHandleBuilder } from './builder.js';
 import { handleAdmin as handleAdminLegacy } from './legacy.js';
@@ -38,6 +39,7 @@ const subRouters = [
   tryHandlePageModules,
   tryHandleThemes,
   tryHandleOrders,
+  tryHandleManualOrders,
   tryHandleSales,
   tryHandleBuilder,
 ];

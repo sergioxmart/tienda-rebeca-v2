@@ -588,6 +588,19 @@ p { margin: 0 0 12px; }
 .account-modal-icon-danger { background: var(--color-danger); }
 .account-modal-icon-success { background: var(--color-success); }
 .account-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+.reservation-opt-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 16px; padding: 12px 14px; border: 1px solid rgba(184,154,94,.38); border-radius: 14px; background: rgba(184,154,94,.08); }
+.reservation-opt-in label { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
+.reservation-opt-in input { margin-top: 3px; accent-color: var(--color-accent); }
+.reservation-opt-in strong, .reservation-opt-in small { display: block; }
+.reservation-opt-in strong { color: var(--color-primary); font-size: 13px; }
+.reservation-opt-in small { margin-top: 3px; color: var(--color-muted); font-size: 11px; }
+.reservation-edit-link { flex: 0 0 auto; padding: 0; border: 0; color: var(--color-primary); background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 750; text-decoration: underline; }
+.reservation-modal { max-height: min(720px, calc(100vh - 40px)); overflow-y: auto; }
+.reservation-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.reservation-form-grid label { display: grid; gap: 6px; color: var(--color-primary); font-size: 12px; font-weight: 700; }
+.reservation-form-grid label:nth-child(5) { grid-column: 1 / -1; }
+.reservation-form-grid .input { font-weight: 400; }
+.reservation-form-grid + .alert { margin-top: 14px; }
 .mobile-account-link { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 13px 15px; border-radius: 11px; color: var(--color-primary); background: #edf6ff; font-size: 13px; font-weight: 750; }
 .mobile-account-link span { color: var(--color-accent); font-size: 18px; }
 
@@ -688,6 +701,10 @@ p { margin: 0 0 12px; }
   .account-modal { padding: 22px; border-radius: 18px; }
   .account-modal-actions { justify-content: stretch; }
   .account-modal-actions .btn { flex: 1; }
+  .reservation-form-grid { grid-template-columns: 1fr; }
+  .reservation-form-grid label:nth-child(5) { grid-column: auto; }
+  .reservation-opt-in { align-items: flex-start; flex-direction: column; }
+  .reservation-edit-link { margin-left: 27px; }
   .colombia-location-fields { grid-template-columns: 1fr; gap: 0; }
   .account-checkout-invite { align-items: flex-start; flex-direction: column; }
   .account-checkout-invite .btn { width: 100%; }

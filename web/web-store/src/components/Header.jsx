@@ -25,6 +25,7 @@ export default function Header() {
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const name = site?.site_name || 'Rebeca Andrade';
@@ -51,6 +52,7 @@ export default function Header() {
 
   useEffect(() => {
     setMenuOpen(false);
+    setSearchOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -80,7 +82,10 @@ export default function Header() {
 
   useEffect(() => {
     const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        setSearchOpen(false);
+      }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
@@ -98,12 +103,14 @@ export default function Header() {
     const value = query.trim();
     navigate(value ? `/categoria?q=${encodeURIComponent(value)}` : '/categoria');
     setMenuOpen(false);
+    setSearchOpen(false);
   };
 
   const openSuggestion = (product) => {
     setQuery('');
     setSuggestions([]);
     setMenuOpen(false);
+    setSearchOpen(false);
     navigate(`/producto/${product.slug}`);
   };
 
@@ -158,7 +165,27 @@ export default function Header() {
             ? <img src={logoUrl} alt={name} />
             : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
         </Link>
-        {showSearch && searchForm('header-search-desktop')}
+        <nav className="nav site-nav" aria-label="Navegación principal">
+          {navLinks.map((link) => (
+            link.href.startsWith('http')
+              ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={link.featured ? 'nav-all' : ''}>{link.label}</a>
+              : <Link key={`${link.label}-${link.href}`} to={link.href} className={link.featured ? 'nav-all' : ''}>{link.label}</Link>
+          ))}
+        </nav>
+        {showSearch && <div className="desktop-search-control">
+          <button
+            className="desktop-search-button"
+            type="button"
+            aria-label="Buscar productos"
+            aria-expanded={searchOpen}
+            aria-controls="desktop-search-popover"
+            onClick={() => setSearchOpen((open) => !open)}
+          >
+            <SearchIcon />
+            <span>Buscar</span>
+          </button>
+          {searchOpen && <div id="desktop-search-popover">{searchForm('header-search-desktop')}</div>}
+        </div>}
         <div className="header-actions">
           <Link to="/cuenta" className="account-header-link">{customer ? 'Mi cuenta' : 'Ingresar'}</Link>
           {site?.contact_phone && <a className="site-header__wa" href={`https://wa.me/${String(site.contact_phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer"><span>WhatsApp</span></a>}
@@ -168,15 +195,6 @@ export default function Header() {
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>}
         </div>
-      </div>
-      <div className="header-nav-row">
-        <nav className="nav site-nav header-width" aria-label="Navegación principal">
-          {navLinks.map((link) => (
-            link.href.startsWith('http')
-              ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={link.featured ? 'nav-all' : ''}>{link.label}</a>
-              : <Link key={`${link.label}-${link.href}`} to={link.href} className={link.featured ? 'nav-all' : ''}>{link.label}</Link>
-          ))}
-        </nav>
       </div>
       <div className={`mobile-menu site-mobile-menu ${menuOpen ? 'is-open' : ''}`} aria-hidden={!menuOpen}>
         <div className="mobile-menu-inner">

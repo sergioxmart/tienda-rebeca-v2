@@ -19,6 +19,10 @@ function ScrollToTop() {
   return null;
 }
 
+function PageContent({ children }) {
+  return <div className="page-content">{children}</div>;
+}
+
 export default function App() {
   return (
     <div className="app">
@@ -27,14 +31,14 @@ export default function App() {
       <main className="main">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/categoria" element={<Catalog />} />
-          <Route path="/categoria/:category" element={<Catalog />} />
-          <Route path="/producto/:slug" element={<ProductPage />} />
-          <Route path="/carrito" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/pago/respuesta" element={<PaymentResponse />} />
-          <Route path="/cuenta" element={<CustomerAccount />} />
-          <Route path="*" element={<div className="center"><h1>404</h1><p>No encontramos esa página.</p></div>} />
+          <Route path="/categoria" element={<PageContent><Catalog /></PageContent>} />
+          <Route path="/categoria/:category" element={<PageContent><Catalog /></PageContent>} />
+          <Route path="/producto/:slug" element={<PageContent><ProductPage /></PageContent>} />
+          <Route path="/carrito" element={<PageContent><Cart /></PageContent>} />
+          <Route path="/checkout" element={<PageContent><Checkout /></PageContent>} />
+          <Route path="/pago/respuesta" element={<PageContent><PaymentResponse /></PageContent>} />
+          <Route path="/cuenta" element={<PageContent><CustomerAccount /></PageContent>} />
+          <Route path="*" element={<PageContent><div className="center"><h1>404</h1><p>No encontramos esa página.</p></div></PageContent>} />
         </Routes>
       </main>
       <Footer />

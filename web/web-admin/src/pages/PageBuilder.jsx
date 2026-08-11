@@ -230,7 +230,12 @@ const CUSTOM_CODE_SETTINGS = [
 ];
 
 for (const schema of Object.values(MODULE_SCHEMAS)) {
-  schema.settings.push(...CUSTOM_CODE_SETTINGS.map((field) => ({ ...field })));
+  const existingKeys = new Set(schema.settings.map((field) => field.key));
+  schema.settings.push(
+    ...CUSTOM_CODE_SETTINGS
+      .filter((field) => !existingKeys.has(field.key))
+      .map((field) => ({ ...field })),
+  );
 }
 
 function downloadModuleTemplate(type) {

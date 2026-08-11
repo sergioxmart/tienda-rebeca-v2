@@ -1,10 +1,9 @@
-# TechStore
+# Rebeca Andrade v2
 
-Tienda de **accesorios de teléfono** (fundas, vidrios templados,
-cargadores, cables, audífonos) para Colombia. Catálogo con
-**variantes reales** (combinaciones color × modelo × capacidad),
-checkout con **pasarela de pago** (Mercado Pago + ePayco), y panel admin
-para gestionar todo.
+Tienda boutique **Rebeca Andrade** para Colombia. Catálogo con variantes
+reales, checkout con pasarelas de pago (Mercado Pago + ePayco), tienda
+pública y panel admin con Web Builder para gestionar la experiencia
+editorial de la marca.
 
 ## Stack
 
@@ -25,11 +24,11 @@ para gestionar todo.
 ├─ core/           # lógica genérica multi-cliente (auth, db, csrf,
 │                  # totp, cookies, uploads, rate-limit, security
 │                  # headers, webhook genérico, migrate runner, tests)
-├─ web/            # TechStore concreto
+├─ web/            # Aplicación concreta de Rebeca Andrade
 │  ├─ server/      # backend node:http + routers (admin/*, public/*, etc.)
 │  ├─ web-store/   # SPA Vite + React tienda pública
 │  ├─ web-admin/   # SPA Vite + React panel admin
-│  ├─ migrations/  # 001-009 schema de TechStore
+│  ├─ migrations/  # Migraciones forward-only de Rebeca Andrade v2
 │  └─ webhook/     # receptor de deploy (placeholder hasta prod)
 ├─ uploads/        # archivos subidos (gitignored, lo crea el server al boot)
 ├─ data/           # solo local (gitignored)
@@ -54,10 +53,10 @@ openssl rand -hex 32  # para cada secret
 # 3. Crear DB + rol + aplicar migrations
 cd web
 npm run db:setup     # una vez
-npm run migrate      # crea las 16 tablas
+npm run migrate      # aplica las migraciones pendientes
 
 # 4. Crear el primer admin
-npm run create-admin -- admin@techstore.local tu-password-admin
+npm run create-admin -- admin@rebecaandrade.local tu-password-admin
 
 # 5. Levantar el server
 npm run dev:server    # :3000
@@ -65,12 +64,13 @@ npm run dev           # :3000 + :5173 (store) + :5174 (admin)
 
 # 6. Probar
 curl http://localhost:3000/healthz
-# → {"ok":true,"service":"techstore-web"}
+# → respuesta JSON con `ok: true`
 ```
 
 ## Estado
 
-- ✅ Schema de DB (16 tablas, 9 migrations).
+- ✅ Base PostgreSQL independiente: `rebecaandrade_v2`, propiedad de `sergio`.
+- ✅ Schema de DB con migraciones forward-only.
 - ✅ Backend admin completo: atributos, categorías, productos,
   variantes, media, site config, users.
 - ✅ Auth admin con 2FA TOTP.
@@ -81,6 +81,6 @@ curl http://localhost:3000/healthz
 
 ## Documentación
 
-Toda la documentación vive en [`Contexto/`](Contexto/README.md). Para
+Toda la documentación vive en [`Contexto/`](Contexto/map.md). Para
 los detalles del modelo de datos, los endpoints, las convenciones de
 código, y el plan de deploy, empezar por ahí.

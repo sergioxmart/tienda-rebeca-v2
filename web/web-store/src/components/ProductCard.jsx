@@ -9,7 +9,8 @@ export default function ProductCard({ product }) {
   const image = product.image_url || product.thumb_url;
   return (
     <Link to={`/producto/${product.slug}`} className="product-card">
-      <div className="image" style={image ? { backgroundImage: `url(${image})` } : undefined}>
+      <div className="image">
+        {image && <img src={image} alt={product.name || 'Producto'} loading="lazy" decoding="async" />}
         {outOfStock && <span className="badge-stock">Agotado</span>}
       </div>
       <div className="info">

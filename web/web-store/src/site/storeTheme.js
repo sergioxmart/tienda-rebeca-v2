@@ -7,6 +7,8 @@ export const STORE_THEME_DEFAULTS = Object.freeze({
   store_product_name_color: '#1A1D21',
   store_price_color: '#B89A5E',
   store_body_text_color: '#1A1D21',
+  store_padding_desktop: 24,
+  store_padding_mobile: 18,
 });
 
 const HEX_COLOR = /^#[0-9A-F]{6}$/i;
@@ -30,11 +32,20 @@ function darken(hex, amount = 0.18) {
   return `#${[red, green, blue].map((channel) => Math.max(0, Math.round(channel * (1 - amount))).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 }
 
+function normalizePadding(value, fallback, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(0, Math.round(number)));
+}
+
 export function normalizeStoreTheme(config = {}) {
-  return Object.fromEntries(Object.entries(STORE_THEME_DEFAULTS).map(([key, fallback]) => [
-    key,
-    normalizeHex(config[key], fallback),
-  ]));
+  return {
+    ...Object.fromEntries(Object.entries(STORE_THEME_DEFAULTS)
+      .filter(([key]) => !key.startsWith('store_padding_'))
+      .map(([key, fallback]) => [key, normalizeHex(config[key], fallback)])),
+    store_padding_desktop: normalizePadding(config.store_padding_desktop, STORE_THEME_DEFAULTS.store_padding_desktop, 96),
+    store_padding_mobile: normalizePadding(config.store_padding_mobile, STORE_THEME_DEFAULTS.store_padding_mobile, 48),
+  };
 }
 
 export function applyStoreTheme(config = {}) {
@@ -59,5 +70,7 @@ export function applyStoreTheme(config = {}) {
   root.style.setProperty('--cream-2', rgba(theme.store_primary_color, 0.08));
   root.style.setProperty('--gold', theme.store_accent_color);
   root.style.setProperty('--black', theme.store_primary_color);
+  root.style.setProperty('--global-padding-desktop', `${theme.store_padding_desktop}px`);
+  root.style.setProperty('--global-padding-mobile', `${theme.store_padding_mobile}px`);
   return theme;
 }

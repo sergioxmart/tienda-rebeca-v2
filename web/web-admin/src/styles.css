@@ -384,6 +384,12 @@ p { margin: 0 0 12px; }
 .builder-global-color-control { display: flex; align-items: center; gap: 7px; flex: 0 0 auto; }
 .builder-global-color-picker { width: 34px; height: 34px; padding: 2px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); cursor: pointer; }
 .builder-global-color-control code { min-width: 72px; color: var(--color-primary); font-size: 10px; font-weight: 700; }
+.builder-global-spacing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.builder-global-spacing-field { display: grid; gap: 12px; min-height: 100px; padding: 12px; border: 1px solid var(--color-border); border-radius: 10px; background: #fbfcfd; }
+.builder-global-spacing-control { display: flex; align-items: center; gap: 10px; }
+.builder-global-spacing-control > input[type="range"] { min-width: 0; flex: 1; accent-color: var(--color-primary); cursor: pointer; }
+.builder-global-spacing-number { display: inline-flex; align-items: center; gap: 5px; color: var(--color-muted); font-size: 11px; }
+.builder-global-spacing-number .input { width: 68px; min-height: 34px; padding: 0 8px; }
 .builder-global-styles-preview { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 11px 13px; border: 1px dashed var(--color-border); border-radius: 10px; background: var(--color-bg); }
 .builder-global-styles-preview span { width: 22px; height: 22px; border: 1px solid rgba(15,42,71,.12); border-radius: 6px; }
 .builder-global-styles-preview strong, .builder-global-styles-preview small { padding: 3px 6px; font-size: 11px; }
@@ -891,6 +897,7 @@ p { margin: 0 0 12px; }
   .builder-navbar-settings-heading, .builder-links-heading { align-items: stretch; flex-direction: column; }
   .builder-navbar-settings-heading .btn, .builder-links-heading .btn { width: 100%; }
   .builder-global-color-grid { grid-template-columns: 1fr; }
+  .builder-global-spacing-grid { grid-template-columns: 1fr; }
   .builder-global-style-heading { align-items: flex-start; flex-direction: column; gap: 4px; }
   .builder-link-row { grid-template-columns: 1fr; }
   .builder-link-row .btn-danger { width: 100%; }

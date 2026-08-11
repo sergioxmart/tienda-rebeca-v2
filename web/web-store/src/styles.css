@@ -40,7 +40,7 @@
 body { font-family: var(--font-sans); color: var(--color-body-text); background: var(--color-bg); }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; }
 .main { width: 100%; max-width: none; margin: 0; padding: 0 0 72px; }
-.page-content { width: min(100%, 1240px); margin: 0 auto; padding: 34px 24px 52px; }
+.page-content { width: min(100%, 1240px); margin: 0 auto; padding: 34px var(--global-padding-desktop, 24px) 52px; }
 
 .site-header {
   background: var(--color-surface);
@@ -747,7 +747,8 @@ p { margin: 0 0 12px; }
 .product-grid { grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); gap: 18px; }
 .product-card { border: 1px solid rgba(26,29,33,.08); border-radius: 8px; box-shadow: none; }
 .product-card:hover { border-color: rgba(184,154,94,.55); box-shadow: 0 12px 28px rgba(26,29,33,.08); transform: translateY(-3px); }
-.product-card .image { aspect-ratio: 1 / 1.06; background: #efe8d8; }
+.product-card .image { aspect-ratio: 1 / 1.06; max-width: 100%; overflow: hidden; background: #efe8d8; }
+.product-card .image img { display: block; width: 100%; max-width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .product-card .name { font-family: var(--font-display); font-size: 18px; font-weight: 400; line-height: 1.22; }
 .product-card .price { color: var(--color-price); font-size: 14px; font-weight: 500; }
 .footer { margin-top: 0; padding: 60px 32px 22px; background: var(--color-primary); }
@@ -761,7 +762,7 @@ p { margin: 0 0 12px; }
   .site-header .site-nav { display: none; }
   .site-header .mobile-menu.site-mobile-menu { top: 100%; max-height: 0; padding: 0; background: var(--color-surface); }
   .site-header .mobile-menu.site-mobile-menu.is-open { max-height: calc(100vh - 64px); padding: 12px 16px; }
-  .page-content { padding: 24px 18px 42px; }
+  .page-content { padding: 24px var(--global-padding-mobile, 18px) 42px; }
   .hero { min-height: 620px; margin-bottom: 52px; padding: 62px 24px 48px; }
   .hero h1 { font-size: clamp(40px,12vw,62px); }
   .hero-visual { opacity: .3; }

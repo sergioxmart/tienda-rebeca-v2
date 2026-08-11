@@ -150,8 +150,12 @@ test('deleteVariant borra una variante', async () => {
     [productId],
   );
 
+  // TEST-B tiene stock > 0, así que deleteVariant exige la confirmación
+  // explícita (variants.js:415) y si no llega responde 409
+  // stock_confirmation_required. El test es anterior a ese guard: pasaba `{}`
+  // como request y esperaba 200.
   const res = mockRes();
-  await deleteVariant({}, res, rows[0].id);
+  await deleteVariant({ body: { confirm_text: 'ELIMINAR' } }, res, rows[0].id);
   assert.equal(res.statusCode, 200);
 
   const getRes = mockRes();

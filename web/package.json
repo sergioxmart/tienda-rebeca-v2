@@ -23,7 +23,7 @@
     "create-admin": "node --env-file-if-exists=.env server/scripts/create-admin.js",
     "test": "npm run test:core && npm run test:web",
     "test:core": "node --env-file=.env --test --test-reporter=spec ../core/test/*.test.js",
-    "test:web": "node --env-file=.env --test --test-reporter=spec ./test/*.test.js"
+    "test:web": "node --env-file=.env --test --test-concurrency=1 --test-reporter=spec ./test/*.test.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

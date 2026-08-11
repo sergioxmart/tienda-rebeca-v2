@@ -79,6 +79,7 @@ no tiene `section`, devuelve 403.
 | POST | `/api/public/customer/auth/request-otp` | `{ email }` | Envía un PIN de 6 dígitos, válido durante 5 minutos, si el correo tiene una cuenta. Respuesta genérica para evitar enumeración. |
 | POST | `/api/public/customer/auth/verify-otp` | `{ email, code }` | Consume el PIN y crea una sesión de cliente en cookie `httpOnly` durante 30 días. |
 | POST | `/api/public/customer/auth/logout` | — | Revoca la sesión de cliente actual. |
+| POST | `/api/public/customer/account/deactivate` | — | Desactiva la cuenta durante 30 días si no tiene pedidos en curso; bloquea la acción si existe un pedido pendiente, pagado, en preparación o enviado. |
 | GET | `/api/public/customer/me` | — | Devuelve la sesión, datos básicos y direcciones guardadas; sin sesión devuelve `authenticated: false`. |
 | PATCH | `/api/public/customer/profile` | `{ name, phone? }` | Actualiza los datos personales del cliente autenticado. |
 | GET | `/api/public/customer/orders` | — | Historial del cliente con líneas, totales, estado y datos de entrega. Requiere sesión OTP. |
@@ -86,6 +87,12 @@ no tiene `section`, devuelve 403.
 | POST | `/api/public/customer/addresses` | `{ label?, recipient_name?, phone?, department, city, address, notes?, latitude?, longitude? }` | Crea una dirección guardada. Requiere sesión OTP. |
 | PATCH | `/api/public/customer/addresses/:id` | Mismo body completo | Edita una dirección propia. Requiere sesión OTP. |
 | DELETE | `/api/public/customer/addresses/:id` | — | Elimina una dirección propia. Requiere sesión OTP. |
+
+Las cuentas creadas durante checkout sin un pago exitoso se limpian después de
+12 horas cuando ya no tienen pedidos en curso. Las cuentas desactivadas se
+pueden reactivar con un PIN válido durante 30 días; después el worker diario
+anonimiza los pedidos históricos y elimina definitivamente los datos de la
+cuenta.
 
 ## `/api/admin/*` (panel)
 

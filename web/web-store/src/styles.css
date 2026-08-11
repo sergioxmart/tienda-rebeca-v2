@@ -206,6 +206,8 @@ p { margin: 0 0 12px; }
 .btn-primary:hover { border-color: var(--color-primary-hover); color: #fff; background: var(--color-primary-hover); }
 .btn-accent { border-color: var(--color-accent); color: #fff; background: var(--color-accent); box-shadow: 0 10px 20px var(--color-accent-shadow); }
 .btn-accent:hover { border-color: var(--color-accent-hover); color: #fff; background: var(--color-accent-hover); box-shadow: 0 14px 26px var(--color-accent-shadow); }
+.btn-danger { border-color: var(--color-danger); color: #fff; background: var(--color-danger); }
+.btn-danger:hover { border-color: #b91c1c; color: #fff; background: #b91c1c; }
 .btn-block { width: 100%; }
 .btn-lg { min-height: 52px; padding: 0 24px; font-size: 15px; }
 
@@ -368,6 +370,10 @@ p { margin: 0 0 12px; }
 .account-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .colombia-location-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .account-address-form { padding: 16px; margin-bottom: 18px; border: 1px solid var(--color-border); border-radius: 14px; background: #f8fafc; }
+.account-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #f0d5d5; }
+.account-danger-zone strong { color: var(--color-danger); font-size: 13px; }
+.account-danger-zone p { margin: 3px 0 0; color: var(--color-muted); font-size: 11px; }
+.account-danger-zone .btn { flex: 0 0 auto; min-height: 38px; padding: 0 13px; font-size: 11px; }
 .account-address-actions, .account-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .account-address-list { display: grid; gap: 10px; }
 .account-address-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid var(--color-border); border-radius: 13px; background: #fbfcfd; }
@@ -398,6 +404,14 @@ p { margin: 0 0 12px; }
 .account-checkout-otp-row .input { min-width: 0; }
 .account-checkout-otp-row .btn { min-height: 44px; white-space: nowrap; }
 .account-continue-guest { margin-top: 8px; padding: 0; border: 0; color: var(--color-muted); background: transparent; font-size: 11px; text-decoration: underline; cursor: pointer; }
+.account-modal-backdrop { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(8, 29, 52, .58); backdrop-filter: blur(5px); }
+.account-modal { width: min(100%, 500px); padding: 28px; border: 1px solid rgba(255,255,255,.5); border-radius: 22px; background: var(--color-surface); box-shadow: var(--shadow-lg); }
+.account-modal h2 { margin-top: 14px; margin-bottom: 10px; font-size: 25px; }
+.account-modal p { color: var(--color-muted); font-size: 14px; line-height: 1.65; }
+.account-modal-icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; background: #c2410c; font-size: 23px; font-weight: 850; }
+.account-modal-icon-danger { background: var(--color-danger); }
+.account-modal-icon-success { background: var(--color-success); }
+.account-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
 .mobile-account-link { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 13px 15px; border-radius: 11px; color: var(--color-primary); background: #edf6ff; font-size: 13px; font-weight: 750; }
 .mobile-account-link span { color: var(--color-accent); font-size: 18px; }
 
@@ -477,6 +491,8 @@ p { margin: 0 0 12px; }
   .account-heading { align-items: flex-start; flex-direction: column; }
   .account-heading-actions { width: 100%; justify-content: flex-start; }
   .account-grid, .account-order-list { grid-template-columns: 1fr; }
+  .account-danger-zone { align-items: flex-start; flex-direction: column; }
+  .account-danger-zone .btn { width: 100%; }
   .account-address-card { flex-direction: column; }
   .account-card-actions { width: 100%; }
   .account-card-actions .btn { flex: 1; }
@@ -492,6 +508,10 @@ p { margin: 0 0 12px; }
   .header-actions { gap: 6px; }
   .panel { padding: 18px; }
   .account-form-grid { grid-template-columns: 1fr; gap: 0; }
+  .account-modal-backdrop { padding: 12px; }
+  .account-modal { padding: 22px; border-radius: 18px; }
+  .account-modal-actions { justify-content: stretch; }
+  .account-modal-actions .btn { flex: 1; }
   .colombia-location-fields { grid-template-columns: 1fr; gap: 0; }
   .account-checkout-invite { align-items: flex-start; flex-direction: column; }
   .account-checkout-invite .btn { width: 100%; }

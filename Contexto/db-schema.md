@@ -225,6 +225,13 @@ El baseline incluye el departamento y los nuevos pedidos guardan también el
 departamento dentro de `shipping_address` para que admin muestre la ubicación
 normalizada.
 
+La migración `002_customer_retention.sql` agrega `deleted_at` y
+`deletion_expires_at`. Una desactivación es reversible durante 30 días. El
+worker de retención elimina cuentas fantasma creadas durante checkout después
+de 12 horas sin pago exitoso, y el worker diario purga cuentas vencidas:
+elimina pedidos expirados/cancelados, conserva los pedidos exitosos y
+anonimiza sus datos personales antes de desvincular la cuenta.
+
 ### `payments` (`001_initial_schema.sql`)
 
 Una fila por transacción con la pasarela. Un pedido puede tener varios

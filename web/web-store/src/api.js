@@ -121,6 +121,10 @@ export const api = {
   customerLogout: async () => {
     await request('/api/public/customer/auth/logout', { method: 'POST' });
   },
+  customerDeactivate: async () => {
+    const r = await request('/api/public/customer/account/deactivate', { method: 'POST' });
+    return { message: r.message || '', reactivation_days: Number(r.reactivation_days || 30) };
+  },
   updateCustomerProfile: async (payload) => {
     const r = await request('/api/public/customer/profile', {
       method: 'PATCH',

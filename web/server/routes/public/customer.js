@@ -92,9 +92,10 @@ async function listAddresses(customerId) {
 
 async function findCustomerByEmail(email) {
   const { rows } = await query(
-    `SELECT id, email, name, phone, last_login_at
+    `SELECT id, email, name, phone, last_login_at, deleted_at, deletion_expires_at
        FROM customer_accounts
       WHERE email = $1
+        AND (deleted_at IS NULL OR deletion_expires_at > NOW())
       LIMIT 1`,
     [email],
   );
@@ -211,6 +212,7 @@ async function verifyOtp(req, res) {
        FROM customer_otp_challenges ch
        JOIN customer_accounts c ON c.id = ch.customer_id
       WHERE c.email = $1
+        AND (c.deleted_at IS NULL OR c.deletion_expires_at > NOW())
         AND ch.purpose = 'login'
         AND ch.consumed_at IS NULL
         AND ch.expires_at > NOW()
@@ -229,7 +231,12 @@ async function verifyOtp(req, res) {
   }
 
   await query('UPDATE customer_otp_challenges SET consumed_at = NOW() WHERE id = $1', [challenge.challenge_id]);
-  await query('UPDATE customer_accounts SET last_login_at = NOW() WHERE id = $1', [challenge.customer_id]);
+  await query(
+    `UPDATE customer_accounts
+        SET last_login_at = NOW(), deleted_at = NULL, deletion_expires_at = NULL
+      WHERE id = $1`,
+    [challenge.customer_id],
+  );
   otpLimiter.clear(rateKeys);
   await createCustomerSession(res, challenge.customer_id);
   return json(res, 200, {
@@ -388,6 +395,73 @@ async function deleteAddress(req, res, addressId) {
   return json(res, 200, { ok: true });
 }
 
+async function getSupportEmail() {
+  const { rows } = await query(
+    `SELECT COALESCE(value #>> '{}', '') AS email
+       FROM site_config WHERE key = 'contact_email' LIMIT 1`,
+  );
+  return rows[0]?.email || 'soporte de la tienda';
+}
+
+async function deactivateAccount(req, res) {
+  const customer = await requireCustomer(req, res);
+  if (!customer) return;
+
+  const supportEmail = await getSupportEmail();
+  const result = await tx(async (client) => {
+    const { rows: accounts } = await client.query(
+      `SELECT id, email
+         FROM customer_accounts
+        WHERE id = $1 AND deleted_at IS NULL
+        FOR UPDATE`,
+      [customer.id],
+    );
+    if (!accounts[0]) return { error: 'account_not_active' };
+
+    const { rows: inProgress } = await client.query(
+      `SELECT order_number, status
+         FROM orders
+        WHERE (client_id = $1 OR lower(customer_email) = $2)
+          AND status IN ('pending', 'paid', 'processing', 'shipped')
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [customer.id, accounts[0].email],
+    );
+    if (inProgress[0]) return { error: 'orders_in_progress', order: inProgress[0] };
+
+    await client.query(
+      `UPDATE customer_accounts
+          SET deleted_at = NOW(),
+              deletion_expires_at = NOW() + INTERVAL '30 days',
+              updated_at = NOW()
+        WHERE id = $1`,
+      [customer.id],
+    );
+    await client.query('DELETE FROM customer_sessions WHERE customer_id = $1', [customer.id]);
+    await client.query('DELETE FROM customer_otp_challenges WHERE customer_id = $1', [customer.id]);
+    return { ok: true };
+  });
+
+  if (result.error === 'orders_in_progress') {
+    return json(res, 409, {
+      ok: false,
+      error: 'account_deletion_blocked',
+      support_email: supportEmail,
+      message: `No puedes desactivar tu cuenta mientras tengas pedidos en curso. Para solicitar la desactivación expresa de tu perfil, por favor envía un correo a ${supportEmail}.`,
+    });
+  }
+  if (result.error) {
+    clearCustomerSessionCookie(res);
+    return json(res, 401, { ok: false, error: 'customer_auth_required', message: 'Inicia sesión para continuar.' });
+  }
+  clearCustomerSessionCookie(res);
+  return json(res, 200, {
+    ok: true,
+    message: 'Tu cuenta ha sido desactivada. Tienes 30 días calendario para iniciar sesión y reactivarla; de lo contrario, tus datos personales serán eliminados de forma permanente.',
+    reactivation_days: 30,
+  });
+}
+
 export async function handleCustomer(req, res) {
   const method = req.method || 'GET';
   const pathname = (req.url || '/').split('?')[0];
@@ -395,6 +469,7 @@ export async function handleCustomer(req, res) {
   if (pathname === '/api/public/customer/auth/request-otp' && method === 'POST') return requestOtp(req, res);
   if (pathname === '/api/public/customer/auth/verify-otp' && method === 'POST') return verifyOtp(req, res);
   if (pathname === '/api/public/customer/auth/logout' && method === 'POST') return logout(req, res);
+  if (pathname === '/api/public/customer/account/deactivate' && method === 'POST') return deactivateAccount(req, res);
   if (pathname === '/api/public/customer/me' && method === 'GET') return getMe(req, res);
   if (pathname === '/api/public/customer/profile' && method === 'PATCH') return updateProfile(req, res);
   if (pathname === '/api/public/customer/orders' && method === 'GET') return listOrders(req, res);

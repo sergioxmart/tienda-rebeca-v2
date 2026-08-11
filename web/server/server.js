@@ -24,6 +24,7 @@ import { handleAuth } from './routes/auth.js';
 import { handleMedia } from './routes/media.js';
 import { handleWebhooks } from './routes/webhooks/index.js';
 import { startOrderExpirationWorker } from './lib/order-expiration.js';
+import { startCustomerRetentionWorker } from './lib/customer-retention.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Dists de store/ y admin/ viven en web/server/public/ (los copia deploy.sh).
@@ -50,6 +51,7 @@ async function main() {
 
   // Expira pedidos pendientes antiguos y mantiene limpia la cola de checkout.
   startOrderExpirationWorker();
+  startCustomerRetentionWorker();
 
   // 3. HTTP server
   const server = createServer(async (req, res) => {

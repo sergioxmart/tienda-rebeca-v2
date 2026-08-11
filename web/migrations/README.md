@@ -8,6 +8,7 @@ El esquema de TechStore fue condensado en una única migración inicial:
 
 - `001_initial_schema.sql`: tablas, índices, restricciones, triggers y
   semillas mínimas del sistema.
+- `002_customer_retention.sql`: ventana de desactivación y purga de cuentas.
 
 La base local fue reiniciada eliminando y recreando el schema `public`. Los
 datos de negocio, usuarios, pedidos, temas, configuración y catálogo parten

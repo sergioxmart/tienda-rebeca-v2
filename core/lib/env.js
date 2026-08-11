@@ -43,6 +43,11 @@ export const env = {
   ORDER_PENDING_TTL_MINUTES:      Number(opt('ORDER_PENDING_TTL_MINUTES', '15')),
   ORDER_EXPIRATION_SWEEP_SECONDS: Number(opt('ORDER_EXPIRATION_SWEEP_SECONDS', '60')),
 
+  // Retención de cuentas de clientes. El worker arranca con una limpieza
+  // inmediata y después ejecuta el anti-spam y la purga en sus intervalos.
+  CUSTOMER_GHOST_SWEEP_SECONDS: Number(opt('CUSTOMER_GHOST_SWEEP_SECONDS', String(60 * 60))),
+  CUSTOMER_PURGE_SWEEP_SECONDS: Number(opt('CUSTOMER_PURGE_SWEEP_SECONDS', String(24 * 60 * 60))),
+
   // Webhook
   WEBHOOK_PORT:      Number(opt('WEBHOOK_PORT', '9001')),
   WEBHOOK_SECRET:    opt('WEBHOOK_SECRET', ''),

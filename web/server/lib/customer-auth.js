@@ -70,6 +70,7 @@ export async function getCustomerSession(req) {
        JOIN customer_accounts c ON c.id = s.customer_id
       WHERE s.token_hash = $1
         AND s.expires_at > NOW()
+        AND c.deleted_at IS NULL
       LIMIT 1`,
     [hashCustomerToken(token)],
   );
@@ -98,4 +99,3 @@ export function publicCustomer(row) {
 export function cleanCustomerString(value, max) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
-

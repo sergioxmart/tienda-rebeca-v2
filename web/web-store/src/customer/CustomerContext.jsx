@@ -31,9 +31,11 @@ export function CustomerProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await api.customerLogout();
-    setCustomer(null);
-    setAddresses([]);
+    try { await api.customerLogout(); }
+    finally {
+      setCustomer(null);
+      setAddresses([]);
+    }
   }, []);
 
   const value = useMemo(() => ({
@@ -48,4 +50,3 @@ export function useCustomer() {
   if (!context) throw new Error('useCustomer debe usarse dentro de CustomerProvider');
   return context;
 }
-

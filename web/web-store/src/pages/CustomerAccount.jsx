@@ -100,6 +100,7 @@ export default function CustomerAccount() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [deactivationModal, setDeactivationModal] = useState(null);
 
   useEffect(() => {
     if (!customer) return;
@@ -131,6 +132,30 @@ export default function CustomerAccount() {
     catch (err) { setError(err.message || 'No pudimos eliminar la dirección.'); }
   };
 
+  const confirmDeactivate = async () => {
+    setBusy(true);
+    try {
+      const result = await api.customerDeactivate();
+      setDeactivationModal({
+        type: 'success',
+        message: result.message || 'Tu cuenta ha sido desactivada. Tienes 30 días calendario para iniciar sesión y reactivarla; de lo contrario, tus datos personales serán eliminados de forma permanente.',
+      });
+    } catch (err) {
+      setDeactivationModal({
+        type: err.code === 'account_deletion_blocked' ? 'blocked' : 'error',
+        message: err.message || 'No pudimos desactivar tu cuenta. Intenta nuevamente.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const closeDeactivationModal = async () => {
+    const shouldLogout = deactivationModal?.type === 'success';
+    setDeactivationModal(null);
+    if (shouldLogout) await logout();
+  };
+
   const totalOrders = useMemo(() => orders.length, [orders]);
   if (loading) return <div className="center"><span className="spinner" /></div>;
   if (!customer) return <AccountLogin />;
@@ -142,10 +167,16 @@ export default function CustomerAccount() {
       <div className="account-heading"><div><span className="section-kicker">Mi cuenta</span><h1>Hola, {firstName}</h1><p>Administra tus datos, direcciones y pedidos desde un solo lugar.</p></div><div className="account-heading-actions"><button className="btn btn-primary" type="button" onClick={() => setShowSettings((visible) => !visible)}>{showSettings ? 'Ver mis pedidos' : 'Editar Datos y direcciones'}</button><button className="btn" type="button" onClick={() => logout()}>Cerrar sesión</button></div></div>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {showSettings && <div className="account-grid">
-        <section className="panel"><h2>Mis datos</h2><p className="account-muted">{customer.email}</p><form onSubmit={saveProfile}><div className="form-group"><label>Nombre completo</label><input className="input" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></div><div className="form-group"><label>Teléfono</label><input className="input" type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></div><button className="btn btn-primary" disabled={busy}>Guardar cambios</button></form></section>
+        <section className="panel"><h2>Mis datos</h2><p className="account-muted">{customer.email}</p><form onSubmit={saveProfile}><div className="form-group"><label>Nombre completo</label><input className="input" required value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} /></div><div className="form-group"><label>Teléfono</label><input className="input" type="tel" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></div><button className="btn btn-primary" disabled={busy}>Guardar cambios</button></form><div className="account-danger-zone"><div><strong>Eliminar cuenta</strong><p>Desactiva tu cuenta y conserva la posibilidad de reactivarla durante 30 días.</p></div><button className="btn btn-danger" type="button" onClick={() => setDeactivationModal({ type: 'confirm' })} disabled={busy}>Eliminar cuenta</button></div></section>
         <section className="panel"><div className="account-section-heading"><div><h2>Mis direcciones</h2><p className="account-muted">{addresses.length} dirección{addresses.length === 1 ? '' : 'es'} guardada{addresses.length === 1 ? '' : 's'}.</p></div><button className="btn btn-accent" type="button" onClick={() => { setAddressForm(EMPTY_ADDRESS); setEditingId(null); setShowAddressForm(true); }}>+ Agregar</button></div>{showAddressForm && <AddressForm value={addressForm} onChange={setAddressForm} onSubmit={saveAddress} onCancel={() => setShowAddressForm(false)} busy={busy} />}<div className="account-address-list">{addresses.map((address) => <article className="account-address-card" key={address.id}><div><strong>{address.label}</strong><p>{address.address}<br />{address.city}{address.recipient_name ? ` · ${address.recipient_name}` : ''}</p>{address.notes && <small>{address.notes}</small>}</div><div className="account-card-actions"><button className="btn" type="button" onClick={() => editAddress(address)}>Editar</button><button className="btn" type="button" onClick={() => deleteAddress(address.id)}>Eliminar</button></div></article>)}{addresses.length === 0 && <p className="account-muted">Aún no tienes direcciones guardadas.</p>}</div></section>
       </div>}
       {!showSettings && <section className="panel account-orders"><div className="account-section-heading"><div><h2>Mis pedidos</h2><p className="account-muted">{totalOrders} pedido{totalOrders === 1 ? '' : 's'} registrado{totalOrders === 1 ? '' : 's'}.</p></div><Link to="/categoria" className="btn">Seguir comprando</Link></div>{orders.length === 0 ? <p className="account-muted">Todavía no tienes pedidos.</p> : <div className="account-order-list">{orders.map((order) => <article className="account-order-card" key={order.id}><div className="account-order-top"><div><strong>{order.order_number}</strong><small>{new Date(order.created_at).toLocaleDateString('es-CO')}</small></div><span className="account-status">{STATUS_LABELS[order.status] || order.status}</span></div><div className="account-order-items">{order.items.map((item) => <div key={`${order.id}-${item.variant_id}-${item.product_name}`}><span>{item.quantity}× {item.product_name}</span><span>{formatCOP(item.line_total)}</span></div>)}</div><div className="account-order-total"><span>Total</span><strong>{formatCOP(order.total)}</strong></div></article>)}</div>}</section>}
+      {deactivationModal && <div className="account-modal-backdrop" role="presentation"><section className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-deactivation-title">
+        {deactivationModal.type === 'confirm' && <><span className="account-modal-icon">!</span><h2 id="account-deactivation-title">¿Eliminar tu cuenta?</h2><p>Tu cuenta será desactivada. Si cambias de opinión, tendrás 30 días calendario para iniciar sesión y reactivarla. Pasado este tiempo, toda tu información será eliminada de forma permanente.</p><div className="account-modal-actions"><button className="btn" type="button" onClick={() => setDeactivationModal(null)} disabled={busy}>Cancelar</button><button className="btn btn-danger" type="button" onClick={confirmDeactivate} disabled={busy}>{busy ? 'Procesando…' : 'Desactivar cuenta'}</button></div></>}
+        {deactivationModal.type === 'blocked' && <><span className="account-modal-icon account-modal-icon-danger">!</span><h2 id="account-deactivation-title">No puedes desactivar tu cuenta</h2><p>{deactivationModal.message}</p><div className="account-modal-actions"><button className="btn btn-primary" type="button" onClick={() => setDeactivationModal(null)}>Entendido</button></div></>}
+        {deactivationModal.type === 'error' && <><span className="account-modal-icon account-modal-icon-danger">!</span><h2 id="account-deactivation-title">No pudimos completar la solicitud</h2><p>{deactivationModal.message}</p><div className="account-modal-actions"><button className="btn" type="button" onClick={() => setDeactivationModal(null)}>Cerrar</button></div></>}
+        {deactivationModal.type === 'success' && <><span className="account-modal-icon account-modal-icon-success">✓</span><h2 id="account-deactivation-title">Cuenta desactivada</h2><p>{deactivationModal.message}</p><div className="account-modal-actions"><button className="btn btn-primary" type="button" onClick={closeDeactivationModal}>Continuar</button></div></>}
+      </section></div>}
     </div>
   );
 }

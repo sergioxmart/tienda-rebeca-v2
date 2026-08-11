@@ -69,18 +69,13 @@ curl http://localhost:3000/healthz
 
 ## Estado
 
-- ✅ Base PostgreSQL independiente: `rebecaandrade_v2`, propiedad de `sergio`.
-- ✅ Schema de DB con migraciones forward-only.
-- ✅ Backend admin completo: atributos, categorías, productos,
-  variantes, media, site config, users.
-- ✅ Auth admin con 2FA TOTP.
-- ✅ 25 tests verdes (`npm test`).
-- ⏳ Catálogo público (sesión 3).
-- ⏳ UI admin + UI store (sesión 4 y 5).
-- ✅ Checkout ePayco y Mercado Pago Checkout Pro en Testing.
+El estado actual del proyecto vive en un solo lugar:
+[`Contexto/map.md`](Contexto/map.md#estado-del-proyecto-a-agosto-2026).
 
 ## Documentación
 
-Toda la documentación vive en [`Contexto/`](Contexto/map.md). Para
-los detalles del modelo de datos, los endpoints, las convenciones de
-código, y el plan de deploy, empezar por ahí.
+Toda la documentación vive en [`Contexto/`](Contexto/README.md).
+Empieza por [`Contexto/README.md`](Contexto/README.md) (índice) o
+directamente por [`Contexto/map.md`](Contexto/map.md) (el mapa del
+repo). Para IAs, los routers son [`AGENTS.md`](AGENTS.md) y
+[`CLAUDE.md`](CLAUDE.md).

@@ -9,6 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
+import Modal from '../components/Modal.jsx';
 import { ADMIN_BACKGROUND_DEFAULTS, ADMIN_THEME_DEFAULTS, ADMIN_THEME_FIELDS, applyAdminTheme } from '../adminTheme.js';
 
 const KNOWN_KEYS = [
@@ -125,6 +126,8 @@ export default function SiteConfig() {
   const [uploadingBackground, setUploadingBackground] = useState(false);
   const [uploadingAdminBackground, setUploadingAdminBackground] = useState(null);
   const [logoVersion, setLogoVersion] = useState(() => Date.now());
+  const [purchaseModePending, setPurchaseModePending] = useState(null);
+  const [purchaseModeSaving, setPurchaseModeSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -174,6 +177,21 @@ export default function SiteConfig() {
       toast.error('No se pudo guardar', err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmPurchaseMode = async () => {
+    if (purchaseModePending === null) return;
+    setPurchaseModeSaving(true);
+    try {
+      await api.patch('/api/admin/site-config', { online_purchases_enabled: purchaseModePending });
+      setConfig((cur) => ({ ...cur, online_purchases_enabled: purchaseModePending }));
+      setPurchaseModePending(null);
+      toast.success(purchaseModePending ? 'Compras en línea activadas' : 'Modo catálogo activado');
+    } catch (err) {
+      toast.error('No se pudo cambiar el modo de compras', err.message);
+    } finally {
+      setPurchaseModeSaving(false);
     }
   };
 
@@ -316,6 +334,55 @@ export default function SiteConfig() {
       <p style={{ color: 'var(--color-muted)' }}>
         Datos de contacto, redes sociales, branding y claves públicas de pago. Las claves secretas van en variables de entorno, no acá.
       </p>
+
+      <div className="config-card">
+        <div className="config-card-heading">
+          <div>
+            <h3>Ventas y cotizaciones</h3>
+            <p>Define si la tienda permite agregar productos al carrito y continuar al checkout.</p>
+          </div>
+          <span className="config-card-icon">▣</span>
+        </div>
+        <div className="site-purchase-mode-row">
+          <div>
+            <strong>Compras en línea</strong>
+            <span>{config.online_purchases_enabled !== false ? 'Activadas · carrito y checkout disponibles' : 'Desactivadas · solo cotizaciones por WhatsApp'}</span>
+          </div>
+          <button
+            type="button"
+            className={`admin-switch ${config.online_purchases_enabled !== false ? 'is-on' : ''}`}
+            role="switch"
+            aria-checked={config.online_purchases_enabled !== false}
+            aria-label="Cambiar compras en línea"
+            onClick={() => setPurchaseModePending(config.online_purchases_enabled === false)}
+            disabled={purchaseModeSaving}
+          >
+            <span />
+          </button>
+        </div>
+        <p className="help site-purchase-mode-help">El cambio se aplica inmediatamente después de confirmar.</p>
+      </div>
+
+      <Modal
+        open={purchaseModePending !== null}
+        onClose={() => !purchaseModeSaving && setPurchaseModePending(null)}
+        title={purchaseModePending ? '¿Activar compras en línea?' : '¿Activar modo catálogo?'}
+        size="sm"
+        footer={(
+          <>
+            <button className="btn" type="button" onClick={() => setPurchaseModePending(null)} disabled={purchaseModeSaving}>Cancelar</button>
+            <button className="btn btn-primary" type="button" onClick={confirmPurchaseMode} disabled={purchaseModeSaving}>
+              {purchaseModeSaving ? <span className="spinner" /> : 'Confirmar cambio'}
+            </button>
+          </>
+        )}
+      >
+        <p>
+          {purchaseModePending
+            ? 'Los clientes volverán a ver el carrito, el botón Agregar al carrito y el checkout. ¿Quieres continuar?'
+            : 'El carrito y el checkout quedarán ocultos para los clientes. Solo podrán cotizar por WhatsApp. ¿Quieres continuar?'}
+        </p>
+      </Modal>
 
       <div className="config-card">
         <div className="config-card-heading">

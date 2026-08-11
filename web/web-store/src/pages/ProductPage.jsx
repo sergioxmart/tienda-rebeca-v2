@@ -5,9 +5,10 @@
 // CartContext si llega).
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useCart } from '../cart/CartContext.jsx';
+import { useSite } from '../site/SiteContext.jsx';
 import Price from '../components/Price.jsx';
 import VariantSelector from '../components/VariantSelector.jsx';
 import QuantitySelector from '../components/QuantitySelector.jsx';
@@ -15,7 +16,7 @@ import Empty from '../components/Empty.jsx';
 
 export default function ProductPage() {
   const { slug } = useParams();
-  const navigate = useNavigate();
+  const { site } = useSite();
   const { addItem, items } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [activeImageId, setActiveImageId] = useState(null);
   const [zoom, setZoom] = useState({ visible: false, imageLeft: 0, imageTop: 0, left: 0, top: 0 });
+  const onlinePurchasesEnabled = site?.online_purchases_enabled !== false;
 
   useEffect(() => {
     setLoading(true);
@@ -162,9 +164,44 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 1800);
   };
 
-  const handleBuyNow = () => {
-    handleAdd();
-    setTimeout(() => navigate('/carrito'), 100);
+  const handleQuote = () => {
+    if (!product || !hasSelectedVariant) return;
+    const phone = String(site?.contact_phone || '').replace(/\D/g, '');
+    if (!phone) {
+      window.alert('La tienda todavía no tiene un teléfono de WhatsApp configurado.');
+      return;
+    }
+    const attributeSummary = (matchedVariant?.attribute_values || [])
+      .map((x) => `${x.attribute_name}: ${x.value}`)
+      .join(' · ');
+    const currentItem = {
+      variant_id: matchedVariant?.id ?? product.id,
+      product_id: product.id,
+      product_name: product.name,
+      attribute_summary: attributeSummary,
+      qty: Math.max(1, Number(qty) || 1),
+    };
+    const merged = new Map();
+    [currentItem, ...items].forEach((item) => {
+      const key = item.variant_id !== null && item.variant_id !== undefined
+        ? `variant:${item.variant_id}`
+        : `product:${item.product_id}:${item.attribute_summary || ''}`;
+      const existing = merged.get(key);
+      merged.set(key, existing
+        ? { ...existing, qty: existing.qty + Math.max(1, Number(item.qty) || 1) }
+        : { ...item, qty: Math.max(1, Number(item.qty) || 1) });
+    });
+    const lines = [
+      'Hola Rebeca, quiero cotizar estos productos:',
+      ...Array.from(merged.values()).flatMap((item, index) => [
+        `${index + 1}. ${item.product_name || 'Producto'} · Cantidad: ${item.qty}`,
+        ...(item.attribute_summary ? [`   ${item.attribute_summary}`] : []),
+      ]),
+      '',
+      'Quedo atento(a) a la cotización. ¡Gracias!',
+    ];
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   if (loading) return <div className="center"><span className="spinner" /></div>;
@@ -261,12 +298,12 @@ export default function ProductPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-accent btn-lg" onClick={handleAdd} disabled={!canAdd}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {onlinePurchasesEnabled && <button className="btn btn-accent btn-lg" onClick={handleAdd} disabled={!canAdd}>
               {added ? '✓ Agregado' : 'Agregar al carrito'}
-            </button>
-            <button className="btn btn-primary btn-lg" onClick={handleBuyNow} disabled={!canAdd}>
-              Comprar ahora
+            </button>}
+            <button className="btn btn-primary btn-lg" onClick={handleQuote} disabled={!hasSelectedVariant}>
+              Cotizar por WhatsApp
             </button>
           </div>
 

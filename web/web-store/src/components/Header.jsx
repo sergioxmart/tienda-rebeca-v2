@@ -36,7 +36,7 @@ export default function Header() {
     : [];
   const showAnnouncement = site?.navbar_show_announcement !== false;
   const showSearch = site?.navbar_show_search !== false;
-  const showCart = site?.navbar_show_cart !== false;
+  const showCart = site?.online_purchases_enabled !== false && site?.navbar_show_cart !== false;
   const showCategories = site?.navbar_show_categories !== false;
   const announcement = site?.navbar_announcement || 'Envíos a toda Colombia · Compra fácil y segura';
   const navLinks = customLinks.length > 0

@@ -22,6 +22,7 @@ export default function Hero({ settings = {} }) {
     custom_code_enabled,
     custom_code,
   } = settings;
+  const minimalVisual = visual_mode === 'none';
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
@@ -50,11 +51,13 @@ export default function Hero({ settings = {} }) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
-    <section className="hero" style={style}>
-      <div className="hero-glow hero-glow-one" />
-      <div className="hero-glow hero-glow-two" />
+    <section className={`hero${minimalVisual ? ' hero-minimal' : ''}`} style={style}>
+      {!minimalVisual && <>
+        <div className="hero-glow hero-glow-one" />
+        <div className="hero-glow hero-glow-two" />
+      </>}
       <div className="hero-content">
-        <span className="hero-eyebrow"><span />{eyebrow}</span>
+        {!minimalVisual && <span className="hero-eyebrow"><span />{eyebrow}</span>}
         {title && <h1>{title}</h1>}
         {subtitle && <p>{subtitle}</p>}
         <div className="hero-actions">
@@ -63,11 +66,11 @@ export default function Hero({ settings = {} }) {
               ? <a href={cta_link} className="btn btn-accent">{cta_text}<span>↗</span></a>
               : <Link to={cta_link} className="btn btn-accent">{cta_text}<span>→</span></Link>
           )}
-          {secondary_cta_text && secondary_cta_link && <Link to={secondary_cta_link} className="hero-secondary-link">{secondary_cta_text}<span>→</span></Link>}
+          {!minimalVisual && secondary_cta_text && secondary_cta_link && <Link to={secondary_cta_link} className="hero-secondary-link">{secondary_cta_text}<span>→</span></Link>}
         </div>
-        <div className="hero-proof"><span><strong>Compra segura</strong><small>Pago protegido</small></span><span><strong>Envíos nacionales</strong><small>A donde estés</small></span></div>
+        {!minimalVisual && <div className="hero-proof"><span><strong>Compra segura</strong><small>Pago protegido</small></span><span><strong>Envíos nacionales</strong><small>A donde estés</small></span></div>}
       </div>
-      <div className={`hero-visual ${visual_mode === 'product' ? 'hero-visual-product' : ''}`} aria-label={product ? `Producto destacado: ${product.name}` : undefined}>
+      {!minimalVisual && <div className={`hero-visual ${visual_mode === 'product' ? 'hero-visual-product' : ''}`} aria-label={product ? `Producto destacado: ${product.name}` : undefined}>
         {visualImage
           ? <div className="hero-device hero-device-product"><img src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
           : <><div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" /><div className="hero-device"><span>TS</span></div></>}
@@ -75,7 +78,7 @@ export default function Hero({ settings = {} }) {
         {product
           ? <div className="hero-floating-card hero-floating-card-bottom"><strong><Price value={product.base_price} /></strong><span>{product.brand || 'Producto destacado'}</span></div>
           : <div className="hero-floating-card hero-floating-card-bottom"><strong>+ calidad</strong><span>+ estilo</span></div>}
-      </div>
+      </div>}
     </section>
   );
 }

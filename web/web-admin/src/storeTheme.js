@@ -1,12 +1,12 @@
 export const STORE_THEME_DEFAULTS = Object.freeze({
-  store_accent_color: '#FF6B35',
-  store_primary_color: '#0F2A47',
+  store_accent_color: '#B89A5E',
+  store_primary_color: '#1A1D21',
   store_surface_color: '#FFFFFF',
-  store_background_color: '#F7F8FA',
-  store_heading_color: '#0F2A47',
-  store_product_name_color: '#0F2A47',
-  store_price_color: '#0F2A47',
-  store_body_text_color: '#172536',
+  store_background_color: '#FAF7F2',
+  store_heading_color: '#1A1D21',
+  store_product_name_color: '#1A1D21',
+  store_price_color: '#B89A5E',
+  store_body_text_color: '#1A1D21',
 });
 
 const HEX_COLOR = /^#[0-9A-F]{6}$/i;

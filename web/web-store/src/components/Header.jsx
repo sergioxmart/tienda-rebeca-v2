@@ -141,9 +141,9 @@ export default function Header() {
   );
 
   return (
-    <header className="header">
+    <header className="header site-header">
       {showAnnouncement && <div className="announcement-bar"><div className="header-width">{announcement.split('·').map((part, index) => <React.Fragment key={`${part}-${index}`}>{index > 0 && <span>·</span>}{part.trim()}</React.Fragment>)}</div></div>}
-      <div className="header-inner">
+      <div className="header-inner site-header__inner">
         <button
           className={`menu-toggle ${menuOpen ? 'is-open' : ''}`}
           type="button"
@@ -153,7 +153,7 @@ export default function Header() {
         >
           <span /><span /><span />
         </button>
-        <Link to="/" className="logo" aria-label={`Ir al inicio de ${name}`}>
+        <Link to="/" className="logo site-header__logo" aria-label={`Ir al inicio de ${name}`}>
           {logoUrl
             ? <img src={logoUrl} alt={name} />
             : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
@@ -161,15 +161,16 @@ export default function Header() {
         {showSearch && searchForm('header-search-desktop')}
         <div className="header-actions">
           <Link to="/cuenta" className="account-header-link">{customer ? 'Mi cuenta' : 'Ingresar'}</Link>
+          {site?.contact_phone && <a className="site-header__wa" href={`https://wa.me/${String(site.contact_phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer"><span>WhatsApp</span></a>}
           {showSearch && <button className="mobile-search-button" type="button" aria-label="Buscar" onClick={() => setMenuOpen(true)}><SearchIcon /></button>}
-          {showCart && <button className="cart-button" onClick={() => navigate('/carrito')} aria-label={`Ver carrito${count > 0 ? `, ${count} productos` : ''}`}>
+          {showCart && <button className="cart-button site-cart" onClick={() => navigate('/carrito')} aria-label={`Ver carrito${count > 0 ? `, ${count} productos` : ''}`}>
             <CartIcon /><span className="cart-label">Carrito</span>
             {count > 0 && <span className="cart-badge">{count}</span>}
           </button>}
         </div>
       </div>
       <div className="header-nav-row">
-        <nav className="nav header-width" aria-label="Navegación principal">
+        <nav className="nav site-nav header-width" aria-label="Navegación principal">
           {navLinks.map((link) => (
             link.href.startsWith('http')
               ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={link.featured ? 'nav-all' : ''}>{link.label}</a>
@@ -177,7 +178,7 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      <div className={`mobile-menu ${menuOpen ? 'is-open' : ''}`} aria-hidden={!menuOpen}>
+      <div className={`mobile-menu site-mobile-menu ${menuOpen ? 'is-open' : ''}`} aria-hidden={!menuOpen}>
         <div className="mobile-menu-inner">
           {showSearch && searchForm('header-search-mobile')}
           <nav aria-label="Navegación móvil">

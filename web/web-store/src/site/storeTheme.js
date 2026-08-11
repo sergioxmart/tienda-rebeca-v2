@@ -1,12 +1,12 @@
 export const STORE_THEME_DEFAULTS = Object.freeze({
-  store_accent_color: '#FF6B35',
-  store_primary_color: '#0F2A47',
+  store_accent_color: '#B89A5E',
+  store_primary_color: '#1A1D21',
   store_surface_color: '#FFFFFF',
-  store_background_color: '#F7F8FA',
-  store_heading_color: '#0F2A47',
-  store_product_name_color: '#0F2A47',
-  store_price_color: '#0F2A47',
-  store_body_text_color: '#172536',
+  store_background_color: '#FAF7F2',
+  store_heading_color: '#1A1D21',
+  store_product_name_color: '#1A1D21',
+  store_price_color: '#B89A5E',
+  store_body_text_color: '#1A1D21',
 });
 
 const HEX_COLOR = /^#[0-9A-F]{6}$/i;
@@ -55,5 +55,9 @@ export function applyStoreTheme(config = {}) {
   root.style.setProperty('--color-accent-shadow', rgba(theme.store_accent_color, 0.22));
   root.style.setProperty('--color-primary-shadow', rgba(theme.store_primary_color, 0.1));
   root.style.setProperty('--color-focus-ring', rgba(theme.store_accent_color, 0.38));
+  root.style.setProperty('--cream', theme.store_background_color);
+  root.style.setProperty('--cream-2', rgba(theme.store_primary_color, 0.08));
+  root.style.setProperty('--gold', theme.store_accent_color);
+  root.style.setProperty('--black', theme.store_primary_color);
   return theme;
 }

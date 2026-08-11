@@ -76,6 +76,42 @@ const MODULE_SCHEMAS = {
       { key: 'title', label: 'Título de la sección', type: 'text' },
     ],
   },
+  carousel: {
+    label: 'Carrusel de productos',
+    description: 'Presentación editorial de productos destacados con navegación y autoplay.',
+    icon: '◈',
+    settings: [
+      { key: 'title', label: 'Título de la sección', type: 'text', defaultValue: 'Piezas destacadas' },
+      { key: 'source', label: 'Fuente', type: 'select', defaultValue: 'featured', options: [{ value: 'featured', label: 'Productos destacados' }, { value: 'all', label: 'Catálogo completo' }] },
+      { key: 'limit', label: 'Cantidad máxima', type: 'number', defaultValue: 6 },
+      { key: 'autoplay_ms', label: 'Autoplay (milisegundos)', type: 'number', defaultValue: 5500 },
+      { key: 'variant', label: 'Variante', type: 'select', defaultValue: 'classic', options: [{ value: 'classic', label: 'Clásica' }, { value: 'editorial', label: 'Editorial' }] },
+    ],
+  },
+  collections: {
+    label: 'Colecciones',
+    description: 'Grid visual con las categorías de la tienda.',
+    icon: '▦',
+    settings: [
+      { key: 'title', label: 'Título de la sección', type: 'text', defaultValue: 'Explora nuestras categorías' },
+      { key: 'variant', label: 'Variante', type: 'select', defaultValue: 'classic', options: [{ value: 'classic', label: 'Clásica' }, { value: 'editorial', label: 'Editorial' }] },
+    ],
+  },
+  text: {
+    label: 'Texto editorial',
+    description: 'Bloque de texto para manifiestos, promociones o información de marca.',
+    icon: '¶',
+    settings: [
+      { key: 'body', label: 'Contenido', type: 'textarea', placeholder: 'Escribe el contenido de la sección.' },
+      { key: 'align', label: 'Alineación', type: 'select', defaultValue: 'center', options: [{ value: 'left', label: 'Izquierda' }, { value: 'center', label: 'Centro' }, { value: 'right', label: 'Derecha' }] },
+    ],
+  },
+  contact: {
+    label: 'Contacto',
+    description: 'Bloque editorial con datos de contacto, horarios y redes sociales.',
+    icon: '✦',
+    settings: [],
+  },
   featured_products: {
     label: 'Productos destacados',
     description: 'Grid de productos con featured=TRUE.',

@@ -7,6 +7,7 @@ import { protect, recordAudit } from './_helpers.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const PAYMENT_METHODS = new Set(['transferencia', 'contraentrega', 'efectivo', 'tarjeta', 'otro']);
 
 function clean(value, max = 500) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -20,6 +21,11 @@ function id(value) {
 function integer(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number) : fallback;
+}
+
+function paymentMethod(value) {
+  const method = clean(value, 80).toLowerCase();
+  return PAYMENT_METHODS.has(method) ? method : 'otro';
 }
 
 function itemKey(item) {
@@ -136,11 +142,11 @@ export async function searchManualCustomers(req, res) {
     `SELECT c.id, c.email, c.name, c.phone,
             r.id AS reservation_id, r.reservation_number,
             r.product_id, r.variant_id, r.product_name,
-            r.requested_type, r.use_date, r.pickup_date, r.status AS reservation_status
+            r.requested_type, r.use_date, r.use_end_date, r.pickup_date, r.status AS reservation_status
        FROM customer_accounts c
        LEFT JOIN LATERAL (
          SELECT id, reservation_number, product_id, variant_id, product_name,
-                requested_type, use_date, pickup_date, status
+                requested_type, use_date, use_end_date, pickup_date, status
            FROM reservations
           WHERE customer_id = c.id AND status IN ('lead', 'pending', 'confirmed')
           ORDER BY created_at DESC LIMIT 1
@@ -153,7 +159,7 @@ export async function searchManualCustomers(req, res) {
     `SELECT NULL::integer AS id, customer_email AS email, customer_name AS name,
             customer_phone AS phone, id AS reservation_id, reservation_number,
             product_id, variant_id, product_name, requested_type, use_date,
-            pickup_date, status AS reservation_status
+            use_end_date, pickup_date, status AS reservation_status
        FROM reservations
       WHERE status = 'lead'
         AND (lower(customer_email) LIKE $1 OR lower(customer_name) LIKE $1 OR lower(customer_phone) LIKE $1)
@@ -168,7 +174,7 @@ export async function searchManualCustomers(req, res) {
 export async function listReservations(req, res) {
   const { rows } = await query(
     `SELECT id, reservation_number, product_name, variant_sku, requested_type,
-            customer_email, customer_name, customer_phone, use_date, pickup_date,
+            customer_email, customer_name, customer_phone, use_date, use_end_date, pickup_date,
             status, quoted_amount, payment_method, shipping_method, notes,
             created_at, updated_at
        FROM reservations
@@ -192,22 +198,23 @@ export async function createManualRecord(req, res) {
         const productId = id(reservation.product_id);
         const variantId = id(reservation.variant_id);
         const useDate = clean(reservation.use_date, 10);
+        const useEndDate = clean(reservation.use_end_date || useDate, 10);
         const pickupDate = clean(reservation.pickup_date, 10);
         const requestedType = ['alquiler', 'alquiler_nuevo'].includes(reservation.requested_type) ? reservation.requested_type : null;
-        if (!productId || !DATE_RE.test(useDate) || !DATE_RE.test(pickupDate) || !requestedType) return { error: 'invalid_reservation' };
+        if (!productId || !DATE_RE.test(useDate) || !DATE_RE.test(useEndDate) || !DATE_RE.test(pickupDate) || useEndDate < useDate || !requestedType) return { error: 'invalid_reservation' };
         const resolved = await resolveItems(client, [{ product_id: productId, variant_id: variantId, qty: 1 }]);
         if (resolved.error) return resolved;
         const item = resolved.items[0];
         const status = ['pending', 'confirmed'].includes(reservation.status) ? reservation.status : 'confirmed';
-        const start = useDate < pickupDate ? useDate : pickupDate;
-        const end = useDate < pickupDate ? pickupDate : useDate;
+        const start = [useDate, useEndDate, pickupDate].sort()[0];
+        const end = [useDate, useEndDate, pickupDate].sort().at(-1);
         const { rows: conflicts } = await client.query(
           `SELECT id, reservation_number FROM reservations
             WHERE id <> COALESCE($1, 0)
               AND product_id = $2
               AND (variant_id = $3 OR (variant_id IS NULL AND $3::integer IS NULL))
               AND status IN ('pending', 'confirmed')
-              AND NOT (GREATEST(use_date, pickup_date) < $4::date OR LEAST(use_date, pickup_date) > $5::date)
+              AND NOT (LEAST(use_date, pickup_date) > $5::date OR GREATEST(use_end_date, pickup_date) < $4::date)
             LIMIT 1`,
           [id(reservation.reservation_id), productId, variantId, start, end],
         );
@@ -219,14 +226,14 @@ export async function createManualRecord(req, res) {
                 SET customer_id = $1, product_id = $2, variant_id = $3,
                     product_name = $4, variant_sku = $5, requested_type = $6,
                     customer_email = $7, customer_name = $8, customer_phone = $9,
-                    use_date = $10, pickup_date = $11, status = $12,
-                    quoted_amount = $13, payment_method = $14, shipping_method = $15,
-                    notes = $16, lead_source = 'admin', updated_at = NOW()
-              WHERE id = $17 AND status = 'lead'
+                    use_date = $10, use_end_date = $11, pickup_date = $12, status = $13,
+                    quoted_amount = $14, payment_method = $15, shipping_method = $16,
+                    notes = $17, lead_source = 'admin', updated_at = NOW()
+              WHERE id = $18 AND status = 'lead'
               RETURNING *`,
             [customer.id, productId, variantId, item.productName, item.sku, requestedType,
-              customer.email, customer.name, customer.phone, useDate, pickupDate, status,
-              Math.max(0, integer(reservation.quoted_amount)), clean(reservation.payment_method, 80), clean(reservation.shipping_method, 80), clean(reservation.notes, 1000), leadId],
+              customer.email, customer.name, customer.phone, useDate, useEndDate, pickupDate, status,
+              Math.max(0, integer(reservation.quoted_amount)), paymentMethod(reservation.payment_method), clean(reservation.shipping_method, 80), clean(reservation.notes, 1000), leadId],
           );
           if (rows[0]) return { reservation: rows[0] };
         }
@@ -236,13 +243,13 @@ export async function createManualRecord(req, res) {
           `INSERT INTO reservations
              (id, reservation_number, customer_id, product_id, variant_id,
               product_name, variant_sku, requested_type, customer_email,
-              customer_name, customer_phone, use_date, pickup_date, status,
+              customer_name, customer_phone, use_date, use_end_date, pickup_date, status,
               quoted_amount, payment_method, shipping_method, notes, lead_source, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'admin', $19)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'admin', $20)
            RETURNING *`,
           [sequence[0].id, number, customer.id, productId, variantId, item.productName, item.sku,
-            requestedType, customer.email, customer.name, customer.phone, useDate, pickupDate, status,
-            Math.max(0, integer(reservation.quoted_amount)), clean(reservation.payment_method, 80), clean(reservation.shipping_method, 80), clean(reservation.notes, 1000), req.user?.id || null],
+            requestedType, customer.email, customer.name, customer.phone, useDate, useEndDate, pickupDate, status,
+            Math.max(0, integer(reservation.quoted_amount)), paymentMethod(reservation.payment_method), clean(reservation.shipping_method, 80), clean(reservation.notes, 1000), req.user?.id || null],
         );
         return { reservation: rows[0] };
       }
@@ -285,7 +292,7 @@ export async function createManualRecord(req, res) {
       await client.query(
         `INSERT INTO payments (order_id, provider, provider_transaction_id, status, amount, currency, payment_method, raw_response)
          VALUES ($1, 'manual', '', $2, $3, 'COP', $4, $5::jsonb)`,
-        [sequence[0].id, paymentStatus === 'paid' ? 'approved' : 'pending', total, clean(body.payment_method, 80), JSON.stringify({ source: 'admin_manual' })],
+        [sequence[0].id, paymentStatus === 'paid' ? 'approved' : 'pending', total, paymentMethod(body.payment_method), JSON.stringify({ source: 'admin_manual' })],
       );
       return { order: { id: sequence[0].id, order_number: orderNumber, status: orderStatus, total } };
     });

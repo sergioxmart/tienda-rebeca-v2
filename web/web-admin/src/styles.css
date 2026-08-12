@@ -339,10 +339,10 @@ p { margin: 0 0 12px; }
 .site-purchase-mode-row strong { color: var(--color-primary); font-size: 14px; }
 .site-purchase-mode-row span { margin-top: 4px; color: var(--color-muted); font-size: 12px; }
 .site-purchase-mode-help { margin: 10px 0 0; }
-.admin-switch { position: relative; flex: 0 0 50px; width: 50px; height: 28px; padding: 3px; border: 0; border-radius: 99px; background: #cbd5dc; cursor: pointer; transition: background .2s ease; }
-.admin-switch span { display: block; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(15,42,71,.22); transition: transform .2s ease; }
+.admin-switch { position: relative; display: flex; align-items: center; flex: 0 0 48px; width: 48px; height: 26px; box-sizing: border-box; overflow: hidden; padding: 2px; border: 0; border-radius: 99px; background: #cbd5dc; cursor: pointer; transition: background .2s ease; }
+.admin-switch span { display: block; flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(15,42,71,.22); transition: transform .2s ease; }
 .admin-switch.is-on { background: var(--color-accent); }
-.admin-switch.is-on span { transform: translateX(22px); }
+.admin-switch.is-on span { transform: translateX(20px); }
 .admin-switch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .admin-switch:disabled { opacity: .6; cursor: wait; }
 .background-upload-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; }

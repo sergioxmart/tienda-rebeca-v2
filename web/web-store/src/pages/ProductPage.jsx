@@ -40,7 +40,7 @@ export default function ProductPage() {
   const [reservationSaving, setReservationSaving] = useState(false);
   const [reservationError, setReservationError] = useState('');
   const [reservationLead, setReservationLead] = useState(null);
-  const [reservationForm, setReservationForm] = useState({ use_date: '', pickup_date: '', name: '', email: '', phone: '' });
+  const [reservationForm, setReservationForm] = useState({ use_date: '', use_end_date: '', pickup_date: '', name: '', email: '', phone: '' });
   const onlinePurchasesEnabled = site?.online_purchases_enabled !== false;
 
   useEffect(() => {
@@ -256,7 +256,7 @@ export default function ProductPage() {
       lines.splice(lines.length - 2, 0,
         '',
         `Datos de reserva (${requestedType === 'alquiler_nuevo' ? 'Alquiler como nuevo' : 'Alquiler'}):`,
-        `Fecha de uso: ${formatReservationDate(reservationForm.use_date)}`,
+        `Fecha de uso: ${formatReservationDate(reservationForm.use_date)} → ${formatReservationDate(reservationForm.use_end_date || reservationForm.use_date)}`,
         `Fecha de recogida: ${formatReservationDate(reservationForm.pickup_date)}`,
         `Nombre: ${reservationForm.name}`,
         `Correo: ${reservationForm.email}`,
@@ -409,7 +409,8 @@ export default function ProductPage() {
             <p>Completa estos datos para que Rebeca pueda confirmar disponibilidad y prepararte una cotización.</p>
             <form onSubmit={handleReservationSubmit}>
               <div className="reservation-form-grid">
-                <label>Fecha de uso<input className="input" type="date" required value={reservationForm.use_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_date: event.target.value }))} /></label>
+                <label>Inicio de uso<input className="input" type="date" required value={reservationForm.use_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_date: event.target.value }))} /></label>
+                <label>Fin de uso<input className="input" type="date" required min={reservationForm.use_date || undefined} value={reservationForm.use_end_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_end_date: event.target.value }))} /></label>
                 <label>Fecha de recogida<input className="input" type="date" required value={reservationForm.pickup_date} onChange={(event) => setReservationForm((current) => ({ ...current, pickup_date: event.target.value }))} /></label>
                 <label>Nombre completo<input className="input" type="text" required maxLength={160} value={reservationForm.name} onChange={(event) => setReservationForm((current) => ({ ...current, name: event.target.value }))} /></label>
                 <label>Correo electrónico<input className="input" type="email" required maxLength={254} value={reservationForm.email} onChange={(event) => setReservationForm((current) => ({ ...current, email: event.target.value }))} /></label>

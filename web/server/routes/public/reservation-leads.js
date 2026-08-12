@@ -24,13 +24,14 @@ export async function createReservationLead(req, res) {
   const email = clean(body?.email, 254).toLowerCase();
   const phone = clean(body?.phone, 40);
   const useDate = clean(body?.use_date, 10);
+  const useEndDate = clean(body?.use_end_date || useDate, 10);
   const pickupDate = clean(body?.pickup_date, 10);
   const requestedType = body?.requested_type;
 
   if (!productId || !name || !phone || !EMAIL_RE.test(email)) {
     return json(res, 400, { ok: false, error: 'invalid_lead_contact', message: 'Completa nombre, correo y teléfono.' });
   }
-  if (!DATE_RE.test(useDate) || !DATE_RE.test(pickupDate)) {
+  if (!DATE_RE.test(useDate) || !DATE_RE.test(useEndDate) || !DATE_RE.test(pickupDate) || useEndDate < useDate) {
     return json(res, 400, { ok: false, error: 'invalid_reservation_date', message: 'Revisa las fechas de uso y recogida.' });
   }
   if (!['alquiler', 'alquiler_nuevo'].includes(requestedType)) {
@@ -82,11 +83,11 @@ export async function createReservationLead(req, res) {
           `UPDATE reservations
               SET customer_id = $1, product_name = $2, variant_sku = $3,
                   requested_type = $4, customer_name = $5, customer_phone = $6,
-                  use_date = $7, pickup_date = $8, quoted_amount = $9,
+                  use_date = $7, use_end_date = $8, pickup_date = $9, quoted_amount = $10,
                   updated_at = NOW()
-            WHERE id = $10
+            WHERE id = $11
             RETURNING id, reservation_number, status`,
-          [customerId, product.name, product.variant_sku || '', requestedType, name, phone, useDate, pickupDate, Math.max(0, Math.round(Number(product.quoted_amount) || 0)), existing[0].id],
+          [customerId, product.name, product.variant_sku || '', requestedType, name, phone, useDate, useEndDate, pickupDate, Math.max(0, Math.round(Number(product.quoted_amount) || 0)), existing[0].id],
         );
         reservation = rows[0];
       } else {
@@ -96,13 +97,13 @@ export async function createReservationLead(req, res) {
           `INSERT INTO reservations
              (id, reservation_number, customer_id, product_id, variant_id,
               product_name, variant_sku, requested_type, customer_email,
-              customer_name, customer_phone, use_date, pickup_date,
+              customer_name, customer_phone, use_date, use_end_date, pickup_date,
               status, quoted_amount, lead_source)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'lead', $14, 'store')
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'lead', $15, 'store')
            RETURNING id, reservation_number, status`,
           [sequence[0].id, reservationNumber, customerId, productId, product.variant_id || null,
             product.name, product.variant_sku || '', requestedType, email, name, phone,
-            useDate, pickupDate, Math.max(0, Math.round(Number(product.quoted_amount) || 0))],
+            useDate, useEndDate, pickupDate, Math.max(0, Math.round(Number(product.quoted_amount) || 0))],
         );
         reservation = rows[0];
       }

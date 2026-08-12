@@ -157,17 +157,21 @@ test('content-type correcto por extensión', async () => {
   } finally { srv.close(); rmSync(dir, { recursive: true, force: true }); }
 });
 
+// El base tiene que estar en la forma nativa de la plataforma: `safeJoin`
+// compara con `startsWith()` contra la salida de `join()`, así que un
+// '/tmp/store' hardcodeado da null en Windows (join devuelve backslashes) y
+// el test falla sin que haya bug. `join(tmpdir(), ...)` sirve en ambos.
+const SAFE_JOIN_BASE = join(tmpdir(), 'store');
+
 test('safeJoin: null si el path sale del base (path traversal)', async () => {
   const { safeJoin } = await import('../lib/static.js');
-  const base = '/tmp/store';
-  assert.equal(safeJoin(base, '/../../../etc/passwd'), null);
-  assert.equal(safeJoin(base, '/foo/../../escape'), null);
+  assert.equal(safeJoin(SAFE_JOIN_BASE, '/../../../etc/passwd'), null);
+  assert.equal(safeJoin(SAFE_JOIN_BASE, '/foo/../../escape'), null);
 });
 
 test('safeJoin: devuelve el path normalizado si está dentro del base', async () => {
   const { safeJoin } = await import('../lib/static.js');
-  const base = '/tmp/store';
-  const out = safeJoin(base, '/index.html');
+  const out = safeJoin(SAFE_JOIN_BASE, '/index.html');
   assert.ok(out, 'debería devolver un path');
   assert.match(out, /index\.html$/);
 });

@@ -12,7 +12,7 @@
     "dev:server": "npm run dev --workspace=server",
     "dev:store": "npm run dev --workspace=web-store",
     "dev:admin": "npm run dev --workspace=web-admin",
-    "dev:webhook": "WEBHOOK_SECRET=${WEBHOOK_SECRET:-test_secret} node webhook/server.mjs",
+    "dev:webhook": "node webhook/server.mjs",
     "dev": "concurrently -k -n server,store,admin -c blue,green,yellow \"npm run dev:server\" \"npm run dev:store\" \"npm run dev:admin\"",
     "build:store": "npm run build --workspace=web-store",
     "build:admin": "npm run build --workspace=web-admin",
@@ -23,7 +23,7 @@
     "create-admin": "node --env-file-if-exists=.env server/scripts/create-admin.js",
     "test": "npm run test:core && npm run test:web",
     "test:core": "node --env-file=.env --test --test-reporter=spec ../core/test/*.test.js",
-    "test:web": "node --env-file=.env --test --test-reporter=spec ./test/*.test.js"
+    "test:web": "node --env-file=.env --test --test-concurrency=1 --test-reporter=spec ./test/*.test.js"
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

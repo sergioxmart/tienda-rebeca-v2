@@ -1,8 +1,13 @@
 # Setup local de desarrollo
 
-> **Última actualización: 2026-08-06**
+> **Última actualización: 2026-08-11**
 
 Pasos para levantar el proyecto en tu máquina desde cero.
+
+> Los outputs de ejemplo de abajo dicen `techstore` porque el proyecto
+> nació con ese nombre; el tag del logger sigue siendo `[techstore]`.
+> Los valores reales de rol y DB salen de `web/.env.example`
+> (`PGUSER=sergio`, `PGDATABASE=rebecaandrade_v2`).
 
 ## Requisitos
 
@@ -14,9 +19,11 @@ Pasos para levantar el proyecto en tu máquina desde cero.
 ## 1. Clonar el repo
 
 ```bash
-git clone git@github.com:sergioxmart/TechStore.git
-cd TechStore
+git clone <url-del-repo>
+cd tienda-rebeca-v2
 ```
+
+> TODO: fijar la URL real del remoto cuando se confirme.
 
 ## 2. Instalar dependencias
 
@@ -162,12 +169,20 @@ npm run dev:admin   # Vite + React admin (puerto 5174)
 | `PORT`        | `3000`             |                                  |
 | `PGHOST`      | `localhost`        |                                  |
 | `PGPORT`      | `5432`             |                                  |
-| `PGUSER`      | `techstore`        | Owner de la DB (creado por `npm run db:setup`) |
+| `PGUSER`      | `sergio`           | Owner de la DB (creado por `npm run db:setup`) |
 | `PGPASSWORD`  | (requerido)        | NO commitear                     |
-| `PGDATABASE`  | `techstore`        | Creada por `npm run db:setup`    |
+| `PGDATABASE`  | `rebecaandrade_v2` | Creada por `npm run db:setup`    |
 | `PG_SUPERUSER`| (sin default)      | Opcional. Superuser alternativo para `db:setup` |
 | `JWT_SECRET`  | (requerido)        | 32 bytes hex                     |
 | `LOG_LEVEL`   | `info`             | `debug` para más verbosidad      |
+
+**La lista completa y actual de variables está en
+`web/.env.example`** — esa es la fuente de verdad, no esta tabla.
+Incluye además: `ORDER_PENDING_TTL_MINUTES`,
+`ORDER_EXPIRATION_SWEEP_SECONDS`, `MAX_UPLOAD_BYTES`,
+`CSP_FRAME_ANCESTORS` (orígenes de la preview del Builder), las claves
+de **ePayco** y **Mercado Pago**, y las de **Resend** para los correos.
+Sin las de Resend, el OTP del portal de cliente no llega.
 
 ## Troubleshooting
 

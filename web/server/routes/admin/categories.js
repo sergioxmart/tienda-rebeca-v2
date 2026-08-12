@@ -15,13 +15,28 @@ import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
 import { protect, recordAudit, slugify, validators, validate, notFound, conflict } from './_helpers.js';
 
+const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function optionalHexColor(value, field) {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !HEX_COLOR_RE.test(value.trim())) {
+    return `${field} debe ser un color HEX válido`;
+  }
+  return null;
+}
+
+function normalizeHexColor(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return value.trim().toUpperCase();
+}
+
 // --- Handlers -------------------------------------------------------------
 // Exportados con `export` además del array `routes` para que los tests
 // unitarios puedan llamarlos sin pasar por `protect`.
 
 export async function listCategories(req, res) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, display_order, active,
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, display_order, active,
             created_at, updated_at
        FROM categories
        ORDER BY display_order, name`,
@@ -31,7 +46,7 @@ export async function listCategories(req, res) {
 
 export async function getCategory(req, res, id) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, display_order, active,
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, display_order, active,
             created_at, updated_at
        FROM categories WHERE id = $1`,
     [id],
@@ -53,13 +68,19 @@ export async function createCategory(req, res) {
       && !validate(res, p, [validators.int(p.display_order, 'display_order')])) {
     return;
   }
+  if (!validate(res, p, [
+    optionalHexColor(p.accent_color, 'accent_color'),
+    optionalHexColor(p.background_color, 'background_color'),
+  ])) return;
 
   try {
     const { rows } = await query(
-      `INSERT INTO categories (slug, name, description, hero_image, display_order, active)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, slug, name, description, hero_image, display_order, active, created_at, updated_at`,
-      [slug, p.name.trim(), p.description ?? '', p.hero_image ?? null, p.display_order ?? 0, p.active ?? true],
+      `INSERT INTO categories (slug, name, description, hero_image, accent_color, background_color, display_order, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, slug, name, description, hero_image, accent_color, background_color, display_order, active, created_at, updated_at`,
+      [slug, p.name.trim(), p.description ?? '', p.hero_image ?? null,
+        normalizeHexColor(p.accent_color), normalizeHexColor(p.background_color),
+        p.display_order ?? 0, p.active ?? true],
     );
     await recordAudit(req.user?.id, 'category.create', req.ip, { id: rows[0].id, slug });
     log.info('category created', { id: rows[0].id, slug, by: req.user?.email });
@@ -80,6 +101,8 @@ export async function updateCategory(req, res, id) {
     validators.optionalString(p.slug, 'slug', { max: 60 }),
     validators.optionalString(p.description, 'description', { max: 1000 }),
     p.hero_image !== undefined && p.hero_image !== null && validators.optionalString(p.hero_image, 'hero_image', { max: 500 }),
+    optionalHexColor(p.accent_color, 'accent_color'),
+    optionalHexColor(p.background_color, 'background_color'),
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),
     p.active !== undefined && validators.bool(p.active, 'active'),
   ])) return;
@@ -91,6 +114,8 @@ export async function updateCategory(req, res, id) {
   if (p.slug !== undefined)          { fields.push(`slug = $${i++}`);          values.push(p.slug); }
   if (p.description !== undefined)   { fields.push(`description = $${i++}`);   values.push(p.description); }
   if (p.hero_image !== undefined)    { fields.push(`hero_image = $${i++}`);    values.push(p.hero_image); }
+  if (p.accent_color !== undefined)  { fields.push(`accent_color = $${i++}`);  values.push(normalizeHexColor(p.accent_color)); }
+  if (p.background_color !== undefined) { fields.push(`background_color = $${i++}`); values.push(normalizeHexColor(p.background_color)); }
   if (p.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(p.display_order); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);        values.push(p.active); }
   if (fields.length === 0) return json(res, 400, { ok: false, error: 'nothing_to_update' });
@@ -99,7 +124,7 @@ export async function updateCategory(req, res, id) {
   try {
     const { rows } = await query(
       `UPDATE categories SET ${fields.join(', ')} WHERE id = $${i}
-        RETURNING id, slug, name, description, hero_image, display_order, active, created_at, updated_at`,
+        RETURNING id, slug, name, description, hero_image, accent_color, background_color, display_order, active, created_at, updated_at`,
       values,
     );
     await recordAudit(req.user?.id, 'category.update', req.ip, { id, fields: Object.keys(p) });

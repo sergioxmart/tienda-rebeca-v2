@@ -13,7 +13,29 @@ import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
 
-const EMPTY = { name: '', slug: '', description: '', hero_image: '', active: true };
+const EMPTY = { name: '', slug: '', description: '', hero_image: '', accent_color: '', background_color: '', active: true };
+const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function pickerColor(value, fallback) {
+  if (!HEX_COLOR_RE.test(value || '')) return fallback;
+  if (value.length === 4) {
+    return `#${value.slice(1).split('').map((character) => character + character).join('')}`;
+  }
+  return value;
+}
+
+function CategoryColorField({ id, label, value, onChange, fallback }) {
+  return (
+    <div className="form-group">
+      <label htmlFor={id}>{label} <span style={{ color: 'var(--color-muted)' }}>(opcional)</span></label>
+      <div className="color-field">
+        <input id={id} className="color-picker" type="color" value={pickerColor(value, fallback)} onChange={(e) => onChange(e.target.value.toUpperCase())} aria-label={`Elegir ${label.toLowerCase()}`} />
+        <input className="input color-hex-input" type="text" inputMode="text" pattern="#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})" value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} placeholder={fallback} />
+        <span className="color-preview" style={{ background: pickerColor(value, fallback) }} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
 
 function slugify(s) {
   return s.toString().toLowerCase().trim()
@@ -57,6 +79,8 @@ export default function Categories() {
     slug: c.slug,
     description: c.description || '',
     hero_image: c.hero_image || '',
+    accent_color: c.accent_color || '',
+    background_color: c.background_color || '',
     active: c.active,
   });
 
@@ -90,6 +114,8 @@ export default function Categories() {
         slug: editing.slug || slugify(editing.name),
         description: editing.description || '',
         hero_image: editing.hero_image || null,
+        accent_color: editing.accent_color || null,
+        background_color: editing.background_color || null,
         display_order: editing.id ? undefined : items.length,
         active: !!editing.active,
       };
@@ -210,6 +236,22 @@ export default function Categories() {
               <textarea className="textarea" maxLength={1000}
                         value={editing.description}
                         onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
+            </div>
+            <div className="form-row">
+              <CategoryColorField
+                id="category-accent-color"
+                label="Color de acento"
+                value={editing.accent_color}
+                onChange={(accent_color) => setEditing({ ...editing, accent_color })}
+                fallback="#B89A5E"
+              />
+              <CategoryColorField
+                id="category-background-color"
+                label="Color de fondo"
+                value={editing.background_color}
+                onChange={(background_color) => setEditing({ ...editing, background_color })}
+                fallback="#FAF7F2"
+              />
             </div>
             <div className="form-row">
               <div className="form-group">

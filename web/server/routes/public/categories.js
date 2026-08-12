@@ -12,7 +12,7 @@ import { notFound } from './_helpers.js';
 
 export async function listCategories(req, res) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, display_order
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, display_order
        FROM categories
        WHERE active = TRUE
        ORDER BY display_order, name`,
@@ -23,7 +23,7 @@ export async function listCategories(req, res) {
 
 export async function getCategoryBySlug(req, res, slug) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, display_order
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, display_order
        FROM categories WHERE slug = $1 AND active = TRUE`,
     [slug],
   );

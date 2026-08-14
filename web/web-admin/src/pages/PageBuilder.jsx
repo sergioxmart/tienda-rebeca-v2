@@ -37,7 +37,7 @@ const MODULE_SCHEMAS = {
       { key: 'image_url',label: 'Imagen de fondo (URL)', type: 'url', placeholder: 'Opcional: imagen que cubre el fondo' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
-        { value: 'abstract', label: 'Abstracto TechStore' },
+        { value: 'abstract', label: 'Abstracto Rebeca Andrade' },
         { value: 'product', label: 'Producto real del catálogo' },
         { value: 'image', label: 'Imagen personalizada' },
       ] },

@@ -50,7 +50,7 @@ export default function Login() {
   const [bgPositionX, setBgPositionX] = useState(50);
   const [bgPositionY, setBgPositionY] = useState(50);
   const [bgZoom, setBgZoom] = useState(100);
-  const [storeName, setStoreName] = useState('TechStore');
+  const [storeName, setStoreName] = useState('Rebeca Andrade');
   const [logoUrl, setLogoUrl] = useState(null);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function Login() {
           document.title = `${c.site_name} · Admin`;
         }
         if (typeof c.logo_url === 'string' && c.logo_url) setLogoUrl(c.logo_url);
-      } catch { /* fallback al tema TechStore */ }
+      } catch { /* fallback a la marca Rebeca Andrade */ }
     })();
   }, []);
 
@@ -313,7 +313,7 @@ export default function Login() {
               <div className="login-actions"><button type="button" className="login-link login-link-button" onClick={() => { setStep('credentials'); setEmail(''); setPassword(''); setTotpCode(''); setError(null); setNotice(null); }}>Cambiar cuenta</button></div>
             </>
           )}
-          <div className="login-footer">Acceso protegido · TechStore</div>
+          <div className="login-footer">Acceso protegido · {storeName}</div>
         </form>
       </div>
     </div>

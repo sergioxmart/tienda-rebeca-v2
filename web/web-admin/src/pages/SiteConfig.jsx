@@ -13,7 +13,7 @@ import Modal from '../components/Modal.jsx';
 import { ADMIN_BACKGROUND_DEFAULTS, ADMIN_THEME_DEFAULTS, ADMIN_THEME_FIELDS, applyAdminTheme } from '../adminTheme.js';
 
 const KNOWN_KEYS = [
-  { key: 'site_name',          label: 'Nombre de la tienda',     type: 'text',     placeholder: 'TechStore Colombia' },
+  { key: 'site_name',          label: 'Nombre de la tienda',     type: 'text',     placeholder: 'Rebeca Andrade' },
   { key: 'contact_email',      label: 'Email de contacto',       type: 'email',    placeholder: '[email protected]' },
   { key: 'contact_phone',      label: 'Teléfono / WhatsApp',     type: 'tel',      placeholder: '+57 300 000 0000' },
   { key: 'contact_address',    label: 'Dirección',               type: 'text',     placeholder: 'Calle 100 #15-20, Bogotá' },

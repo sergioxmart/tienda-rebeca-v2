@@ -14,6 +14,7 @@ export const BUILDER_CONFIG_KEYS = [
   'contact_address', 'contact_instagram', 'contact_facebook', 'admin_login_bg',
   'navbar_enabled', 'navbar_announcement', 'navbar_show_announcement',
   'navbar_show_search', 'navbar_show_cart', 'navbar_show_categories', 'navbar_links',
+  'navbar_logo_mode', 'navbar_logo_text', 'navbar_logo_font', 'navbar_mobile_logo_alignment',
   'navbar_custom_code_enabled', 'navbar_custom_code',
   'store_accent_color', 'store_primary_color', 'store_surface_color', 'store_background_color',
   'store_heading_color', 'store_product_name_color', 'store_price_color', 'store_body_text_color',

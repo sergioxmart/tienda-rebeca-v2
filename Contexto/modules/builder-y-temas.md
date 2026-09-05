@@ -1,6 +1,6 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-08-11**
+> **Última actualización: 2026-09-05**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
@@ -28,6 +28,11 @@ guardar/exportar el resultado completo como **tema**. Endpoints en
 - **Tema** = snapshot de la lista ordenada de `page_modules` + un subset
   de `site_config` (`BUILDER_CONFIG_KEYS`: nombre del sitio, contacto,
   navbar, colores de tienda, fondo del login admin).
+- La configuración del Nav Bar se edita en un modal del Builder. Incluye
+  visibilidad, enlaces, código personalizado y una alternativa de logo
+  textual con familia tipográfica predefinida; las claves
+  `navbar_logo_mode`, `navbar_logo_text` y `navbar_logo_font` viajan en el
+  mismo subset de `site_config`.
 
 ## Agregar un tipo de módulo nuevo (toca 3 archivos)
 

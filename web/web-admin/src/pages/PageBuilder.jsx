@@ -262,6 +262,10 @@ const NAV_DEFAULTS = {
   navbar_show_cart: true,
   navbar_show_categories: true,
   navbar_links: [],
+  navbar_logo_mode: 'image',
+  navbar_logo_text: 'Rebeca Andrade',
+  navbar_logo_font: 'display',
+  navbar_mobile_logo_alignment: 'left',
   navbar_custom_code_enabled: false,
   navbar_custom_code: '',
 };
@@ -652,13 +656,45 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
   );
 }
 
-function NavbarSettings({ navSettings, navSaving, setNavValue, updateNavLink, addNavLink, removeNavLink, saveNavSettings }) {
+function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   return (
-    <div className="builder-module-details builder-navbar-settings">
+    <div className="builder-navbar-settings">
       <div className="builder-navbar-settings-heading">
         <div><span className="builder-kicker">Configuración del módulo</span><h3>Nav Bar de la tienda</h3><p>Estos cambios se guardan en el borrador y solo llegan a 5173 al publicar.</p></div>
-        <button className="btn btn-primary btn-sm" type="button" onClick={saveNavSettings} disabled={navSaving}>{navSaving ? <span className="spinner" /> : 'Guardar Navbar'}</button>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Tipo de logo</label>
+          <select className="select" value={navSettings.navbar_logo_mode} onChange={(e) => setNavValue('navbar_logo_mode', e.target.value)}>
+            <option value="image">Usar logo cargado</option>
+            <option value="text">Usar texto de marca</option>
+          </select>
+        </div>
+        {navSettings.navbar_logo_mode === 'text' && (
+          <div className="form-group">
+            <label>Texto del logo</label>
+            <input className="input" value={navSettings.navbar_logo_text} onChange={(e) => setNavValue('navbar_logo_text', e.target.value)} placeholder="Rebeca Andrade" />
+          </div>
+        )}
+      </div>
+      {navSettings.navbar_logo_mode === 'text' && (
+        <div className="form-group">
+          <label>Fuente del texto</label>
+          <select className="select" value={navSettings.navbar_logo_font} onChange={(e) => setNavValue('navbar_logo_font', e.target.value)}>
+            <option value="display">Editorial · fuente de la tienda</option>
+            <option value="serif">Clásica · serif</option>
+            <option value="sans">Limpia · sans serif</option>
+            <option value="script">Manuscrita · cursiva</option>
+          </select>
+        </div>
+      )}
+      <div className="form-group">
+        <label>Ubicación del logo en móvil</label>
+        <select className="select" value={navSettings.navbar_mobile_logo_alignment} onChange={(e) => setNavValue('navbar_mobile_logo_alignment', e.target.value)}>
+          <option value="left">A la izquierda</option>
+          <option value="center">Centrado</option>
+        </select>
       </div>
       <label className="builder-checkbox-field builder-navbar-custom-toggle">
         <input type="checkbox" checked={customCodeEnabled} onChange={(e) => setNavValue('navbar_custom_code_enabled', e.target.checked)} />
@@ -710,7 +746,8 @@ export default function PageBuilder() {
   const [hasDraft, setHasDraft] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [modalTab, setModalTab] = useState('edit');
-  const [navbarExpanded, setNavbarExpanded] = useState(false);
+  const [navbarOpen, setNavbarOpen] = useState(false);
+  const [savedNavSettings, setSavedNavSettings] = useState(NAV_DEFAULTS);
   const [globalStylesOpen, setGlobalStylesOpen] = useState(false);
   const [globalStyles, setGlobalStyles] = useState(STORE_THEME_DEFAULTS);
   const [savedGlobalStyles, setSavedGlobalStyles] = useState(STORE_THEME_DEFAULTS);
@@ -730,6 +767,7 @@ export default function PageBuilder() {
       const config = draft.site_config_subset || {};
       const normalizedStyles = normalizeStoreTheme(config);
       setNavSettings((current) => ({ ...current, ...config, navbar_links: normalizeNavLinks(config.navbar_links ?? current.navbar_links) }));
+      setSavedNavSettings((current) => ({ ...current, ...config, navbar_links: normalizeNavLinks(config.navbar_links ?? current.navbar_links) }));
       setGlobalStyles(normalizedStyles);
       setSavedGlobalStyles(normalizedStyles);
       setReorderDirty(false);
@@ -839,7 +877,11 @@ export default function PageBuilder() {
     try {
       const next = { ...navSettings, navbar_links: navSettings.navbar_links.filter((link) => link.label.trim() && link.href.trim()) };
       setNavSettings(next);
-      if (await persistDraft(modules, next)) toast.success('Navbar guardado en el borrador');
+      if (await persistDraft(modules, next)) {
+        setSavedNavSettings(next);
+        setNavbarOpen(false);
+        toast.success('Navbar guardado en el borrador');
+      }
     } catch (err) {
       toast.error('No se pudo guardar el navbar', err.message);
     } finally {
@@ -908,10 +950,18 @@ export default function PageBuilder() {
   const toggleNavbar = async () => {
     const nextNav = { ...navSettings, navbar_enabled: navSettings.navbar_enabled === false };
     setNavSettings(nextNav);
-    await persistDraft(modules, nextNav);
+    if (await persistDraft(modules, nextNav)) setSavedNavSettings(nextNav);
   };
 
-  const configureNavbar = () => setNavbarExpanded((expanded) => !expanded);
+  const configureNavbar = () => {
+    setNavSettings(savedNavSettings);
+    setNavbarOpen(true);
+  };
+  const closeNavbar = () => {
+    if (navSaving) return;
+    setNavSettings(savedNavSettings);
+    setNavbarOpen(false);
+  };
 
   const handleDelete = async () => {
     const nextModules = modules.filter((module) => module.id !== deleting.id);
@@ -979,15 +1029,6 @@ export default function PageBuilder() {
           disableUp
           disableDown
           disableDelete
-          details={navbarExpanded && <NavbarSettings
-            navSettings={navSettings}
-            navSaving={navSaving}
-            setNavValue={setNavValue}
-            updateNavLink={updateNavLink}
-            addNavLink={addNavLink}
-            removeNavLink={removeNavLink}
-            saveNavSettings={saveNavSettings}
-          />}
         />
         {modules.map((m, idx) => {
           const sch = MODULE_SCHEMAS[m.type];
@@ -1030,6 +1071,29 @@ export default function PageBuilder() {
         }
       >
         <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} />
+      </Modal>
+
+      <Modal
+        open={navbarOpen}
+        onClose={closeNavbar}
+        size="lg"
+        title="Configurar Nav Bar"
+        footer={
+          <>
+            <button className="btn" type="button" onClick={closeNavbar} disabled={navSaving}>Cancelar</button>
+            <button className="btn btn-primary" type="button" onClick={saveNavSettings} disabled={navSaving}>
+              {navSaving ? <span className="spinner" /> : 'Guardar Nav Bar'}
+            </button>
+          </>
+        }
+      >
+        <NavbarSettings
+          navSettings={navSettings}
+          setNavValue={setNavValue}
+          updateNavLink={updateNavLink}
+          addNavLink={addNavLink}
+          removeNavLink={removeNavLink}
+        />
       </Modal>
 
       <Modal

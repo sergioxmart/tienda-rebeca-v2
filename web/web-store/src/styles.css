@@ -746,7 +746,8 @@ p { margin: 0 0 12px; }
 .site-header .site-nav { flex: 1 1 auto; min-width: 0; justify-content: center; padding: 0 12px; }
 .site-header .site-cart { width: 36px; min-height: 36px; padding: 0; border-radius: 50%; color: var(--color-primary); background: transparent; border-color: rgba(26,29,33,.18); }
 .site-header .cart-label { display: none; }
-.site-header__wa { display: inline-flex; align-items: center; justify-content: center; padding: 9px 16px; border-radius: 999px; color: #fff; background: var(--color-accent); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.site-header__wa { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 16px; border-radius: 999px; color: #fff; background: var(--color-accent); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.site-header__wa svg { display: block; width: 18px; height: 18px; flex: 0 0 auto; fill: currentColor; }
 .site-header .site-nav { max-width: none; min-height: 42px; justify-content: center; gap: 25px; padding: 0 12px; }
 .site-header .site-nav a { padding: 10px 0 12px; color: var(--color-muted); font-size: 10px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; }
 .site-header .site-nav a:hover, .site-header .site-nav a.nav-all { color: var(--color-primary); }
@@ -773,9 +774,11 @@ p { margin: 0 0 12px; }
 @media (max-width: 760px) {
   .site-header .header-inner { min-height: 64px; padding: 12px 16px; }
   .site-header .menu-toggle { order: -1; width: 36px; height: 36px; border-radius: 6px; background: transparent; }
+  .site-header .header-actions { margin-left: auto; }
   .site-header .account-header-link { display: none; }
-  .site-header__wa { padding: 8px; font-size: 0; }
-  .site-header__wa::before { content: 'WA'; font-size: 10px; }
+  .site-header__wa { width: 36px; min-height: 36px; padding: 0; border-radius: 50%; }
+  .site-header__wa::before { content: none; }
+  .site-header__wa-label { display: none; }
   .site-header .site-nav { display: none; }
   .site-header .mobile-menu.site-mobile-menu { top: 100%; max-height: 0; padding: 0; background: var(--color-surface); }
   .site-header .mobile-menu.site-mobile-menu.is-open { max-height: calc(100vh - 64px); padding: 12px 16px; }

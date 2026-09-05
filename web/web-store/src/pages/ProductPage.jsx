@@ -68,19 +68,35 @@ export default function ProductPage() {
     }));
   }, [product]);
 
-  // Encontrar la variant que matchea la selección actual
-  const matchedVariant = useMemo(() => {
-    if (!product?.variants?.length) return null;
-    const sel = Object.entries(selected).filter(([, valueId]) => valueId !== '' && valueId !== null && valueId !== undefined);
-    if (sel.length === 0) return null;
-    return product.variants.find((v) => {
-      const avs = v.attribute_values || [];
-      if (avs.length !== sel.length) return false;
-      return sel.every(([attrId, valueId]) =>
-        avs.some((x) => x.attribute_id === Number(attrId) && x.attribute_value_id === Number(valueId))
+  const selectedEntries = useMemo(
+    () => Object.entries(selected)
+      .filter(([, valueId]) => valueId !== '' && valueId !== null && valueId !== undefined)
+      .map(([attributeId, valueId]) => [Number(attributeId), Number(valueId)]),
+    [selected],
+  );
+
+  // Variantes compatibles con la selección parcial. Esta lista solo alimenta
+  // la previsualización; no habilita la compra de una combinación incompleta.
+  const candidateVariants = useMemo(() => {
+    if (!product?.variants?.length || selectedEntries.length === 0) return [];
+    return product.variants.filter((variant) => {
+      const attributeValues = variant.attribute_values || [];
+      return selectedEntries.every(([attributeId, valueId]) =>
+        attributeValues.some((item) =>
+          Number(item.attribute_id) === attributeId
+          && Number(item.attribute_value_id) === valueId
+        )
       );
-    }) || null;
-  }, [product, selected]);
+    });
+  }, [product, selectedEntries]);
+
+  // La variante exacta sigue siendo la única válida para comprar o reservar.
+  const matchedVariant = useMemo(() => {
+    if (selectedEntries.length === 0) return null;
+    return candidateVariants.find((variant) =>
+      (variant.attribute_values || []).length === selectedEntries.length
+    ) || null;
+  }, [candidateVariants, selectedEntries]);
 
   // Precio y stock efectivos
   // Antes de que el cliente elija, usamos la primera variante activa como
@@ -89,10 +105,12 @@ export default function ProductPage() {
   const defaultVariant = product?.variants?.find((variant) => Number(variant.stock) > 0)
     || product?.variants?.[0]
     || null;
-  // La variante exacta depende del estado `selected`; al cambiar cualquier
-  // atributo este valor cambia y fuerza la actualización de precio, stock,
-  // descripción y multimedia en el mismo render.
-  const displayVariant = matchedVariant || defaultVariant;
+  // Para una selección parcial usamos una candidata compatible como referencia
+  // visual. La variante exacta sigue teniendo prioridad cuando ya existe.
+  const previewVariant = candidateVariants.find((variant) => Number(variant.stock) > 0)
+    || candidateVariants[0]
+    || null;
+  const displayVariant = matchedVariant || previewVariant || defaultVariant;
   const effectivePrice = displayVariant && Number(displayVariant.price) > 0
     ? displayVariant.price
     : product?.base_price;
@@ -116,7 +134,29 @@ export default function ProductPage() {
   const remainingStock = selectedStock === null ? 0 : Math.max(0, selectedStock - cartQty);
   const maxQty = Math.min(99, remainingStock);
   const canAdd = hasSelectedVariant && remainingStock > 0 && qty <= maxQty;
-  const activeMedia = displayVariant?.media?.length ? displayVariant.media : (product?.media || []);
+  const candidateMedia = useMemo(() => {
+    if (selectedEntries.length === 0 || candidateVariants.length === 0) return [];
+
+    const seen = new Set();
+    const media = [];
+    for (const variant of candidateVariants) {
+      for (const item of variant.media || []) {
+        const key = item.id !== null && item.id !== undefined
+          ? `id:${item.id}`
+          : `${item.kind || ''}:${item.url || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        media.push(item);
+      }
+    }
+    return media.sort((a, b) =>
+      Number(a.display_order || 0) - Number(b.display_order || 0)
+    );
+  }, [candidateVariants, selectedEntries]);
+
+  const activeMedia = candidateMedia.length > 0
+    ? candidateMedia
+    : (displayVariant?.media?.length ? displayVariant.media : (product?.media || []));
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
   const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
   const image = selectedGalleryImage?.url || product?.image_url || product?.thumb_url;
@@ -133,7 +173,7 @@ export default function ProductPage() {
   useEffect(() => {
     setActiveImageId(null);
     setZoom((current) => ({ ...current, visible: false }));
-  }, [displayVariant?.id, product?.id]);
+  }, [displayVariant?.id, product?.id, selected]);
 
   useEffect(() => {
     if (!rentalSelected) {

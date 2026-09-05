@@ -6,7 +6,7 @@
 //   PATCH  /api/admin/categories/:id    cualquiera de los anteriores
 //   DELETE /api/admin/categories/:id
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
@@ -57,6 +57,7 @@ export default function Categories() {
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [moving, setMoving] = useState(false);
+  const movingRef = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -87,20 +88,21 @@ export default function Categories() {
   const moveSelected = async (direction) => {
     const index = items.findIndex((item) => item.id === selectedId);
     const targetIndex = index + direction;
-    if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
-    const current = items[index];
-    const target = items[targetIndex];
+    if (movingRef.current || index < 0 || targetIndex < 0 || targetIndex >= items.length) return;
+    const reordered = [...items];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    movingRef.current = true;
     setMoving(true);
     try {
-      await Promise.all([
-        api.patch(`/api/admin/categories/${current.id}`, { display_order: target.display_order }),
-        api.patch(`/api/admin/categories/${target.id}`, { display_order: current.display_order }),
-      ]);
+      await api.patch('/api/admin/categories/reorder', {
+        ids: reordered.map((category) => category.id),
+      });
+      setItems(reordered.map((category, position) => ({ ...category, display_order: position })));
       toast.success('Orden actualizado');
-      await load();
     } catch (err) {
       toast.error('No se pudo cambiar el orden', err.message);
     } finally {
+      movingRef.current = false;
       setMoving(false);
     }
   };

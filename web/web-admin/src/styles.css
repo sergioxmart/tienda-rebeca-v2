@@ -227,8 +227,8 @@ p { margin: 0 0 12px; }
   margin-bottom: 20px;
 }
 .page-header h1 { margin: 0; }
-.builder-global-settings-button { width: 42px; height: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 0; }
-.builder-global-settings-button svg { display: block; width: 18px; height: 18px; margin: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.builder-global-settings-button { min-width: 92px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+.builder-global-settings-button svg { display: block; width: 17px; height: 17px; flex: 0 0 17px; margin: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- Login ---------- */
 

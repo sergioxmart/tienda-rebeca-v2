@@ -10,7 +10,7 @@
 //   - name: 1-100 chars.
 //   - description, hero_image: opcionales.
 
-import { query } from '../../lib/db.js';
+import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
 import { protect, recordAudit, slugify, validators, validate, notFound, conflict } from './_helpers.js';
@@ -135,6 +135,37 @@ export async function updateCategory(req, res, id) {
   }
 }
 
+export async function reorderCategories(req, res) {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number) : [];
+  if (ids.length === 0 || ids.some((id) => !Number.isInteger(id) || id < 1) || new Set(ids).size !== ids.length) {
+    return json(res, 400, { ok: false, error: 'invalid_category_order' });
+  }
+
+  const result = await tx(async (client) => {
+    const { rows: existing } = await client.query(
+      'SELECT id FROM categories ORDER BY display_order, name FOR UPDATE',
+    );
+    const existingIds = existing.map((category) => category.id);
+    if (existingIds.length !== ids.length || existingIds.some((id) => !ids.includes(id))) {
+      return { error: 'invalid_category_order' };
+    }
+
+    // Use a temporary range so this remains safe even if a deployment adds a
+    // uniqueness constraint to display_order later.
+    const offset = existingIds.length + 1;
+    await client.query('UPDATE categories SET display_order = display_order + $1', [offset]);
+    for (const [index, id] of ids.entries()) {
+      await client.query('UPDATE categories SET display_order = $1 WHERE id = $2', [index, id]);
+    }
+    return { categories: ids.map((id, index) => ({ id, display_order: index })) };
+  });
+
+  if (result.error) return json(res, 400, { ok: false, error: result.error });
+  await recordAudit(req.user?.id, 'category.reorder', req.ip, { ids });
+  log.info('categories reordered', { count: ids.length, by: req.user?.email });
+  return json(res, 200, { ok: true, categories: result.categories });
+}
+
 export async function deleteCategory(req, res, id) {
   const { rows: existing } = await query('SELECT id FROM categories WHERE id = $1', [id]);
   if (existing.length === 0) return notFound(res);
@@ -158,6 +189,7 @@ export async function deleteCategory(req, res, id) {
 
 const routes = [
   { method: 'GET',    pattern: /^\/api\/admin\/categories\/?$/,         handler: listCategories,   section: 'categories' },
+  { method: 'PATCH',  pattern: /^\/api\/admin\/categories\/reorder\/?$/, handler: reorderCategories, section: 'categories' },
   { method: 'GET',    pattern: /^\/api\/admin\/categories\/(\d+)\/?$/,  handler: getCategory,      section: 'categories' },
   { method: 'POST',   pattern: /^\/api\/admin\/categories\/?$/,         handler: createCategory,   section: 'categories' },
   { method: 'PATCH',  pattern: /^\/api\/admin\/categories\/(\d+)\/?$/,  handler: updateCategory,   section: 'categories' },

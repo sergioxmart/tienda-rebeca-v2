@@ -112,6 +112,7 @@ cuenta.
 | GET | `/api/admin/categories/:id` | — | `categories` |
 | POST | `/api/admin/categories` | `{ slug, name, description?, hero_image?, display_order?, active? }` | `categories` |
 | PATCH | `/api/admin/categories/:id` | (cualquier subset) | `categories` |
+| PATCH | `/api/admin/categories/reorder` | `{ ids: number[] }` en el orden deseado | `categories` |
 | DELETE | `/api/admin/categories/:id` | — | `categories` |
 
 ### Atributos

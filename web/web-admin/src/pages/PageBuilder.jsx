@@ -941,7 +941,7 @@ export default function PageBuilder() {
           )}
           <button className="btn" onClick={() => setPreviewOpen(true)}>Vista previa</button>
           <button className="btn builder-global-settings-button" type="button" onClick={() => setGlobalStylesOpen(true)} title="Configurar estilos globales" aria-label="Configurar estilos globales">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z" /><path d="m19.4 13.5 1.2.9-1.8 3.1-1.4-.6a7.8 7.8 0 0 1-1.7 1l-.2 1.5h-3.6l-.2-1.5a7.8 7.8 0 0 1-1.7-1l-1.4.6-1.8-3.1 1.2-.9a7.6 7.6 0 0 1 0-2l-1.2-.9 1.8-3.1 1.4.6a7.8 7.8 0 0 1 1.7-1l.2-1.5h3.6l.2 1.5a7.8 7.8 0 0 1 1.7 1l1.4-.6 1.8 3.1-1.2.9a7.6 7.6 0 0 1 0 2Z" /></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /><path d="M9 4v4M15 10v4M7 16v4" /></svg><span>Estilos</span>
           </button>
           {hasDraft && <button className="btn btn-danger" onClick={discardDraft} disabled={draftSaving}>Descartar borrador</button>}
           {hasDraft && <button className="btn btn-primary" onClick={publishDraft} disabled={draftSaving}>Publicar</button>}

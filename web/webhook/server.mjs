@@ -25,6 +25,16 @@ import { createLogger } from '../../core/lib/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Quita las comillas envolventes SOLO si abren y cierran. Ver el comentario
+// largo en server/env-loader.js: tratando cada extremo por separado, un valor
+// como 'self' http://localhost:5173 perdia la comilla inicial y quedaba roto.
+function unquote(v) {
+  const quoted = v.length >= 2
+    && (v[0] === '"' || v[0] === "'")
+    && v[v.length - 1] === v[0];
+  return quoted ? v.slice(1, -1) : v;
+}
+
 // Carga .env desde la raíz del repo (mismo que el server)
 function loadEnv() {
   const envPath = join(__dirname, '..', '.env');
@@ -35,14 +45,18 @@ function loadEnv() {
     const eq = t.indexOf('=');
     if (eq < 0) continue;
     const k = t.slice(0, eq).trim();
-    const v = t.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
-    if (!(k in process.env)) process.env[k] = v;
+    if (!(k in process.env)) process.env[k] = unquote(t.slice(eq + 1).trim());
   }
 }
 loadEnv();
 
 const PORT         = Number(process.env.WEBHOOK_PORT || 9001);
-const SECRET       = process.env.WEBHOOK_SECRET || '';
+// El default de desarrollo vivía en el script `dev:webhook` con sintaxis bash
+// (`WEBHOOK_SECRET=${WEBHOOK_SECRET:-test_secret} node ...`), que revienta en
+// cmd/PowerShell. Acá es portable y el comportamiento no cambia: en producción
+// sigue siendo obligatorio definirlo explícitamente.
+const SECRET       = process.env.WEBHOOK_SECRET
+  || (process.env.NODE_ENV === 'production' ? '' : 'test_secret');
 const REPO_DIR     = process.env.REPO_DIR || join(__dirname, '..');
 const DEPLOY_SCRIPT = join(__dirname, 'deploy.sh');
 const LOG_DIR      = process.env.LOG_DIR || '/var/log/pm2-techstore';

@@ -15,6 +15,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Quita las comillas envolventes SOLO si abren y cierran. La version anterior
+// usaba .replace(/^["']|["']$/g, ''), que trata cada extremo por separado: con
+// CSP_FRAME_ANCESTORS='self' http://localhost:5173 comia la comilla inicial y
+// dejaba `self' http://...`, una CSP malformada que rompe el preview del
+// Builder. Mismo criterio que server/scripts/setup-db.js.
+function unquote(v) {
+  const quoted = v.length >= 2
+    && (v[0] === '"' || v[0] === "'")
+    && v[v.length - 1] === v[0];
+  return quoted ? v.slice(1, -1) : v;
+}
 // server.js esta en web/server/, asi que .env vive en web/.env
 const envPath = join(__dirname, '..', '.env');
 if (existsSync(envPath)) {
@@ -24,7 +36,6 @@ if (existsSync(envPath)) {
     const eq = t.indexOf('=');
     if (eq < 0) continue;
     const k = t.slice(0, eq).trim();
-    const v = t.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
-    if (!(k in process.env)) process.env[k] = v;
+    if (!(k in process.env)) process.env[k] = unquote(t.slice(eq + 1).trim());
   }
 }

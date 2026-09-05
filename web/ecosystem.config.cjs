@@ -20,13 +20,14 @@ module.exports = {
   apps: [
     {
       name: 'techstore-web',
+      cwd: __dirname,
       script: 'server/server.js',
       // --env-file carga web/.env ANTES de que ESM ejecute cualquier
       // import. Sin esto, `lib/env.js` (importado por server.js) intenta
       // leer process.env.PG* antes de que tengamos chance de setearlo.
       // El path es relativo al cwd de PM2 (que en este ecosystem es web/).
       // El ecosistema de PM2 no hereda el flag, hay que pasarlo aca.
-      node_args: '--env-file=.env',
+      node_args: `--env-file=${__dirname}/.env`,
       instances: 1,
       autorestart: true,
       watch: false,
@@ -46,8 +47,9 @@ module.exports = {
     },
     {
       name: 'techstore-admin',
+      cwd: __dirname,
       script: 'admin/server.js',
-      node_args: '--env-file=.env',
+      node_args: `--env-file=${__dirname}/.env`,
       instances: 1,
       autorestart: true,
       watch: false,
@@ -71,6 +73,7 @@ module.exports = {
     },
     {
       name: 'techstore-webhook',
+      cwd: __dirname,
       script: 'webhook/server.mjs',
       instances: 1,
       autorestart: true,

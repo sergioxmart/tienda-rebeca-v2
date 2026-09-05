@@ -290,7 +290,7 @@ export default function Themes() {
               <label>Nombre *</label>
               <input className="input" required maxLength={100} autoFocus
                      value={creating.name} onChange={(e) => setCreating({ ...creating, name: e.target.value })}
-                     placeholder="TechStore Navideño, Verano 2026, etc." />
+                     placeholder="Colección navideña, Verano 2026, etc." />
             </div>
             <div className="form-group">
               <label>Descripción <span style={{ color: 'var(--color-muted)' }}>(opcional)</span></label>

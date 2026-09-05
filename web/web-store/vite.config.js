@@ -8,8 +8,8 @@ export default defineConfig({
     strictPort: true,
     host: '127.0.0.1',
     proxy: {
-      '/api':   { target: 'http://localhost:3000', changeOrigin: false },
-      '/media': { target: 'http://localhost:3000', changeOrigin: false },
+      '/api':   { target: 'http://127.0.0.1:3000', changeOrigin: false },
+      '/media': { target: 'http://127.0.0.1:3000', changeOrigin: false },
     },
   },
   build: {

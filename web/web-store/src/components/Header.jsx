@@ -17,6 +17,10 @@ function CartIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 4.5h2l1.6 10.2a1.8 1.8 0 0 0 1.8 1.5h8.7a1.8 1.8 0 0 0 1.7-1.3L21 8H7" /><circle cx="9.5" cy="19.2" r="1.2" /><circle cx="18" cy="19.2" r="1.2" /></svg>;
 }
 
+function WhatsAppIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.08 0C5.54 .22 .22 5.32 .22 11.86c0 2.09.55 4.13 1.59 5.92L.1 24l6.37-1.67a11.84 11.84 0 0 0 5.61 1.42h.01c6.54 0 11.86-5.32 11.86-11.86 0-3.17-1.23-6.15-3.45-8.39ZM12.09 21.72h-.01a9.83 9.83 0 0 1-5.01-1.37l-.36-.21-3.78.99 1.01-3.68-.23-.38a9.84 9.84 0 1 1 8.38 4.65Zm5.4-7.38c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.27-.47-2.42-1.5-.89-.79-1.5-1.77-1.68-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.09 4.5.71.31 1.27.49 1.71.63.72.23 1.37.2 1.89.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z" /></svg>;
+}
+
 export default function Header() {
   const { site, categories } = useSite();
   const { count } = useCart();
@@ -25,9 +29,10 @@ export default function Header() {
   const location = useLocation();
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const name = site?.site_name || 'TechStore';
+  const name = site?.site_name || 'Rebeca Andrade';
   const logoUrl = site?.logo_url;
   const visibleCategories = Array.isArray(categories) ? categories.slice(0, 5) : [];
   const customLinks = Array.isArray(site?.navbar_links)
@@ -35,7 +40,7 @@ export default function Header() {
     : [];
   const showAnnouncement = site?.navbar_show_announcement !== false;
   const showSearch = site?.navbar_show_search !== false;
-  const showCart = site?.navbar_show_cart !== false;
+  const showCart = site?.online_purchases_enabled !== false && site?.navbar_show_cart !== false;
   const showCategories = site?.navbar_show_categories !== false;
   const announcement = site?.navbar_announcement || 'Envíos a toda Colombia · Compra fácil y segura';
   const navLinks = customLinks.length > 0
@@ -51,6 +56,7 @@ export default function Header() {
 
   useEffect(() => {
     setMenuOpen(false);
+    setSearchOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -80,7 +86,10 @@ export default function Header() {
 
   useEffect(() => {
     const closeOnEscape = (event) => {
-      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        setSearchOpen(false);
+      }
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
@@ -98,12 +107,14 @@ export default function Header() {
     const value = query.trim();
     navigate(value ? `/categoria?q=${encodeURIComponent(value)}` : '/categoria');
     setMenuOpen(false);
+    setSearchOpen(false);
   };
 
   const openSuggestion = (product) => {
     setQuery('');
     setSuggestions([]);
     setMenuOpen(false);
+    setSearchOpen(false);
     navigate(`/producto/${product.slug}`);
   };
 
@@ -158,25 +169,36 @@ export default function Header() {
             ? <img src={logoUrl} alt={name} />
             : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
         </Link>
-        {showSearch && searchForm('header-search-desktop')}
-        <div className="header-actions">
-          <Link to="/cuenta" className="account-header-link">{customer ? 'Mi cuenta' : 'Ingresar'}</Link>
-          {site?.contact_phone && <a className="site-header__wa" href={`https://wa.me/${String(site.contact_phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer"><span>WhatsApp</span></a>}
-          {showSearch && <button className="mobile-search-button" type="button" aria-label="Buscar" onClick={() => setMenuOpen(true)}><SearchIcon /></button>}
-          {showCart && <button className="cart-button site-cart" onClick={() => navigate('/carrito')} aria-label={`Ver carrito${count > 0 ? `, ${count} productos` : ''}`}>
-            <CartIcon /><span className="cart-label">Carrito</span>
-            {count > 0 && <span className="cart-badge">{count}</span>}
-          </button>}
-        </div>
-      </div>
-      <div className="header-nav-row">
-        <nav className="nav site-nav header-width" aria-label="Navegación principal">
+        <nav className="nav site-nav" aria-label="Navegación principal">
           {navLinks.map((link) => (
             link.href.startsWith('http')
               ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={link.featured ? 'nav-all' : ''}>{link.label}</a>
               : <Link key={`${link.label}-${link.href}`} to={link.href} className={link.featured ? 'nav-all' : ''}>{link.label}</Link>
           ))}
         </nav>
+        {showSearch && <div className="desktop-search-control">
+          <button
+            className="desktop-search-button"
+            type="button"
+            aria-label="Buscar productos"
+            aria-expanded={searchOpen}
+            aria-controls="desktop-search-popover"
+            onClick={() => setSearchOpen((open) => !open)}
+          >
+            <SearchIcon />
+            <span>Buscar</span>
+          </button>
+          {searchOpen && <div id="desktop-search-popover">{searchForm('header-search-desktop')}</div>}
+        </div>}
+        <div className="header-actions">
+          <Link to="/cuenta" className="account-header-link">{customer ? 'Mi cuenta' : 'Ingresar'}</Link>
+          {site?.contact_phone && <a className="site-header__wa" href={`https://wa.me/${String(site.contact_phone).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" aria-label="Abrir WhatsApp"><WhatsAppIcon /><span className="site-header__wa-label">WhatsApp</span></a>}
+          {showSearch && <button className="mobile-search-button" type="button" aria-label="Buscar" onClick={() => setMenuOpen(true)}><SearchIcon /></button>}
+          {showCart && <button className="cart-button site-cart" onClick={() => navigate('/carrito')} aria-label={`Ver carrito${count > 0 ? `, ${count} productos` : ''}`}>
+            <CartIcon /><span className="cart-label">Carrito</span>
+            {count > 0 && <span className="cart-badge">{count}</span>}
+          </button>}
+        </div>
       </div>
       <div className={`mobile-menu site-mobile-menu ${menuOpen ? 'is-open' : ''}`} aria-hidden={!menuOpen}>
         <div className="mobile-menu-inner">
@@ -188,8 +210,10 @@ export default function Header() {
                 : <Link key={`${link.label}-${link.href}`} to={link.href} className="mobile-nav-link">{link.label} <span>→</span></Link>
             ))}
           </nav>
-          {showCart && <Link to="/carrito" className="mobile-cart-link"><CartIcon /> Ver carrito {count > 0 && <strong>({count})</strong>}</Link>}
-          <Link to="/cuenta" className="mobile-account-link">{customer ? 'Mi cuenta' : 'Ingresar a mi cuenta'} <span>→</span></Link>
+          <div className="mobile-menu-actions">
+            {showCart && <Link to="/carrito" className="mobile-cart-link"><CartIcon /> <span>Ver carrito {count > 0 && <strong>({count})</strong>}</span></Link>}
+            <Link to="/cuenta" className="mobile-account-link"><span>{customer ? 'Mi cuenta' : 'Ingresar a mi cuenta'}</span> <span aria-hidden="true">→</span></Link>
+          </div>
         </div>
       </div>
     </header>

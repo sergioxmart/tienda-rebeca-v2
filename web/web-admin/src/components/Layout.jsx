@@ -59,7 +59,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [site, setSite] = useState({ site_name: 'TechStore', logo_url: null });
+  const [site, setSite] = useState({ site_name: 'Rebeca Andrade', logo_url: null });
   const [openGroups, setOpenGroups] = useState(() => {
     const defaults = Object.fromEntries(NAV_GROUPS.map((group) => [group.label, ['Operación', 'Sitio Web'].includes(group.label)]));
     try {
@@ -98,7 +98,7 @@ export default function Layout() {
         if (active && data?.config) {
           applyAdminTheme(data.config);
           setSite({
-            site_name: data.config.site_name || 'TechStore',
+            site_name: data.config.site_name || 'Rebeca Andrade',
             logo_url: data.config.logo_url || null,
           });
         }
@@ -117,7 +117,7 @@ export default function Layout() {
       <aside className={`sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="brand-mark">
-            {site.logo_url ? <img src={site.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : String(site.site_name || 'TechStore').slice(0, 1).toUpperCase()}
+            {site.logo_url ? <img src={site.logo_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} /> : String(site.site_name || 'Rebeca Andrade').slice(0, 1).toUpperCase()}
           </span>
           <span className="brand-copy">
             <strong>{site.site_name}</strong>
@@ -164,7 +164,7 @@ export default function Layout() {
       </aside>
       {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label="Cerrar menú" onClick={() => setSidebarOpen(false)} />}
       <header className="header">
-        <div className="header-context"><button className="mobile-sidebar-toggle" type="button" aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}><span /><span /><span /></button><span className="header-kicker">TechStore</span><span>Panel de administración</span></div>
+        <div className="header-context"><button className="mobile-sidebar-toggle" type="button" aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}><span /><span /><span /></button><span className="header-kicker">{site.site_name}</span><span>Panel de administración</span></div>
         <div className="user">
           <span className="role-pill">{user?.role || 'admin'}</span>
         </div>

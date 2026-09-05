@@ -22,7 +22,7 @@ import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
-import { STORE_THEME_DEFAULTS, STORE_THEME_FIELDS, normalizeStoreTheme } from '../storeTheme.js';
+import { STORE_THEME_DEFAULTS, STORE_THEME_FIELDS, STORE_SPACING_FIELDS, normalizeStoreTheme } from '../storeTheme.js';
 
 // Schema de los settings por tipo. Cada setting tiene key, label y type.
 const MODULE_SCHEMAS = {
@@ -36,7 +36,8 @@ const MODULE_SCHEMAS = {
       { key: 'subtitle', label: 'Subtítulo',      type: 'textarea' },
       { key: 'image_url',label: 'Imagen de fondo (URL)', type: 'url', placeholder: 'Opcional: imagen que cubre el fondo' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
-        { value: 'abstract', label: 'Abstracto TechStore' },
+        { value: 'none', label: 'Ninguno' },
+        { value: 'abstract', label: 'Abstracto Rebeca Andrade' },
         { value: 'product', label: 'Producto real del catálogo' },
         { value: 'image', label: 'Imagen personalizada' },
       ] },
@@ -230,7 +231,12 @@ const CUSTOM_CODE_SETTINGS = [
 ];
 
 for (const schema of Object.values(MODULE_SCHEMAS)) {
-  schema.settings.push(...CUSTOM_CODE_SETTINGS.map((field) => ({ ...field })));
+  const existingKeys = new Set(schema.settings.map((field) => field.key));
+  schema.settings.push(
+    ...CUSTOM_CODE_SETTINGS
+      .filter((field) => !existingKeys.has(field.key))
+      .map((field) => ({ ...field })),
+  );
 }
 
 function downloadModuleTemplate(type) {
@@ -289,6 +295,44 @@ function GlobalColorField({ field, value, onChange }) {
   );
 }
 
+function GlobalSpacingField({ field, value, onChange }) {
+  const numericValue = Number(value);
+  const safeValue = Number.isFinite(numericValue) ? numericValue : field.min;
+  return (
+    <div className="builder-global-spacing-field">
+      <div className="builder-global-color-copy">
+        <label htmlFor={`builder-${field.key}`}>{field.label}</label>
+        <span>{field.description}</span>
+      </div>
+      <div className="builder-global-spacing-control">
+        <input
+          id={`builder-${field.key}`}
+          type="range"
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          value={safeValue}
+          onChange={(event) => onChange(field.key, Number(event.target.value))}
+          aria-label={field.label}
+        />
+        <label className="builder-global-spacing-number">
+          <input
+            className="input"
+            type="number"
+            min={field.min}
+            max={field.max}
+            step={field.step}
+            value={safeValue}
+            onChange={(event) => onChange(field.key, Number(event.target.value))}
+            aria-label={`${field.label} en ${field.unit}`}
+          />
+          <span>{field.unit}</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function GlobalStoreStyles({ values, onChange }) {
   const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
   const typographyFields = STORE_THEME_FIELDS.slice(4);
@@ -308,6 +352,12 @@ function GlobalStoreStyles({ values, onChange }) {
         <div className="builder-global-style-heading"><h3>Tipografía</h3><span>Colores independientes para cada nivel de contenido</span></div>
         <div className="builder-global-color-grid">
           {typographyFields.map((field) => <GlobalColorField key={field.key} field={field} value={values[field.key]} onChange={(value) => onChange(field.key, value)} />)}
+        </div>
+      </section>
+      <section className="builder-global-style-section">
+        <div className="builder-global-style-heading"><h3>Espaciado lateral</h3><span>Independiente para escritorio y móvil; no modifica el Hero full-width.</span></div>
+        <div className="builder-global-spacing-grid">
+          {STORE_SPACING_FIELDS.map((field) => <GlobalSpacingField key={field.key} field={field} value={values[field.key]} onChange={(key, value) => onChange(key, value)} />)}
         </div>
       </section>
       <div className="builder-global-styles-preview" aria-hidden="true">

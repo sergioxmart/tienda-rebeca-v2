@@ -1,6 +1,6 @@
-# TechStore — Convenciones y reglas
+# Rebeca Andrade v2 — Convenciones y reglas
 
-> **Última actualización: 2026-08-06**
+> **Última actualización: 2026-08-11**
 
 > Reglas del proyecto para IAs y humanos que trabajen en este repo.
 > **Léelo antes de programar.** Si entras por primera vez, lee
@@ -9,10 +9,16 @@
 
 ## Qué es
 
-Web para **TechStore** (accesorios de teléfono en Colombia).
-Tienda pública (catálogo + carrito + checkout con pasarela) + panel
-admin (CRUD de productos, variantes, atributos, pedidos, config).
-Stack modular Fioratta-style, sin Next.js.
+Web para la boutique **Rebeca Andrade** (Colombia).
+Tienda pública (catálogo + carrito + checkout con pasarela + portal de
+cliente) + panel admin (CRUD de productos, variantes, atributos,
+pedidos, inventario, Web Builder y temas). Stack modular
+Fioratta-style, sin Next.js.
+
+> **Nota de marca**: el proyecto nació como *TechStore* y se reconvirtió
+> a Rebeca Andrade. El nombre `techstore` sobrevive a propósito en los
+> procesos PM2, el tag del logger, `/healthz` y el marker
+> `.techstore-production`. Ver [`map.md`](./map.md#qué-es).
 
 ## Stack
 
@@ -82,13 +88,13 @@ array `routes` declara un `section:` que mapea al permiso.
 Cualquier ruta nueva que se agregue debe tener un `section` (defensa
 en profundidad: si falta, devuelve 403).
 
-El frontend espeja la config en
-`web/web-admin/src/lib/permissions.js` y la usa para:
-- Filtrar links del sidebar (operator y viewer no ven secciones que
-  no pueden leer).
-- Esconder botones de acción con `<RoleGate section="...">` cuando
-  el user no puede escribir.
-- Mostrar/ocultar el botón "Usuarios" en la topbar.
+> **TODO / desactualizado**: este doc describía un espejo de la config
+> en `web/web-admin/src/lib/permissions.js` con un componente
+> `<RoleGate>`. **Ese archivo no existe en el código actual** (no hay
+> `web-admin/src/lib/`, ni ninguna referencia a `RoleGate` o
+> `SECTION_PERMS` en el frontend). Hoy el gating por rol en el admin es
+> únicamente de backend. Si se implementa el espejo en el frontend,
+> actualizar esta sección; mientras tanto, no asumas que existe.
 
 **Reglas duras del backend:**
 1. Si el rol no está en `read` (GET) o `write` (POST/PATCH/DELETE)
@@ -101,13 +107,12 @@ El frontend espeja la config en
 - Mostrar/ocultar botones de acción en cada página según rol.
 - Filtrar links del sidebar.
 
-Si agregás una nueva sección al array `SECTION_PERMS`:
+Si agregás una nueva sección a `SECTION_PERMS`:
 1. Definila en el backend
-   (`web/server/routes/admin/_section_perms.js`).
-2. Espejala en el frontend
-   (`web/web-admin/src/lib/permissions.js`).
-3. Si la sección tiene link en el sidebar, mapeala en
-   `SIDEBAR_SECTION_MAP`.
+   (`web/server/routes/admin/_section_perms.js`) — **este es el único
+   paso obligatorio hoy**.
+2. Declará el `section:` en cada ruta del router que la use, o
+   `protect()` devuelve 403.
 
 ## Convenciones de código
 
@@ -159,8 +164,9 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 ```
 .
 ├─ core/                   # Lógica de negocio genérica, multi-cliente.
-│                          # Usable standalone (re-export desde web/) o
-│                          # dividida (Core Remoto, ver core-remoto.md).
+│                          # Hoy se usa standalone (re-export desde web/).
+│                          # El modo dividido "Core Remoto" (mTLS) es una
+│                          # idea, no está implementado ni documentado.
 │  ├─ lib/                 # auth, body, client-ip, cookies, csrf, db,
 │                          # email, env, file, json, logger, static,
 │                          # totp, uploads
@@ -169,10 +175,10 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 │  ├─ scripts/             # migrate.js (runMigrations genérico)
 │  └─ test/                # tests unitarios (node:test, correr con npm test)
 │
-├─ web/                    # TechStore concreto.
+├─ web/                    # La tienda concreta (Rebeca Andrade).
 │  ├─ server/              # Backend node:http + pg
 │  │  ├─ server.js         # Entry point
-│  │  ├─ routes/           # auth.js, public/, admin/, media.js
+│  │  ├─ routes/           # auth.js, public/, admin/, webhooks/, media.js
 │  │  ├─ lib/              # Re-exports de core/lib/* (path relativo)
 │  │  ├─ middleware/       # Re-exports de core/middleware/*
 │  │  └─ scripts/           # migrate.js, setup-db.js, create-admin.js
@@ -184,6 +190,10 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 ├─ uploads/                # Archivos subidos (gitignored, en la RAÍZ del repo)
 ├─ data/                   # Solo local (gitignored)
 ├─ Contexto/               # Toda la documentación del proyecto
+│  ├─ README.md            # Índice del vault (empezar acá)
+│  ├─ map.md               # Mapa maestro
+│  ├─ modules/             # Fichas de módulos grandes
+│  └─ plans/               # activos/ y archivo/
 ├─ AGENTS.md               # Router universal para cualquier IA
 ├─ CLAUDE.md               # Router para Claude Code
 └─ README.md               # Descripción del mono-repo
@@ -210,8 +220,8 @@ rotos):
    detrás de auth. Mutaciones requieren CSRF.
 4. **Doc**: si agregas un endpoint, agrégalo a [`api.md`](./api.md)
    en el mismo commit. **Y si el cambio toca `core/`, actualizá
-   tambien [`map.md`](./map.md), [`architecture.md`](./architecture.md)
-   y este `conventions.md`** (la doc se mantiene al día con el código).
+   también [`map.md`](./map.md) y este `conventions.md`** (la doc se
+   mantiene al día con el código).
 5. **Prueba local** con `npm run dev:server`, `npm test` y
    `npm run migrate` antes de commitear.
 
@@ -273,26 +283,28 @@ nueva convención, cambio de paths, cambio de subdominio, etc.) debe
 actualizar la doc en el mismo commit o en un commit inmediato.
 Esto incluye:
 
-- Mover/crear/borrar archivos en `core/`: actualizar `map.md` y
-  `architecture.md`.
-- Cambiar paths o subdominios: actualizar `webhook.md` y `deploy.md`.
+**La regla corta, para cualquier IA**: al terminar una feature, si
+cambió algo estructural, actualiza [`map.md`](./map.md) y la ficha del
+módulo en [`modules/`](./modules/) con un **resumen conciso**, nunca un
+volcado de código, y **nunca en cada mensaje**.
+
+En detalle:
+
+- Mover/crear/borrar archivos en `core/`: actualizar `map.md`.
+- Endpoints nuevos o cambiados: actualizar `api.md`.
+- Cambios de schema: actualizar `db-schema.md`.
+- Cambiar paths, subdominios o el script de deploy: actualizar
+  `webhook.md` y la nota sobre el marker acá.
 - Cambiar reglas o convenciones: actualizar `conventions.md`.
-- Cambiar el alcance del proyecto (nuevo cliente, nueva decisión):
-  actualizar `project-context.md` y `core-remoto.md`.
-- Cambiar el script de deploy: actualizar `deploy.md` y la nota sobre
-  el marker en `conventions.md`.
+- Cambiar el alcance del proyecto (nueva decisión de negocio):
+  actualizar `project-context.md` y la sección "Alcance" de `map.md`.
+- Módulos grandes o no obvios: mantener su ficha en `modules/`.
 
 La fecha de "Última actualización" al tope de cada doc debe
 bumpearse en el mismo commit que el cambio.
 
-## Estado actual del proyecto (a agosto 2026)
+## Estado actual del proyecto
 
-- ✅ Setup local con `npm run db:setup` automatizado.
-- ✅ Baseline de base de datos consolidado en `001_initial_schema.sql`.
-- ✅ Backend admin completo: 8 routers con RBAC + CSRF.
-- ✅ Auth admin con 2FA TOTP y backup codes.
-- ✅ 25 tests verdes.
-- ⏳ Rutas públicas del catálogo (sesión 3).
-- ⏳ UI admin y UI store (sesión 4 y 5).
-- ✅ Checkout ePayco y Mercado Pago Checkout Pro: intenciones/preferencias y
-  webhooks idempotentes; requieren credenciales Testing y una URL pública HTTPS.
+El estado vive en un solo lugar: la sección "Estado del proyecto" de
+[`map.md`](./map.md#estado-del-proyecto-a-agosto-2026). No lo dupliques
+acá.

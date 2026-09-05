@@ -114,6 +114,9 @@ export async function updateSiteConfig(req, res) {
   if (p.admin_login_bg_mode !== undefined && !['solid', 'gradient', 'image'].includes(p.admin_login_bg_mode)) {
     return json(res, 400, { ok: false, error: 'invalid_login_background_mode' });
   }
+  if (p.online_purchases_enabled !== undefined && typeof p.online_purchases_enabled !== 'boolean') {
+    return json(res, 400, { ok: false, error: 'invalid_online_purchases_enabled' });
+  }
 
   // UPSERT atómico de cada key. ON CONFLICT (key) DO UPDATE.
   await tx(async (client) => {

@@ -15,6 +15,7 @@ import { createPaymentIntent } from './payment-intent.js';
 import { geocodeAddress } from './geocode.js';
 import { handleCustomer } from './customer.js';
 import { listColombiaLocations } from './locations.js';
+import { createReservationLead } from './reservation-leads.js';
 
 export async function handlePublic(req, res) {
   const method = req.method || 'GET';
@@ -38,6 +39,10 @@ export async function handlePublic(req, res) {
   // Checkout: crea un pedido real con estado pendiente.
   if (pathname === '/api/public/orders' && method === 'POST') {
     return createOrder(req, res);
+  }
+
+  if (pathname === '/api/public/reservation-leads' && method === 'POST') {
+    return createReservationLead(req, res);
   }
 
   if (pathname === '/api/public/checkout/payment-intent' && method === 'POST') {

@@ -49,7 +49,7 @@ function buildQueryString(params, attributes) {
 
 export default function Catalog() {
   const { category: categorySlug } = useParams();
-  const { categories } = useSite();
+  const { site, categories } = useSite();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Cargar atributos (para el filter bar)
@@ -110,8 +110,8 @@ export default function Catalog() {
   return (
     <div>
       <div className="catalog-heading">
-        <div><span className="section-kicker">Catálogo TechStore</span><h1>{categoryObj ? categoryObj.name : 'Todos los productos'}</h1></div>
-        <span className="catalog-heading-note">Encuentra accesorios pensados para acompañarte</span>
+        <div><span className="section-kicker">Catálogo {site?.site_name || 'Rebeca Andrade'}</span><h1>{categoryObj ? categoryObj.name : 'Todos los productos'}</h1></div>
+        <span className="catalog-heading-note">Encuentra piezas pensadas para acompañarte</span>
       </div>
 
       <div className="filter-bar">

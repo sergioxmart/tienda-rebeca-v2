@@ -347,14 +347,20 @@ const routes = [
   { method: 'POST',   pattern: /^\/api\/admin\/media\/cleanup\/?$/,         handler: cleanupOrphans, section: 'media' },
 ];
 
-export async function tryHandleProductMedia(req, res) {
+export function matchProductMediaRoute(req) {
   const method = req.method || 'GET';
   const pathname = (req.url || '/').split('?')[0];
   for (const route of routes) {
     if (route.method !== method) continue;
     const m = route.pattern.exec(pathname);
     if (!m) continue;
-    return protect(route.handler, route.section)(req, res, m[1]) || true;
+    return { ...route, params: m.slice(1) };
   }
   return false;
+}
+
+export async function tryHandleProductMedia(req, res) {
+  const match = matchProductMediaRoute(req);
+  if (!match) return false;
+  return protect(match.handler, match.section)(req, res, ...match.params) || true;
 }

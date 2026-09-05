@@ -4,18 +4,31 @@
 // botón "Agregar" crea un item sin variant_id (igual lo soportamos en el
 // CartContext si llega).
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useCart } from '../cart/CartContext.jsx';
+import { useSite } from '../site/SiteContext.jsx';
 import Price from '../components/Price.jsx';
 import VariantSelector from '../components/VariantSelector.jsx';
 import QuantitySelector from '../components/QuantitySelector.jsx';
 import Empty from '../components/Empty.jsx';
 
+function normalizeLabel(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function formatReservationDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+const GALLERY_ZOOM_SCALE = 2.5;
+
 export default function ProductPage() {
   const { slug } = useParams();
-  const navigate = useNavigate();
+  const { site } = useSite();
   const { addItem, items } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +38,13 @@ export default function ProductPage() {
   const [added, setAdded] = useState(false);
   const [activeImageId, setActiveImageId] = useState(null);
   const [zoom, setZoom] = useState({ visible: false, imageLeft: 0, imageTop: 0, left: 0, top: 0 });
+  const [reservationModalOpen, setReservationModalOpen] = useState(false);
+  const [reservationSaving, setReservationSaving] = useState(false);
+  const [reservationError, setReservationError] = useState('');
+  const [reservationLead, setReservationLead] = useState(null);
+  const [reservationForm, setReservationForm] = useState({ use_date: '', use_end_date: '', pickup_date: '', name: '', email: '', phone: '' });
+  const touchZoomRef = useRef(false);
+  const onlinePurchasesEnabled = site?.online_purchases_enabled !== false;
 
   useEffect(() => {
     setLoading(true);
@@ -51,19 +71,35 @@ export default function ProductPage() {
     }));
   }, [product]);
 
-  // Encontrar la variant que matchea la selección actual
-  const matchedVariant = useMemo(() => {
-    if (!product?.variants?.length) return null;
-    const sel = Object.entries(selected).filter(([, valueId]) => valueId !== '' && valueId !== null && valueId !== undefined);
-    if (sel.length === 0) return null;
-    return product.variants.find((v) => {
-      const avs = v.attribute_values || [];
-      if (avs.length !== sel.length) return false;
-      return sel.every(([attrId, valueId]) =>
-        avs.some((x) => x.attribute_id === Number(attrId) && x.attribute_value_id === Number(valueId))
+  const selectedEntries = useMemo(
+    () => Object.entries(selected)
+      .filter(([, valueId]) => valueId !== '' && valueId !== null && valueId !== undefined)
+      .map(([attributeId, valueId]) => [Number(attributeId), Number(valueId)]),
+    [selected],
+  );
+
+  // Variantes compatibles con la selección parcial. Esta lista solo alimenta
+  // la previsualización; no habilita la compra de una combinación incompleta.
+  const candidateVariants = useMemo(() => {
+    if (!product?.variants?.length || selectedEntries.length === 0) return [];
+    return product.variants.filter((variant) => {
+      const attributeValues = variant.attribute_values || [];
+      return selectedEntries.every(([attributeId, valueId]) =>
+        attributeValues.some((item) =>
+          Number(item.attribute_id) === attributeId
+          && Number(item.attribute_value_id) === valueId
+        )
       );
-    }) || null;
-  }, [product, selected]);
+    });
+  }, [product, selectedEntries]);
+
+  // La variante exacta sigue siendo la única válida para comprar o reservar.
+  const matchedVariant = useMemo(() => {
+    if (selectedEntries.length === 0) return null;
+    return candidateVariants.find((variant) =>
+      (variant.attribute_values || []).length === selectedEntries.length
+    ) || null;
+  }, [candidateVariants, selectedEntries]);
 
   // Precio y stock efectivos
   // Antes de que el cliente elija, usamos la primera variante activa como
@@ -72,10 +108,12 @@ export default function ProductPage() {
   const defaultVariant = product?.variants?.find((variant) => Number(variant.stock) > 0)
     || product?.variants?.[0]
     || null;
-  // La variante exacta depende del estado `selected`; al cambiar cualquier
-  // atributo este valor cambia y fuerza la actualización de precio, stock,
-  // descripción y multimedia en el mismo render.
-  const displayVariant = matchedVariant || defaultVariant;
+  // Para una selección parcial usamos una candidata compatible como referencia
+  // visual. La variante exacta sigue teniendo prioridad cuando ya existe.
+  const previewVariant = candidateVariants.find((variant) => Number(variant.stock) > 0)
+    || candidateVariants[0]
+    || null;
+  const displayVariant = matchedVariant || previewVariant || defaultVariant;
   const effectivePrice = displayVariant && Number(displayVariant.price) > 0
     ? displayVariant.price
     : product?.base_price;
@@ -99,30 +137,76 @@ export default function ProductPage() {
   const remainingStock = selectedStock === null ? 0 : Math.max(0, selectedStock - cartQty);
   const maxQty = Math.min(99, remainingStock);
   const canAdd = hasSelectedVariant && remainingStock > 0 && qty <= maxQty;
-  const activeMedia = displayVariant?.media?.length ? displayVariant.media : (product?.media || []);
+  const candidateMedia = useMemo(() => {
+    if (selectedEntries.length === 0 || candidateVariants.length === 0) return [];
+
+    const seen = new Set();
+    const media = [];
+    for (const variant of candidateVariants) {
+      for (const item of variant.media || []) {
+        const key = item.id !== null && item.id !== undefined
+          ? `id:${item.id}`
+          : `${item.kind || ''}:${item.url || ''}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        media.push(item);
+      }
+    }
+    return media.sort((a, b) =>
+      Number(a.display_order || 0) - Number(b.display_order || 0)
+    );
+  }, [candidateVariants, selectedEntries]);
+
+  const activeMedia = candidateMedia.length > 0
+    ? candidateMedia
+    : (displayVariant?.media?.length ? displayVariant.media : (product?.media || []));
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
   const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
-  const image = selectedGalleryImage?.url || product?.image_url || product?.thumb_url;
+  // Las entradas de product_media.url son las fuentes originales subidas al
+  // servidor. Preferirlas aquí evita que el zoom termine usando una miniatura
+  // o un fallback optimizado cuando la galería sí tiene la imagen completa.
+  const image = selectedGalleryImage?.url
+    || activeMedia.find((item) => item.kind === 'image')?.url
+    || product?.media?.find((item) => item.kind === 'image')?.url
+    || product?.image_url
+    || product?.thumb_url;
   const variantDescription = displayVariant?.description || product?.description;
+  const availabilityAttribute = attributes.find((attribute) => normalizeLabel(attribute.slug) === 'disponibilidad');
+  const availabilityValue = availabilityAttribute
+    ? availabilityAttribute.values.find((value) => Number(value.id) === Number(selected[availabilityAttribute.id]))
+    : null;
+  const requestedType = normalizeLabel(availabilityValue?.value) === 'alquiler como nuevo'
+    ? 'alquiler_nuevo'
+    : normalizeLabel(availabilityValue?.value) === 'alquiler' ? 'alquiler' : null;
+  const rentalSelected = Boolean(requestedType);
 
   useEffect(() => {
     setActiveImageId(null);
     setZoom((current) => ({ ...current, visible: false }));
-  }, [displayVariant?.id, product?.id]);
+  }, [displayVariant?.id, product?.id, selected]);
 
-  const handleGalleryMove = (event) => {
+  useEffect(() => {
+    if (!rentalSelected) {
+      setReservationModalOpen(false);
+      setReservationLead(null);
+    }
+  }, [rentalSelected]);
+
+  const updateZoomFromPoint = (clientX, clientY, target) => {
     if (!image) return;
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const clamp = (value) => Math.max(0, Math.min(1, value));
-    const x = clamp((event.clientX - rect.left) / rect.width);
-    const y = clamp((event.clientY - rect.top) / rect.height);
-    const zoomScale = 2.5;
+    const x = clamp((clientX - rect.left) / rect.width);
+    const y = clamp((clientY - rect.top) / rect.height);
     // La imagen interna mide 250% del recuadro. El offset centra el punto del
     // cursor dentro del zoom y se limita en los bordes para no dejar espacios.
-    const imageOffset = (point) => Math.max(100 - (zoomScale * 100), Math.min(0, 50 - (point * zoomScale * 100)));
-    const size = 184;
-    const left = Math.min(Math.max(10, event.clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
-    const top = Math.min(Math.max(10, event.clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
+    const imageOffset = (point) => Math.max(100 - (GALLERY_ZOOM_SCALE * 100), Math.min(0, 50 - (point * GALLERY_ZOOM_SCALE * 100)));
+    const size = typeof window !== 'undefined'
+      && window.matchMedia('(max-width: 760px)').matches
+      ? 240
+      : 184;
+    const left = Math.min(Math.max(10, clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
+    const top = Math.min(Math.max(10, clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
     setZoom({
       visible: true,
       imageLeft: imageOffset(x),
@@ -132,6 +216,30 @@ export default function ProductPage() {
     });
   };
 
+  const handleGalleryMove = (event) => {
+    if (touchZoomRef.current) return;
+    updateZoomFromPoint(event.clientX, event.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchStart = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchZoomRef.current = true;
+    updateZoomFromPoint(touch.clientX, touch.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchMove = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (event.cancelable) event.preventDefault();
+    updateZoomFromPoint(touch.clientX, touch.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchEnd = () => {
+    touchZoomRef.current = false;
+    setZoom((current) => ({ ...current, visible: false }));
+  };
+
   useEffect(() => {
     setQty((current) => Math.min(Math.max(Number(current) || 1, 1), Math.max(1, maxQty)));
   }, [maxQty]);
@@ -139,6 +247,28 @@ export default function ProductPage() {
   const handleSelectionChange = (nextSelected) => {
     setSelected(nextSelected);
     setQty(1);
+    setReservationLead(null);
+  };
+
+  const handleReservationSubmit = async (event) => {
+    event.preventDefault();
+    if (!product || !matchedVariant || !requestedType) return;
+    setReservationSaving(true);
+    setReservationError('');
+    try {
+      const result = await api.createReservationLead({
+        product_id: product.id,
+        variant_id: matchedVariant.id,
+        requested_type: requestedType,
+        ...reservationForm,
+      });
+      setReservationLead(result.reservation);
+      setReservationModalOpen(false);
+    } catch (error) {
+      setReservationError(error.message || 'No pudimos guardar los datos de la reserva.');
+    } finally {
+      setReservationSaving(false);
+    }
   };
 
   const handleAdd = () => {
@@ -162,9 +292,56 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 1800);
   };
 
-  const handleBuyNow = () => {
-    handleAdd();
-    setTimeout(() => navigate('/carrito'), 100);
+  const handleQuote = () => {
+    if (!product || !hasSelectedVariant) return;
+    const phone = String(site?.contact_phone || '').replace(/\D/g, '');
+    if (!phone) {
+      window.alert('La tienda todavía no tiene un teléfono de WhatsApp configurado.');
+      return;
+    }
+    const attributeSummary = (matchedVariant?.attribute_values || [])
+      .map((x) => `${x.attribute_name}: ${x.value}`)
+      .join(' · ');
+    const currentItem = {
+      variant_id: matchedVariant?.id ?? product.id,
+      product_id: product.id,
+      product_name: product.name,
+      attribute_summary: attributeSummary,
+      qty: Math.max(1, Number(qty) || 1),
+    };
+    const merged = new Map();
+    [currentItem, ...items].forEach((item) => {
+      const key = item.variant_id !== null && item.variant_id !== undefined
+        ? `variant:${item.variant_id}`
+        : `product:${item.product_id}:${item.attribute_summary || ''}`;
+      const existing = merged.get(key);
+      merged.set(key, existing
+        ? { ...existing, qty: existing.qty + Math.max(1, Number(item.qty) || 1) }
+        : { ...item, qty: Math.max(1, Number(item.qty) || 1) });
+    });
+    const lines = [
+      'Hola Rebeca, quiero cotizar estos productos:',
+      ...Array.from(merged.values()).flatMap((item, index) => [
+        `${index + 1}. ${item.product_name || 'Producto'} · Cantidad: ${item.qty}`,
+        ...(item.attribute_summary ? [`   ${item.attribute_summary}`] : []),
+      ]),
+      '',
+      'Quedo atento(a) a la cotización. ¡Gracias!',
+    ];
+    if (reservationLead || (rentalSelected && reservationForm.use_date)) {
+      lines.splice(lines.length - 2, 0,
+        '',
+        `Datos de reserva (${requestedType === 'alquiler_nuevo' ? 'Alquiler como nuevo' : 'Alquiler'}):`,
+        `Fecha de uso: ${formatReservationDate(reservationForm.use_date)} → ${formatReservationDate(reservationForm.use_end_date || reservationForm.use_date)}`,
+        `Fecha de recogida: ${formatReservationDate(reservationForm.pickup_date)}`,
+        `Nombre: ${reservationForm.name}`,
+        `Correo: ${reservationForm.email}`,
+        `Teléfono: ${reservationForm.phone}`,
+        ...(reservationLead?.reservation_number ? [`Solicitud: ${reservationLead.reservation_number}`] : []),
+      );
+    }
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
   };
 
   if (loading) return <div className="center"><span className="spinner" /></div>;
@@ -188,8 +365,17 @@ export default function ProductPage() {
             className="gallery-frame"
             onMouseMove={handleGalleryMove}
             onMouseLeave={() => setZoom((current) => ({ ...current, visible: false }))}
+            onTouchStart={handleGalleryTouchStart}
+            onTouchMove={handleGalleryTouchMove}
+            onTouchEnd={handleGalleryTouchEnd}
+            onTouchCancel={handleGalleryTouchEnd}
           >
-            <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+            <div
+              className="gallery"
+              role="img"
+              aria-label={selectedGalleryImage?.alt_text || product.name}
+              style={image ? { backgroundImage: `url(${image})` } : undefined}
+            />
             {zoom.visible && image && (
               <div
                 className="gallery-zoom"
@@ -203,7 +389,13 @@ export default function ProductPage() {
                   className="gallery-zoom-image"
                   src={image}
                   alt=""
-                  style={{ left: `${zoom.imageLeft}%`, top: `${zoom.imageTop}%` }}
+                  decoding="async"
+                  style={{
+                    width: `${GALLERY_ZOOM_SCALE * 100}%`,
+                    height: `${GALLERY_ZOOM_SCALE * 100}%`,
+                    left: `${zoom.imageLeft}%`,
+                    top: `${zoom.imageTop}%`,
+                  }}
                 />
               </div>
             )}
@@ -247,6 +439,27 @@ export default function ProductPage() {
             />
           )}
 
+          {rentalSelected && hasSelectedVariant && (
+            <div className="reservation-opt-in">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={Boolean(reservationLead)}
+                  onChange={(event) => {
+                    if (event.target.checked) {
+                      setReservationError('');
+                      setReservationModalOpen(true);
+                    } else {
+                      setReservationLead(null);
+                    }
+                  }}
+                />
+                <span><strong>Quiero agendar esta reserva</strong><small>Déjanos las fechas y tus datos para preparar la cotización.</small></span>
+              </label>
+              {reservationLead && <button type="button" className="reservation-edit-link" onClick={() => setReservationModalOpen(true)}>Editar datos</button>}
+            </div>
+          )}
+
           {hasSelectedVariant && (
             <div className="stock-status-line" style={{ color: selectedStock > 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
               <span>{selectedStock > 0 ? `✓ ${selectedStock} en stock` : '✗ Sin stock'}</span>
@@ -261,12 +474,12 @@ export default function ProductPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-accent btn-lg" onClick={handleAdd} disabled={!canAdd}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {onlinePurchasesEnabled && <button className="btn btn-accent btn-lg" onClick={handleAdd} disabled={!canAdd}>
               {added ? '✓ Agregado' : 'Agregar al carrito'}
-            </button>
-            <button className="btn btn-primary btn-lg" onClick={handleBuyNow} disabled={!canAdd}>
-              Comprar ahora
+            </button>}
+            <button className="btn btn-primary btn-lg" onClick={handleQuote} disabled={!hasSelectedVariant}>
+              Cotizar por WhatsApp
             </button>
           </div>
 
@@ -278,6 +491,31 @@ export default function ProductPage() {
           )}
         </div>
       </div>
+
+      {reservationModalOpen && (
+        <div className="account-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setReservationModalOpen(false)}>
+          <section className="account-modal reservation-modal" role="dialog" aria-modal="true" aria-labelledby="reservation-modal-title">
+            <span className="account-modal-icon account-modal-icon-success">⌁</span>
+            <h2 id="reservation-modal-title">Agenda tu reserva</h2>
+            <p>Completa estos datos para que Rebeca pueda confirmar disponibilidad y prepararte una cotización.</p>
+            <form onSubmit={handleReservationSubmit}>
+              <div className="reservation-form-grid">
+                <label>Inicio de uso<input className="input" type="date" required value={reservationForm.use_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_date: event.target.value }))} /></label>
+                <label>Fin de uso<input className="input" type="date" required min={reservationForm.use_date || undefined} value={reservationForm.use_end_date} onChange={(event) => setReservationForm((current) => ({ ...current, use_end_date: event.target.value }))} /></label>
+                <label>Fecha de recogida<input className="input" type="date" required value={reservationForm.pickup_date} onChange={(event) => setReservationForm((current) => ({ ...current, pickup_date: event.target.value }))} /></label>
+                <label>Nombre completo<input className="input" type="text" required maxLength={160} value={reservationForm.name} onChange={(event) => setReservationForm((current) => ({ ...current, name: event.target.value }))} /></label>
+                <label>Correo electrónico<input className="input" type="email" required maxLength={254} value={reservationForm.email} onChange={(event) => setReservationForm((current) => ({ ...current, email: event.target.value }))} /></label>
+                <label>Teléfono<input className="input" type="tel" required maxLength={40} value={reservationForm.phone} onChange={(event) => setReservationForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+              </div>
+              {reservationError && <div className="alert alert-error" role="alert">{reservationError}</div>}
+              <div className="account-modal-actions">
+                <button className="btn" type="button" onClick={() => setReservationModalOpen(false)} disabled={reservationSaving}>Cancelar</button>
+                <button className="btn btn-primary" type="submit" disabled={reservationSaving}>{reservationSaving ? 'Guardando…' : 'Guardar reserva'}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

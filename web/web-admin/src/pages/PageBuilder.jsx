@@ -35,7 +35,7 @@ const MODULE_SCHEMAS = {
       { key: 'eyebrow',  label: 'Etiqueta superior', type: 'text', placeholder: 'Tecnología para tu día a día', defaultValue: 'Tecnología para tu día a día' },
       { key: 'title',    label: 'Título',         type: 'text' },
       { key: 'subtitle', label: 'Subtítulo',      type: 'textarea' },
-      { key: 'image_url',label: 'Imagen de fondo (URL)', type: 'url', placeholder: 'Opcional: imagen que cubre el fondo' },
+      { key: 'image_url',label: 'Imagen de fondo', type: 'media', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
         { value: 'abstract', label: 'Abstracto Rebeca Andrade' },
@@ -43,7 +43,7 @@ const MODULE_SCHEMAS = {
         { value: 'image', label: 'Imagen personalizada' },
       ] },
       { key: 'product_slug', label: 'Producto destacado', type: 'product', placeholder: 'Selecciona un producto' },
-      { key: 'visual_image_url', label: 'Imagen personalizada (URL)', type: 'url', placeholder: 'Se usa cuando eliges Imagen personalizada' },
+      { key: 'visual_image_url', label: 'Imagen personalizada', type: 'media', placeholder: 'Se usa cuando eliges Imagen personalizada' },
       { key: 'cta_text', label: 'Texto del botón',type: 'text',  placeholder: 'Ver catálogo' },
       { key: 'cta_link', label: 'Link del botón', type: 'text',  placeholder: '/categoria/accesorios-telefono' },
       { key: 'secondary_cta_text', label: 'Texto del segundo enlace', type: 'text', defaultValue: 'Explorar catálogo' },
@@ -57,7 +57,7 @@ const MODULE_SCHEMAS = {
     description: 'Imagen clickeable horizontal.',
     icon: '🖼️',
     settings: [
-      { key: 'image_url', label: 'Imagen (URL)', type: 'url' },
+      { key: 'image_url', label: 'Imagen', type: 'media', placeholder: 'Pega una URL o elige una imagen de Media' },
       { key: 'link',      label: 'Link al hacer click', type: 'text', placeholder: '/categoria/...' },
       { key: 'alt',       label: 'Texto alternativo',   type: 'text' },
     ],
@@ -459,6 +459,103 @@ function CustomCodeEditor({ value, onChange, moduleType, moduleLabel, idPrefix =
   </div>;
 }
 
+function MediaPickerModal({ open, onClose, items, loading, value, onSelect }) {
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (open) setSearch('');
+  }, [open]);
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredItems = items.filter((item) => {
+    if (item.kind && item.kind !== 'image') return false;
+    if (!normalizedSearch) return true;
+    return [item.alt_text, item.url, item.id]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedSearch));
+  });
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="Elegir imagen de Media"
+      footer={<button className="btn" type="button" onClick={onClose}>Cerrar</button>}
+    >
+      <div className="builder-media-picker">
+        <div className="builder-media-picker-toolbar">
+          <input
+            className="input"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por nombre o URL"
+            aria-label="Buscar imagen en Media"
+          />
+          <span>{filteredItems.length} imagen{filteredItems.length === 1 ? '' : 'es'}</span>
+        </div>
+        {loading ? (
+          <div className="builder-media-picker-empty"><span className="spinner" /> Cargando biblioteca…</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="builder-media-picker-empty">No hay imágenes que coincidan con la búsqueda.</div>
+        ) : (
+          <div className="builder-media-picker-grid">
+            {filteredItems.map((item) => {
+              const selected = item.url === value;
+              return (
+                <button
+                  className={`builder-media-picker-item${selected ? ' is-selected' : ''}`}
+                  type="button"
+                  key={item.id || item.url}
+                  onClick={() => onSelect(item.url)}
+                  title={item.alt_text || `Imagen #${item.id}`}
+                >
+                  <span className="builder-media-picker-thumb">
+                    <img src={item.url} alt={item.alt_text || ''} loading="lazy" />
+                    {selected && <span className="builder-media-picker-check" aria-label="Imagen seleccionada">✓</span>}
+                  </span>
+                  <strong>{item.alt_text || `Imagen #${item.id}`}</strong>
+                  <small>{item.url}</small>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function MediaField({ field, value, onChange, onOpenPicker }) {
+  return (
+    <>
+      <div className="builder-media-url-row">
+        <input
+          className="input"
+          type="text"
+          value={value || ''}
+          placeholder={field.placeholder || 'Pega una URL de imagen'}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button className="btn" type="button" onClick={onOpenPicker}>Elegir de Media</button>
+      </div>
+      {value ? (
+        <div className="builder-media-selected">
+          <img src={value} alt="Vista previa de la imagen seleccionada" />
+          <div>
+            <strong>Imagen seleccionada</strong>
+            <span>{value}</span>
+          </div>
+          <button className="btn btn-sm" type="button" onClick={() => onChange('')}>Quitar</button>
+        </div>
+      ) : (
+        <div className="help">Puedes pegar una URL externa o seleccionar un archivo existente desde Media.</div>
+      )}
+    </>
+  );
+}
+
 function NavbarSettings({ navSettings, navSaving, setNavValue, updateNavLink, addNavLink, removeNavLink, saveNavSettings }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   return (
@@ -522,6 +619,10 @@ export default function PageBuilder() {
   const [globalStyles, setGlobalStyles] = useState(STORE_THEME_DEFAULTS);
   const [savedGlobalStyles, setSavedGlobalStyles] = useState(STORE_THEME_DEFAULTS);
   const [globalStylesSaving, setGlobalStylesSaving] = useState(false);
+  const [mediaItems, setMediaItems] = useState([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [mediaPickerField, setMediaPickerField] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -548,6 +649,25 @@ export default function PageBuilder() {
   useEffect(() => {
     api.get('/api/admin/products?active=true').then((data) => setProducts(data.products || [])).catch(() => setProducts([]));
   }, []);
+
+  const loadMedia = async () => {
+    if (mediaLoading) return;
+    setMediaLoading(true);
+    try {
+      const data = await api.get('/api/admin/media?kind=image');
+      setMediaItems(data.media || data.items || []);
+      setMediaLoaded(true);
+    } catch (err) {
+      toast.error('No se pudo cargar la biblioteca de Media', err.message);
+    } finally {
+      setMediaLoading(false);
+    }
+  };
+
+  const openMediaPicker = async (fieldKey) => {
+    setMediaPickerField(fieldKey);
+    if (!mediaLoaded) await loadMedia();
+  };
 
   const persistDraft = async (nextModules, nextNavSettings) => {
     setDraftSaving(true);
@@ -874,7 +994,14 @@ export default function PageBuilder() {
               />;
               return <div className="form-group" key={f.key}>
                 <label>{f.label}</label>
-                {f.type === 'textarea' ? (
+                {f.type === 'media' ? (
+                  <MediaField
+                    field={f}
+                    value={editing.settings[f.key] ?? ''}
+                    onChange={(value) => setSetting(f.key, value)}
+                    onOpenPicker={() => openMediaPicker(f.key)}
+                  />
+                ) : f.type === 'textarea' ? (
                   <textarea className="textarea"
                             value={editing.settings[f.key] ?? ''}
                             onChange={(e) => setSetting(f.key, e.target.value)} />
@@ -910,6 +1037,18 @@ export default function PageBuilder() {
       >
         <LiveStorePreview modules={modules} navSettings={navSettings} globalStyles={globalStyles} />
       </Modal>
+
+      <MediaPickerModal
+        open={Boolean(mediaPickerField && editing)}
+        onClose={() => setMediaPickerField(null)}
+        items={mediaItems}
+        loading={mediaLoading}
+        value={mediaPickerField ? editing?.settings?.[mediaPickerField] : ''}
+        onSelect={(url) => {
+          if (mediaPickerField) setSetting(mediaPickerField, url);
+          setMediaPickerField(null);
+        }}
+      />
 
       <Confirm
         open={!!deleting}

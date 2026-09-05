@@ -85,16 +85,24 @@ export default function Login() {
     if (bgMode === 'image' && bgImage) {
       return {
         backgroundColor: bg,
-        backgroundImage: `linear-gradient(135deg, ${bg}dd, ${bgSecondary}aa), url("${bgImage}")`,
-        backgroundSize: `cover, ${bgZoom}% auto`,
-        backgroundPosition: `center, ${bgPositionX}% ${bgPositionY}%`,
-        backgroundRepeat: 'no-repeat',
+        '--login-bg-image': `url("${bgImage}")`,
+        '--login-bg-overlay': `linear-gradient(135deg, ${bg}dd, ${bgSecondary}aa)`,
+        '--login-bg-zoom': bgZoom / 100,
+        '--login-bg-position': `${bgPositionX}% ${bgPositionY}%`,
       };
     }
     if (bgMode === 'gradient') {
-      return { background: `linear-gradient(135deg, ${bg} 0%, ${bgSecondary} 100%)` };
+      return {
+        background: `linear-gradient(135deg, ${bg} 0%, ${bgSecondary} 100%)`,
+        '--login-bg-image': 'none',
+        '--login-bg-overlay': 'transparent',
+      };
     }
-    return { background: bg };
+    return {
+      background: bg,
+      '--login-bg-image': 'none',
+      '--login-bg-overlay': 'transparent',
+    };
   }, [bg, bgMode, bgImage, bgSecondary, bgPositionX, bgPositionY, bgZoom]);
 
   if (status === 'auth') {

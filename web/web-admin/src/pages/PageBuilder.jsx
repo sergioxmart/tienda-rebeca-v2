@@ -260,6 +260,7 @@ const NAV_DEFAULTS = {
   navbar_show_announcement: true,
   navbar_show_search: true,
   navbar_show_cart: true,
+  navbar_show_store: true,
   navbar_show_categories: true,
   navbar_links: [],
   navbar_logo_mode: 'image',
@@ -716,6 +717,7 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
         <label><input type="checkbox" checked={navSettings.navbar_show_announcement} onChange={(e) => setNavValue('navbar_show_announcement', e.target.checked)} /> Mostrar mensaje superior</label>
         <label><input type="checkbox" checked={navSettings.navbar_show_search} onChange={(e) => setNavValue('navbar_show_search', e.target.checked)} /> Mostrar buscador</label>
         <label><input type="checkbox" checked={navSettings.navbar_show_cart} onChange={(e) => setNavValue('navbar_show_cart', e.target.checked)} /> Mostrar carrito</label>
+        <label><input type="checkbox" checked={navSettings.navbar_show_store !== false} onChange={(e) => setNavValue('navbar_show_store', e.target.checked)} /> Mostrar Tienda</label>
       </div>
       <div className="builder-links-heading"><div><h3>Enlaces personalizados</h3><p>Usa rutas como <code>/categoria</code> o URLs externas.</p></div><button className="btn btn-sm" type="button" onClick={addNavLink}>+ Agregar enlace</button></div>
       {navSettings.navbar_links.length > 0 && <div className="builder-links-list">

@@ -52,14 +52,15 @@ export default function Header() {
   const showAnnouncement = site?.navbar_show_announcement !== false;
   const showSearch = site?.navbar_show_search !== false;
   const showCart = site?.online_purchases_enabled !== false && site?.navbar_show_cart !== false;
+  const showStore = site?.navbar_show_store !== false;
   const showCategories = site?.navbar_show_categories !== false;
   const announcement = site?.navbar_announcement || 'Envíos a toda Colombia · Compra fácil y segura';
-  const navLinks = customLinks.length > 0
-    ? customLinks
-    : [
-        { label: 'Tienda', href: '/categoria', featured: true },
-        ...(showCategories ? visibleCategories.map((c) => ({ label: c.name, href: `/categoria/${c.slug}` })) : []),
-      ];
+  const defaultNavLinks = [
+    ...(showStore ? [{ label: 'Tienda', href: '/categoria', featured: true }] : []),
+    ...(showCategories ? visibleCategories.map((c) => ({ label: c.name, href: `/categoria/${c.slug}` })) : []),
+  ];
+  const navLinks = (customLinks.length > 0 ? customLinks : defaultNavLinks)
+    .filter((link) => showStore || !(link.label.trim().toLowerCase() === 'tienda' && link.href === '/categoria'));
 
   if (site?.navbar_custom_code_enabled && site.navbar_custom_code) {
     return <CustomCode code={site.navbar_custom_code} className="navbar-custom-code" />;

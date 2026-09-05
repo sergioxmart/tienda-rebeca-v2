@@ -31,8 +31,8 @@ guardar/exportar el resultado completo como **tema**. Endpoints en
 - La configuración del Nav Bar se edita en un modal del Builder. Incluye
   visibilidad, enlaces, código personalizado y una alternativa de logo
   textual con familia tipográfica predefinida; las claves
-  `navbar_logo_mode`, `navbar_logo_text` y `navbar_logo_font` viajan en el
-  mismo subset de `site_config`.
+  `navbar_logo_mode`, `navbar_logo_text`, `navbar_logo_font` y
+  `navbar_show_store` viajan en el mismo subset de `site_config`.
 
 ## Agregar un tipo de módulo nuevo (toca 3 archivos)
 

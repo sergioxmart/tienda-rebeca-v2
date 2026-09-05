@@ -46,7 +46,9 @@ log "now at $NEW_SHA"
 #    `sh: 1: vite: not found`, code 127). El node_modules queda con
 #    devDeps instaladas (~200MB), aceptable para nuestro server.
 log "npm ci"
-npm ci --no-audit --no-fund --silent
+# El webhook corre bajo NODE_ENV=production; npm omite devDependencies en
+# ese contexto, pero Vite es necesario para compilar las dos SPAs.
+npm ci --include=dev --no-audit --no-fund --silent
 
 # 3. Migrations
 log "running migrations"

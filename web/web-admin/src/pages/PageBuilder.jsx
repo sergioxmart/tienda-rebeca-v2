@@ -16,7 +16,7 @@
 //   - web/server/routes/admin/page-modules.js (seed inicial opcional)
 //   - aca en MODULE_SCHEMAS (label, icon, settings[])
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
@@ -400,7 +400,12 @@ function defaultSettingsForType(type) {
 
 function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista previa real de la tienda' }) {
   const frameRef = useRef(null);
-  const payload = { modules: modules || [], site_config_subset: { ...(navSettings || {}), ...(globalStyles || {}) } };
+  const [previewMode, setPreviewMode] = useState('desktop');
+  const payload = useMemo(() => ({
+    modules: modules || [],
+    site_config_subset: { ...(navSettings || {}), ...(globalStyles || {}) },
+  }), [modules, navSettings, globalStyles]);
+  const payloadKey = useMemo(() => JSON.stringify(payload), [payload]);
 
   const sendDraft = () => {
     frameRef.current?.contentWindow?.postMessage({ type: 'techstore-builder-preview', draft: payload }, '*');
@@ -413,12 +418,23 @@ function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista p
     window.addEventListener('message', handleReady);
     sendDraft();
     return () => window.removeEventListener('message', handleReady);
-  }, [modules, navSettings]);
+  }, [payload]);
 
   return (
     <div className="builder-real-preview">
-      <div className="builder-real-preview-heading"><strong>{title}</strong><span>Renderiza la misma tienda y los mismos datos del catálogo.</span></div>
-      <iframe ref={frameRef} title={title} src={getStorePreviewUrl()} onLoad={sendDraft} />
+      <div className="builder-real-preview-heading">
+        <div className="builder-real-preview-copy"><strong>{title}</strong><span>Renderiza la misma tienda y los mismos datos del catálogo.</span></div>
+        <div className="builder-preview-switch" role="tablist" aria-label="Tamaño de la vista previa">
+          <button className={previewMode === 'desktop' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'desktop'} onClick={() => setPreviewMode('desktop')}>Escritorio</button>
+          <button className={previewMode === 'mobile' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'mobile'} onClick={() => setPreviewMode('mobile')}>Móvil</button>
+        </div>
+      </div>
+      <div className={`builder-real-preview-viewport is-${previewMode}`}>
+        <div className="builder-real-preview-device">
+          <span className="builder-real-preview-device-label">{previewMode === 'mobile' ? 'Móvil · 390 × 844' : 'Escritorio · adaptable'}</span>
+          <iframe key={payloadKey} className={`builder-real-preview-frame is-${previewMode}`} ref={frameRef} title={title} src={getStorePreviewUrl()} onLoad={sendDraft} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -602,7 +618,7 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
               <button className={viewport === 'mobile' ? 'is-active' : ''} type="button" onClick={() => setViewport('mobile')} role="tab" aria-selected={viewport === 'mobile'}>Móvil</button>
             </div>
           </div>
-          <div className="builder-media-crop-preview">
+          <div className={`builder-media-crop-preview is-${viewport}`}>
             <img
               src={value}
               alt="Vista previa del encuadre"
@@ -1117,6 +1133,7 @@ export default function PageBuilder() {
         open={previewOpen}
         onClose={() => setPreviewOpen(false)}
         size="lg"
+        layerClassName="modal-backdrop builder-preview-modal-layer"
         title="Vista previa del borrador"
         footer={<button className="btn" onClick={() => setPreviewOpen(false)}>Cerrar</button>}
       >

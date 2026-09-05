@@ -210,8 +210,10 @@ export default function Header() {
                 : <Link key={`${link.label}-${link.href}`} to={link.href} className="mobile-nav-link">{link.label} <span>→</span></Link>
             ))}
           </nav>
-          {showCart && <Link to="/carrito" className="mobile-cart-link"><CartIcon /> Ver carrito {count > 0 && <strong>({count})</strong>}</Link>}
-          <Link to="/cuenta" className="mobile-account-link">{customer ? 'Mi cuenta' : 'Ingresar a mi cuenta'} <span>→</span></Link>
+          <div className="mobile-menu-actions">
+            {showCart && <Link to="/carrito" className="mobile-cart-link"><CartIcon /> <span>Ver carrito {count > 0 && <strong>({count})</strong>}</span></Link>}
+            <Link to="/cuenta" className="mobile-account-link"><span>{customer ? 'Mi cuenta' : 'Ingresar a mi cuenta'}</span> <span aria-hidden="true">→</span></Link>
+          </div>
         </div>
       </div>
     </header>

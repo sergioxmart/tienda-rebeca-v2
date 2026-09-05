@@ -12,7 +12,7 @@
 // "no dos variantes con la misma combinación" la enforces el server
 // (409 duplicate_variant) — acá mostramos el error como toast.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api.js';
 import { useToast } from './Toast.jsx';
 import Modal from './Modal.jsx';
@@ -56,6 +56,7 @@ export default function VariantEditor({ productId, variants, attributes, categor
   const [media, setMedia] = useState([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
+  const mediaBusyRef = useRef(false);
   const [videoUrl, setVideoUrl] = useState('');
   const [libraryMedia, setLibraryMedia] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
@@ -274,10 +275,18 @@ export default function VariantEditor({ productId, variants, attributes, categor
   };
 
   const removeMedia = async (item) => {
+    if (!editing?.id || mediaBusyRef.current) return;
+    mediaBusyRef.current = true;
+    setMediaBusy(true);
     try {
       await api.delete(`/api/admin/media/${item.id}/variants/${editing.id}`);
       setMedia((cur) => cur.filter((mediaItem) => mediaItem.id !== item.id));
+      toast.success('Multimedia desvinculada');
     } catch (err) { toast.error('No se pudo desvincular la multimedia', err.message); }
+    finally {
+      mediaBusyRef.current = false;
+      setMediaBusy(false);
+    }
   };
 
   const attachLibraryMedia = async (item) => {
@@ -488,7 +497,7 @@ export default function VariantEditor({ productId, variants, attributes, categor
               {mediaLoading ? <p className="form-hint">Cargando multimedia…</p> : media.length === 0 ? <p className="form-hint">Aún no hay imágenes ni videos para esta variante.</p> : <div className="variant-media-grid">
                 {media.map((item) => <div className="variant-media-item" key={item.id}>
                   {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <div className="variant-video-tile">▶ Video</div>}
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => removeMedia(item)}>Desvincular</button>
+                  <button type="button" className="btn btn-sm btn-danger" disabled={mediaBusy} onClick={() => removeMedia(item)}>Desvincular</button>
                 </div>)}
               </div>}
             </div>}

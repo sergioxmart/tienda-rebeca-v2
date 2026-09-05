@@ -53,7 +53,26 @@ export default function VariantSelector({ attributes, variants, selected, onChan
   }, [attributes, inStockVariants, selected]);
 
   const setValue = (attrId, valueId) => {
-    onChange({ ...selected, [attrId]: valueId });
+    const attrIndex = attributes.findIndex((attr) => attr.id === attrId);
+    if (attrIndex < 0) return;
+
+    // La posición del grupo define la jerarquía de la combinación. Al
+    // cambiar o quitar un nivel, los grupos posteriores dejan de ser válidos
+    // porque dependían de la selección anterior.
+    const nextSelected = {};
+    for (const attr of attributes.slice(0, attrIndex)) {
+      if (selected[attr.id] !== undefined && selected[attr.id] !== null && selected[attr.id] !== '') {
+        nextSelected[attr.id] = selected[attr.id];
+      }
+    }
+
+    // El mismo clic funciona como toggle: quita el nivel actual y, por la
+    // truncación anterior, también limpia sus dependientes.
+    if (selected[attrId] !== valueId) {
+      nextSelected[attrId] = valueId;
+    }
+
+    onChange(nextSelected);
   };
 
   return (
@@ -69,8 +88,8 @@ export default function VariantSelector({ attributes, variants, selected, onChan
                 key={`value-${attr.id}-${v.id}`}
                 type="button"
                 className={`swatch ${isSelected ? 'selected' : ''} ${!isAvailable ? 'disabled' : ''}`}
-                onClick={() => isAvailable && setValue(attr.id, v.id)}
-                disabled={!isAvailable}
+                onClick={() => (isAvailable || isSelected) && setValue(attr.id, v.id)}
+                disabled={!isAvailable && !isSelected}
               >
                 {attr.type === 'color' && v.hex && (
                   <span style={{

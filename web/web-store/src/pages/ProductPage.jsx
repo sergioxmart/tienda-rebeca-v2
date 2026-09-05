@@ -4,7 +4,7 @@
 // botón "Agregar" crea un item sin variant_id (igual lo soportamos en el
 // CartContext si llega).
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useCart } from '../cart/CartContext.jsx';
@@ -24,6 +24,8 @@ function formatReservationDate(value) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+const GALLERY_ZOOM_SCALE = 2.5;
+
 export default function ProductPage() {
   const { slug } = useParams();
   const { site } = useSite();
@@ -41,6 +43,7 @@ export default function ProductPage() {
   const [reservationError, setReservationError] = useState('');
   const [reservationLead, setReservationLead] = useState(null);
   const [reservationForm, setReservationForm] = useState({ use_date: '', use_end_date: '', pickup_date: '', name: '', email: '', phone: '' });
+  const touchZoomRef = useRef(false);
   const onlinePurchasesEnabled = site?.online_purchases_enabled !== false;
 
   useEffect(() => {
@@ -159,7 +162,14 @@ export default function ProductPage() {
     : (displayVariant?.media?.length ? displayVariant.media : (product?.media || []));
   const galleryImages = activeMedia.filter((item) => item.kind === 'image');
   const selectedGalleryImage = galleryImages.find((item) => item.id === activeImageId) || galleryImages[0];
-  const image = selectedGalleryImage?.url || product?.image_url || product?.thumb_url;
+  // Las entradas de product_media.url son las fuentes originales subidas al
+  // servidor. Preferirlas aquí evita que el zoom termine usando una miniatura
+  // o un fallback optimizado cuando la galería sí tiene la imagen completa.
+  const image = selectedGalleryImage?.url
+    || activeMedia.find((item) => item.kind === 'image')?.url
+    || product?.media?.find((item) => item.kind === 'image')?.url
+    || product?.image_url
+    || product?.thumb_url;
   const variantDescription = displayVariant?.description || product?.description;
   const availabilityAttribute = attributes.find((attribute) => normalizeLabel(attribute.slug) === 'disponibilidad');
   const availabilityValue = availabilityAttribute
@@ -182,19 +192,21 @@ export default function ProductPage() {
     }
   }, [rentalSelected]);
 
-  const handleGalleryMove = (event) => {
+  const updateZoomFromPoint = (clientX, clientY, target) => {
     if (!image) return;
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     const clamp = (value) => Math.max(0, Math.min(1, value));
-    const x = clamp((event.clientX - rect.left) / rect.width);
-    const y = clamp((event.clientY - rect.top) / rect.height);
-    const zoomScale = 2.5;
+    const x = clamp((clientX - rect.left) / rect.width);
+    const y = clamp((clientY - rect.top) / rect.height);
     // La imagen interna mide 250% del recuadro. El offset centra el punto del
     // cursor dentro del zoom y se limita en los bordes para no dejar espacios.
-    const imageOffset = (point) => Math.max(100 - (zoomScale * 100), Math.min(0, 50 - (point * zoomScale * 100)));
-    const size = 184;
-    const left = Math.min(Math.max(10, event.clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
-    const top = Math.min(Math.max(10, event.clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
+    const imageOffset = (point) => Math.max(100 - (GALLERY_ZOOM_SCALE * 100), Math.min(0, 50 - (point * GALLERY_ZOOM_SCALE * 100)));
+    const size = typeof window !== 'undefined'
+      && window.matchMedia('(max-width: 760px)').matches
+      ? 240
+      : 184;
+    const left = Math.min(Math.max(10, clientX - rect.left + 18), Math.max(10, rect.width - size - 10));
+    const top = Math.min(Math.max(10, clientY - rect.top + 18), Math.max(10, rect.height - size - 10));
     setZoom({
       visible: true,
       imageLeft: imageOffset(x),
@@ -202,6 +214,30 @@ export default function ProductPage() {
       left,
       top,
     });
+  };
+
+  const handleGalleryMove = (event) => {
+    if (touchZoomRef.current) return;
+    updateZoomFromPoint(event.clientX, event.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchStart = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchZoomRef.current = true;
+    updateZoomFromPoint(touch.clientX, touch.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchMove = (event) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (event.cancelable) event.preventDefault();
+    updateZoomFromPoint(touch.clientX, touch.clientY, event.currentTarget);
+  };
+
+  const handleGalleryTouchEnd = () => {
+    touchZoomRef.current = false;
+    setZoom((current) => ({ ...current, visible: false }));
   };
 
   useEffect(() => {
@@ -329,8 +365,17 @@ export default function ProductPage() {
             className="gallery-frame"
             onMouseMove={handleGalleryMove}
             onMouseLeave={() => setZoom((current) => ({ ...current, visible: false }))}
+            onTouchStart={handleGalleryTouchStart}
+            onTouchMove={handleGalleryTouchMove}
+            onTouchEnd={handleGalleryTouchEnd}
+            onTouchCancel={handleGalleryTouchEnd}
           >
-            <div className="gallery" style={image ? { backgroundImage: `url(${image})` } : undefined} />
+            <div
+              className="gallery"
+              role="img"
+              aria-label={selectedGalleryImage?.alt_text || product.name}
+              style={image ? { backgroundImage: `url(${image})` } : undefined}
+            />
             {zoom.visible && image && (
               <div
                 className="gallery-zoom"
@@ -344,7 +389,13 @@ export default function ProductPage() {
                   className="gallery-zoom-image"
                   src={image}
                   alt=""
-                  style={{ left: `${zoom.imageLeft}%`, top: `${zoom.imageTop}%` }}
+                  decoding="async"
+                  style={{
+                    width: `${GALLERY_ZOOM_SCALE * 100}%`,
+                    height: `${GALLERY_ZOOM_SCALE * 100}%`,
+                    left: `${zoom.imageLeft}%`,
+                    top: `${zoom.imageTop}%`,
+                  }}
                 />
               </div>
             )}

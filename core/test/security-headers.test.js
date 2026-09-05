@@ -44,3 +44,16 @@ test('permite Cloudflare Insights y la vista previa de la tienda', () => {
   assert.match(csp, /connect-src[^;]*https:\/\/cloudflareinsights\.com/);
   assert.match(csp, /frame-src[^;]*https:\/\/rebecandrade\.com/);
 });
+
+test('mantiene permitido el admin aunque CSP_FRAME_ANCESTORS sea personalizado', () => {
+  const previous = process.env.CSP_FRAME_ANCESTORS;
+  process.env.CSP_FRAME_ANCESTORS = "'self'";
+  try {
+    const { req, res, next } = mockReqRes();
+    securityHeaders(req, res, next);
+    assert.match(res.headers['content-security-policy'], /frame-ancestors[^;]*https:\/\/admin\.rebecandrade\.com/);
+  } finally {
+    if (previous === undefined) delete process.env.CSP_FRAME_ANCESTORS;
+    else process.env.CSP_FRAME_ANCESTORS = previous;
+  }
+});

@@ -12,8 +12,12 @@ export function securityHeaders(_req, res, next) {
 
   // Se usa CSP en lugar de X-Frame-Options para no romper la vista previa
   // del Builder, que carga la tienda de 5173 dentro del admin 5174.
-  const frameAncestors = process.env.CSP_FRAME_ANCESTORS
-    || "'self' http://localhost:5173 http://localhost:5174 https://admin.rebecandrade.com";
+  const configuredAncestors = process.env.CSP_FRAME_ANCESTORS
+    || "'self' http://localhost:5173 http://localhost:5174";
+  const frameAncestors = [...new Set([
+    ...configuredAncestors.trim().split(/\s+/),
+    'https://admin.rebecandrade.com',
+  ])].join(' ');
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "base-uri 'self'",

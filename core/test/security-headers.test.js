@@ -35,3 +35,12 @@ test('no muta req', () => {
   securityHeaders(req, res, next);
   assert.deepEqual(req, before);
 });
+
+test('permite Cloudflare Insights y la vista previa de la tienda', () => {
+  const { req, res, next } = mockReqRes();
+  securityHeaders(req, res, next);
+  const csp = res.headers['content-security-policy'];
+  assert.match(csp, /script-src[^;]*https:\/\/static\.cloudflareinsights\.com/);
+  assert.match(csp, /connect-src[^;]*https:\/\/cloudflareinsights\.com/);
+  assert.match(csp, /frame-src[^;]*https:\/\/rebecandrade\.com/);
+});

@@ -13,19 +13,19 @@ export function securityHeaders(_req, res, next) {
   // Se usa CSP en lugar de X-Frame-Options para no romper la vista previa
   // del Builder, que carga la tienda de 5173 dentro del admin 5174.
   const frameAncestors = process.env.CSP_FRAME_ANCESTORS
-    || "'self' http://localhost:5173 http://localhost:5174";
+    || "'self' http://localhost:5173 http://localhost:5174 https://admin.rebecandrade.com";
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     `frame-ancestors ${frameAncestors}`,
     "form-action 'self'",
-    "script-src 'self' https://checkout.epayco.co https://sdk.mercadopago.com",
+    "script-src 'self' https://checkout.epayco.co https://sdk.mercadopago.com https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://unpkg.com",
     'img-src \'self\' data: blob: https:',
     'font-src \'self\' data: https:',
-    "connect-src 'self' https://api.mercadopago.com https://api.epayco.co https://nominatim.openstreetmap.org",
-    "frame-src 'self' https://*.mercadopago.com https://*.epayco.co",
+    "connect-src 'self' https://api.mercadopago.com https://api.epayco.co https://nominatim.openstreetmap.org https://cloudflareinsights.com https://*.cloudflareinsights.com",
+    "frame-src 'self' https://rebecandrade.com https://www.rebecandrade.com http://localhost:5173 http://localhost:5174 http://127.0.0.1:5173 http://127.0.0.1:5174 https://*.mercadopago.com https://*.epayco.co",
   ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

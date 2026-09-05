@@ -23,6 +23,7 @@ import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
 import { STORE_THEME_DEFAULTS, STORE_THEME_FIELDS, STORE_SPACING_FIELDS, normalizeStoreTheme } from '../storeTheme.js';
+import { getStorePreviewUrl } from '../previewUrl.js';
 
 // Schema de los settings por tipo. Cada setting tiene key, label y type.
 const MODULE_SCHEMAS = {
@@ -395,15 +396,6 @@ function defaultSettingsForType(type) {
     else out[f.key] = '';
   }
   return out;
-}
-
-function getStorePreviewUrl() {
-  const configured = import.meta.env.VITE_STORE_PREVIEW_URL;
-  if (configured) return `${configured.replace(/\/$/, '')}/?builder_preview=1`;
-  const url = new URL(window.location.origin);
-  if (url.port === '5174' || !url.port) url.port = '5173';
-  url.search = '?builder_preview=1';
-  return url.toString();
 }
 
 function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista previa real de la tienda' }) {

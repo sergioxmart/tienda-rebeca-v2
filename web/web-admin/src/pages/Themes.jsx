@@ -16,6 +16,7 @@ import { useToast } from '../components/Toast.jsx';
 import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
+import { getStorePreviewUrl } from '../previewUrl.js';
 
 const EMPTY_NEW = { name: '', description: '' };
 const THEME_MODULE_META = {
@@ -26,15 +27,6 @@ const THEME_MODULE_META = {
   featured_products: { label: 'Productos destacados', icon: '⭐', description: 'Productos marcados como destacados.' },
   recent_products: { label: 'Productos recientes', icon: '🆕', description: 'Productos ordenados por novedades.' },
 };
-
-function getStorePreviewUrl() {
-  const configured = import.meta.env.VITE_STORE_PREVIEW_URL;
-  if (configured) return `${configured.replace(/\/$/, '')}/?builder_preview=1`;
-  const url = new URL(window.location.origin);
-  if (url.port === '5174' || !url.port) url.port = '5173';
-  url.search = '?builder_preview=1';
-  return url.toString();
-}
 
 function ThemeLivePreview({ modules, siteConfig }) {
   const frameRef = useRef(null);

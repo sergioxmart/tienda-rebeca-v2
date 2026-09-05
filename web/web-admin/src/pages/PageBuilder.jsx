@@ -35,7 +35,7 @@ const MODULE_SCHEMAS = {
       { key: 'eyebrow',  label: 'Etiqueta superior', type: 'text', placeholder: 'Tecnología para tu día a día', defaultValue: 'Tecnología para tu día a día' },
       { key: 'title',    label: 'Título',         type: 'text' },
       { key: 'subtitle', label: 'Subtítulo',      type: 'textarea' },
-      { key: 'image_url',label: 'Imagen de fondo', type: 'media', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
+      { key: 'image_url',label: 'Imagen de fondo', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
         { value: 'abstract', label: 'Abstracto Rebeca Andrade' },
@@ -43,7 +43,7 @@ const MODULE_SCHEMAS = {
         { value: 'image', label: 'Imagen personalizada' },
       ] },
       { key: 'product_slug', label: 'Producto destacado', type: 'product', placeholder: 'Selecciona un producto' },
-      { key: 'visual_image_url', label: 'Imagen personalizada', type: 'media', placeholder: 'Se usa cuando eliges Imagen personalizada' },
+      { key: 'visual_image_url', label: 'Imagen personalizada', type: 'media', mediaPlacementKey: 'visual_placement', placeholder: 'Se usa cuando eliges Imagen personalizada' },
       { key: 'cta_text', label: 'Texto del botón',type: 'text',  placeholder: 'Ver catálogo' },
       { key: 'cta_link', label: 'Link del botón', type: 'text',  placeholder: '/categoria/accesorios-telefono' },
       { key: 'secondary_cta_text', label: 'Texto del segundo enlace', type: 'text', defaultValue: 'Explorar catálogo' },
@@ -57,7 +57,7 @@ const MODULE_SCHEMAS = {
     description: 'Imagen clickeable horizontal.',
     icon: '🖼️',
     settings: [
-      { key: 'image_url', label: 'Imagen', type: 'media', placeholder: 'Pega una URL o elige una imagen de Media' },
+      { key: 'image_url', label: 'Imagen', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Pega una URL o elige una imagen de Media' },
       { key: 'link',      label: 'Link al hacer click', type: 'text', placeholder: '/categoria/...' },
       { key: 'alt',       label: 'Texto alternativo',   type: 'text' },
     ],
@@ -459,6 +459,28 @@ function CustomCodeEditor({ value, onChange, moduleType, moduleLabel, idPrefix =
   </div>;
 }
 
+const DEFAULT_MEDIA_PLACEMENT = {
+  desktop: { x: 50, y: 50, zoom: 100 },
+  mobile: { x: 50, y: 50, zoom: 100 },
+};
+
+function clampMediaValue(value, min, max, fallback) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.min(max, Math.max(min, numericValue)) : fallback;
+}
+
+function normalizeMediaPlacement(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return Object.fromEntries(Object.entries(DEFAULT_MEDIA_PLACEMENT).map(([viewport, defaults]) => {
+    const current = source[viewport] && typeof source[viewport] === 'object' ? source[viewport] : {};
+    return [viewport, {
+      x: clampMediaValue(current.x, 0, 100, defaults.x),
+      y: clampMediaValue(current.y, 0, 100, defaults.y),
+      zoom: clampMediaValue(current.zoom, 100, 220, defaults.zoom),
+    }];
+  }));
+}
+
 function MediaPickerModal({ open, onClose, items, loading, value, onSelect }) {
   const [search, setSearch] = useState('');
 
@@ -527,7 +549,19 @@ function MediaPickerModal({ open, onClose, items, loading, value, onSelect }) {
   );
 }
 
-function MediaField({ field, value, onChange, onOpenPicker }) {
+function MediaField({ field, value, placement, onChange, onPlacementChange, onOpenPicker }) {
+  const [placementOpen, setPlacementOpen] = useState(false);
+  const [viewport, setViewport] = useState('desktop');
+  const normalizedPlacement = normalizeMediaPlacement(placement);
+  const currentPlacement = normalizedPlacement[viewport];
+
+  const updatePlacement = (key, nextValue) => {
+    onPlacementChange({
+      ...normalizedPlacement,
+      [viewport]: { ...currentPlacement, [key]: Number(nextValue) },
+    });
+  };
+
   return (
     <>
       <div className="builder-media-url-row">
@@ -541,14 +575,60 @@ function MediaField({ field, value, onChange, onOpenPicker }) {
         <button className="btn" type="button" onClick={onOpenPicker}>Elegir de Media</button>
       </div>
       {value ? (
+        <>
         <div className="builder-media-selected">
           <img src={value} alt="Vista previa de la imagen seleccionada" />
           <div>
             <strong>Imagen seleccionada</strong>
             <span>{value}</span>
           </div>
-          <button className="btn btn-sm" type="button" onClick={() => onChange('')}>Quitar</button>
+          <div className="builder-media-selected-actions">
+            <button
+              className={`btn btn-sm builder-media-settings-button${placementOpen ? ' is-active' : ''}`}
+              type="button"
+              onClick={() => setPlacementOpen((open) => !open)}
+              aria-label="Ajustar encuadre de imagen"
+              aria-expanded={placementOpen}
+              title="Ajustar encuadre"
+            >⚙</button>
+            <button className="btn btn-sm" type="button" onClick={() => onChange('')}>Quitar</button>
+          </div>
         </div>
+        {placementOpen && <div className="builder-media-placement">
+          <div className="builder-media-placement-heading">
+            <div><strong>Ajustar encuadre</strong><span>Configura la posición y el zoom para cada pantalla.</span></div>
+            <div className="builder-media-placement-tabs" role="tablist" aria-label="Tamaño de pantalla">
+              <button className={viewport === 'desktop' ? 'is-active' : ''} type="button" onClick={() => setViewport('desktop')} role="tab" aria-selected={viewport === 'desktop'}>Escritorio</button>
+              <button className={viewport === 'mobile' ? 'is-active' : ''} type="button" onClick={() => setViewport('mobile')} role="tab" aria-selected={viewport === 'mobile'}>Móvil</button>
+            </div>
+          </div>
+          <div className="builder-media-crop-preview">
+            <img
+              src={value}
+              alt="Vista previa del encuadre"
+              style={{
+                objectPosition: `${currentPlacement.x}% ${currentPlacement.y}%`,
+                transform: `scale(${currentPlacement.zoom / 100})`,
+                transformOrigin: `${currentPlacement.x}% ${currentPlacement.y}%`,
+              }}
+            />
+          </div>
+          <div className="builder-media-placement-controls">
+            {[
+              ['x', 'Posición horizontal'],
+              ['y', 'Posición vertical'],
+              ['zoom', 'Zoom'],
+            ].map(([key, label]) => {
+              const min = key === 'zoom' ? 100 : 0;
+              const max = key === 'zoom' ? 220 : 100;
+              return <label key={key}>
+                <span>{label}<strong>{currentPlacement[key]}%</strong></span>
+                <input type="range" min={min} max={max} step="1" value={currentPlacement[key]} onChange={(event) => updatePlacement(key, event.target.value)} aria-label={`${label} para ${viewport}`} />
+              </label>;
+            })}
+          </div>
+        </div>}
+        </>
       ) : (
         <div className="help">Puedes pegar una URL externa o seleccionar un archivo existente desde Media.</div>
       )}
@@ -785,6 +865,9 @@ export default function PageBuilder() {
         const raw = editing.settings[f.key];
         if (raw === '' || raw === undefined || raw === null) continue;
         settingsOut[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? Boolean(raw) : raw;
+        if (f.type === 'media' && f.mediaPlacementKey) {
+          settingsOut[f.mediaPlacementKey] = normalizeMediaPlacement(editing.settings[f.mediaPlacementKey]);
+        }
       }
       const nextModule = { id: editing.id || `draft-${Date.now()}`, type: editing.type, settings: settingsOut, active: editing.active };
       const nextModules = editing.mode === 'new'
@@ -998,7 +1081,9 @@ export default function PageBuilder() {
                   <MediaField
                     field={f}
                     value={editing.settings[f.key] ?? ''}
+                    placement={f.mediaPlacementKey ? editing.settings[f.mediaPlacementKey] : undefined}
                     onChange={(value) => setSetting(f.key, value)}
+                    onPlacementChange={(value) => f.mediaPlacementKey && setSetting(f.mediaPlacementKey, value)}
                     onOpenPicker={() => openMediaPicker(f.key)}
                   />
                 ) : f.type === 'textarea' ? (

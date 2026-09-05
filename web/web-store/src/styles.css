@@ -326,6 +326,7 @@ p { margin: 0 0 12px; }
 .hero-minimal::before, .hero-minimal::after { display: none; }
 .hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255,255,255,0.14) 1px, transparent 1px); background-size: 24px 24px; mask-image: linear-gradient(90deg, rgba(0,0,0,0.65), transparent 75%); opacity: 0.22; }
 .hero::after { content: ''; position: absolute; width: 410px; height: 410px; right: 6%; bottom: -240px; border: 1px solid rgba(255,255,255,0.16); border-radius: 50%; box-shadow: 0 0 0 34px rgba(255,255,255,0.03), 0 0 0 68px rgba(255,255,255,0.025); }
+.hero-image-background { position: absolute; inset: 0; z-index: 0; pointer-events: none; background-image: linear-gradient(rgba(15,42,71,0.55), rgba(15,42,71,0.7)), var(--hero-image-url); background-repeat: no-repeat; background-size: cover; background-position: var(--hero-image-desktop-position, 50% 50%); transform: scale(var(--hero-image-desktop-zoom, 1)); transform-origin: var(--hero-image-desktop-position, 50% 50%); }
 .hero-glow { position: absolute; z-index: -1; border-radius: 50%; filter: blur(2px); pointer-events: none; }
 .hero-glow-one { width: 300px; height: 300px; top: -160px; right: 35%; background: rgba(255, 107, 53, 0.23); }
 .hero-glow-two { width: 200px; height: 200px; left: 43%; bottom: -130px; background: rgba(44, 188, 197, 0.2); }
@@ -351,7 +352,7 @@ p { margin: 0 0 12px; }
 .hero-device-product { width: min(320px, 82%); height: min(360px, 88%); aspect-ratio: auto; align-items: center; padding: 24px; border: 1px solid rgba(255,255,255,0.24); border-radius: 38% 22% 38% 22%; background: radial-gradient(circle at 50% 35%, rgba(255,255,255,0.26), rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.02)); box-shadow: 22px 30px 46px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.08); transform: rotate(4deg); }
 .hero-device-product::before { inset: 12px; width: auto; height: auto; border: 1px dashed rgba(255,255,255,0.22); border-radius: inherit; background: transparent; }
 .hero-device-product::after { display: none; }
-.hero-device-product img { position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 22px 18px rgba(0,0,0,0.24)); transform: rotate(-4deg); }
+.hero-device-product img { position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain; object-position: var(--hero-visual-desktop-position, 50% 50%); filter: drop-shadow(0 22px 18px rgba(0,0,0,0.24)); transform: scale(var(--hero-visual-desktop-zoom, 1)) rotate(-4deg); transform-origin: var(--hero-visual-desktop-position, 50% 50%); }
 .hero-orbit { position: absolute; border: 1px solid rgba(255,255,255,0.22); border-radius: 50%; transform: rotate(-25deg); }
 .hero-orbit-one { width: 360px; height: 170px; }
 .hero-orbit-two { width: 250px; height: 420px; transform: rotate(42deg); }
@@ -411,7 +412,8 @@ p { margin: 0 0 12px; }
 .category-card-icon { z-index: 1; width: 58px; height: 58px; display: flex; align-items: center; justify-content: center; border-radius: 18px; color: var(--color-accent); background: var(--color-accent-soft); font-size: 28px; font-weight: 850; }
 .category-card > div:last-of-type { z-index: 1; }
 .category-card > span { z-index: 1; color: var(--color-muted); font-size: 10px; font-weight: 700; }
-.promo-banner { min-height: 190px; margin-bottom: 50px; border-radius: 25px; background-color: #e9eef2; background-position: center; background-size: cover; box-shadow: var(--shadow-sm); }
+.promo-banner { position: relative; min-height: 190px; overflow: hidden; margin-bottom: 50px; border-radius: 25px; background-color: #e9eef2; box-shadow: var(--shadow-sm); }
+.promo-banner::before { content: ''; position: absolute; inset: 0; background-image: var(--banner-image-url); background-repeat: no-repeat; background-size: cover; background-position: var(--banner-image-desktop-position, 50% 50%); transform: scale(var(--banner-image-desktop-zoom, 1)); transform-origin: var(--banner-image-desktop-position, 50% 50%); }
 
 /* ---------- Catalog and filters ---------- */
 
@@ -791,5 +793,8 @@ p { margin: 0 0 12px; }
   .hero { min-height: 620px; margin-bottom: 52px; padding: 62px 24px 48px; }
   .hero h1 { font-size: clamp(40px,12vw,62px); }
   .hero-visual { opacity: .3; }
+  .hero-image-background { background-position: var(--hero-image-mobile-position, 50% 50%); transform: scale(var(--hero-image-mobile-zoom, 1)); transform-origin: var(--hero-image-mobile-position, 50% 50%); }
+  .hero-device-product img { object-position: var(--hero-visual-mobile-position, 50% 50%); transform: scale(var(--hero-visual-mobile-zoom, 1)) rotate(-4deg); transform-origin: var(--hero-visual-mobile-position, 50% 50%); }
+  .promo-banner::before { background-position: var(--banner-image-mobile-position, 50% 50%); transform: scale(var(--banner-image-mobile-zoom, 1)); transform-origin: var(--banner-image-mobile-position, 50% 50%); }
   .store-section { padding: 0 18px; margin-bottom: 52px; }
 }

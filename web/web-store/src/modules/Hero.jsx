@@ -5,12 +5,14 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Price from '../components/Price.jsx';
 import CustomCode from './CustomCode.jsx';
+import { normalizeMediaPlacement } from './mediaPlacement.js';
 
 export default function Hero({ settings = {} }) {
   const {
     title,
     subtitle,
     image_url,
+    image_placement,
     cta_text,
     cta_link,
     secondary_cta_text = 'Explorar catálogo',
@@ -19,6 +21,7 @@ export default function Hero({ settings = {} }) {
     visual_mode = 'abstract',
     product_slug,
     visual_image_url,
+    visual_placement,
     custom_code_enabled,
     custom_code,
   } = settings;
@@ -44,14 +47,32 @@ export default function Hero({ settings = {} }) {
     || product?.media?.find((media) => media.kind === 'image')?.url
     || product?.variants?.flatMap((variant) => variant.media || []).find((media) => media.kind === 'image')?.url;
   const visualImage = visual_mode === 'image' ? visual_image_url : productImage;
+  const imagePlacement = normalizeMediaPlacement(image_placement);
+  const visualPlacement = normalizeMediaPlacement(visual_placement);
   const style = image_url
-    ? { backgroundImage: `linear-gradient(rgba(15,42,71,0.55), rgba(15,42,71,0.7)), url(${image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : undefined;
+    ? {
+      '--hero-image-url': `url(${image_url})`,
+      '--hero-image-desktop-position': `${imagePlacement.desktop.x}% ${imagePlacement.desktop.y}%`,
+      '--hero-image-desktop-zoom': imagePlacement.desktop.zoom / 100,
+      '--hero-image-mobile-position': `${imagePlacement.mobile.x}% ${imagePlacement.mobile.y}%`,
+      '--hero-image-mobile-zoom': imagePlacement.mobile.zoom / 100,
+      '--hero-visual-desktop-position': `${visualPlacement.desktop.x}% ${visualPlacement.desktop.y}%`,
+      '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
+      '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
+      '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
+    }
+    : {
+      '--hero-visual-desktop-position': `${visualPlacement.desktop.x}% ${visualPlacement.desktop.y}%`,
+      '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
+      '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
+      '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
+    };
   if (custom_code_enabled && custom_code) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
-    <section className={`hero${minimalVisual ? ' hero-minimal' : ''}`} style={style}>
+    <section className={`hero${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
+      {image_url && <div className="hero-image-background" aria-hidden="true" />}
       {!minimalVisual && <>
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
@@ -72,7 +93,7 @@ export default function Hero({ settings = {} }) {
       </div>
       {!minimalVisual && <div className={`hero-visual ${visual_mode === 'product' ? 'hero-visual-product' : ''}`} aria-label={product ? `Producto destacado: ${product.name}` : undefined}>
         {visualImage
-          ? <div className="hero-device hero-device-product"><img src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
+          ? <div className="hero-device hero-device-product"><img className="hero-visual-image" src={visualImage} alt={product?.name || 'Imagen destacada'} /></div>
           : <><div className="hero-orbit hero-orbit-one" /><div className="hero-orbit hero-orbit-two" /><div className="hero-device"><span>TS</span></div></>}
         <div className="hero-floating-card hero-floating-card-top"><span className="floating-dot" />{product ? product.name : 'Selección Rebeca Andrade'}</div>
         {product

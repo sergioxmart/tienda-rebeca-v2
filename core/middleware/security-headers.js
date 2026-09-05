@@ -17,13 +17,18 @@ export function securityHeaders(req, res, next) {
 
   // Se usa CSP en lugar de X-Frame-Options para no romper la vista previa
   // del Builder, que carga la tienda de 5173 dentro del admin 5174.
+  const localRequest = isLocalRequest(req);
   const configuredAncestors = process.env.CSP_FRAME_ANCESTORS
     || "'self' http://localhost:5173 http://localhost:5174";
+  const localFrameAncestors = localRequest
+    ? 'http://localhost:3001 http://127.0.0.1:3001'
+    : '';
   const frameAncestors = [...new Set([
     ...configuredAncestors.trim().split(/\s+/),
+    ...localFrameAncestors.split(/\s+/).filter(Boolean),
     'https://admin.rebecandrade.com',
   ])].join(' ');
-  const localPreviewSources = isLocalRequest(req)
+  const localPreviewSources = localRequest
     ? 'http://localhost:3000 http://localhost:3001 http://localhost:5173 http://localhost:5174 http://127.0.0.1:3000 http://127.0.0.1:3001 http://127.0.0.1:5173 http://127.0.0.1:5174'
     : '';
   res.setHeader('Content-Security-Policy', [

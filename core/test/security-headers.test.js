@@ -63,6 +63,7 @@ test('permite la preview del Builder en los hosts locales', () => {
   securityHeaders(req, res, next);
   assert.match(res.headers['content-security-policy'], /frame-src[^;]*http:\/\/localhost:3000/);
   assert.match(res.headers['content-security-policy'], /frame-src[^;]*http:\/\/localhost:3001/);
+  assert.match(res.headers['content-security-policy'], /frame-ancestors[^;]*http:\/\/localhost:3001/);
 });
 
 test('no agrega puertos locales a la CSP del host público', () => {

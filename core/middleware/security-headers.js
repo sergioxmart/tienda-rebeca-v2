@@ -1,7 +1,12 @@
 // Headers de seguridad básicos que toda respuesta HTTP debería tener.
 // Se aplica antes de los handlers para que incluso un 500 los traiga.
 
-export function securityHeaders(_req, res, next) {
+function isLocalRequest(req) {
+  const host = String(req?.headers?.host || '').split(':')[0].toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+}
+
+export function securityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-DNS-Prefetch-Control', 'off');
@@ -18,6 +23,9 @@ export function securityHeaders(_req, res, next) {
     ...configuredAncestors.trim().split(/\s+/),
     'https://admin.rebecandrade.com',
   ])].join(' ');
+  const localPreviewSources = isLocalRequest(req)
+    ? 'http://localhost:3000 http://localhost:3001 http://localhost:5173 http://localhost:5174 http://127.0.0.1:3000 http://127.0.0.1:3001 http://127.0.0.1:5173 http://127.0.0.1:5174'
+    : '';
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "base-uri 'self'",
@@ -29,7 +37,7 @@ export function securityHeaders(_req, res, next) {
     'img-src \'self\' data: blob: https:',
     'font-src \'self\' data: https:',
     "connect-src 'self' https://api.mercadopago.com https://api.epayco.co https://nominatim.openstreetmap.org https://cloudflareinsights.com https://*.cloudflareinsights.com",
-    "frame-src 'self' https://rebecandrade.com https://www.rebecandrade.com http://localhost:5173 http://localhost:5174 http://127.0.0.1:5173 http://127.0.0.1:5174 https://*.mercadopago.com https://*.epayco.co",
+    `frame-src 'self' https://rebecandrade.com https://www.rebecandrade.com ${localPreviewSources} https://*.mercadopago.com https://*.epayco.co`,
   ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

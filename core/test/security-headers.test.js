@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { securityHeaders } from '../middleware/security-headers.js';
 
-function mockReqRes() {
-  const req = { headers: {} };
+function mockReqRes(headers = {}) {
+  const req = { headers };
   const res = { headers: {} };
   res.setHeader = (k, v) => { res.headers[k.toLowerCase()] = v; };
   return { req, res, nextCalled: false, next() { mockReqRes.nextCalled = true; } };
@@ -56,4 +56,18 @@ test('mantiene permitido el admin aunque CSP_FRAME_ANCESTORS sea personalizado',
     if (previous === undefined) delete process.env.CSP_FRAME_ANCESTORS;
     else process.env.CSP_FRAME_ANCESTORS = previous;
   }
+});
+
+test('permite la preview del Builder en los hosts locales', () => {
+  const { req, res, next } = mockReqRes({ host: 'localhost:3001' });
+  securityHeaders(req, res, next);
+  assert.match(res.headers['content-security-policy'], /frame-src[^;]*http:\/\/localhost:3000/);
+  assert.match(res.headers['content-security-policy'], /frame-src[^;]*http:\/\/localhost:3001/);
+});
+
+test('no agrega puertos locales a la CSP del host público', () => {
+  const { req, res, next } = mockReqRes({ host: 'admin.rebecandrade.com' });
+  securityHeaders(req, res, next);
+  const frameSrc = res.headers['content-security-policy'].match(/frame-src[^;]*/)?.[0] || '';
+  assert.doesNotMatch(frameSrc, /localhost:3000|localhost:3001|127\.0\.0\.1:3000|127\.0\.0\.1:3001/);
 });

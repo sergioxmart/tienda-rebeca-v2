@@ -29,6 +29,16 @@ DEPLOY_REASON="${DEPLOY_REASON:-manual}"
 
 log() { echo "$LOG_PREFIX $(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
 
+# GitHub puede entregar eventos repetidos mientras un deploy ya está
+# ejecutándose. Serializar evita que dos `npm ci` se borren el node_modules
+# entre sí y dejen Vite ausente durante el build.
+LOCK_FILE="${DEPLOY_LOCK_FILE:-/tmp/techstore-deploy.lock}"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  log "another deployment is already running; skipping"
+  exit 0
+fi
+
 log "start (reason=$DEPLOY_REASON) repo=$REPO_DIR"
 
 # 1. Repo

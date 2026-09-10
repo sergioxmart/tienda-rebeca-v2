@@ -661,7 +661,10 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
 
 function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
-  const logoBorderRadius = Math.min(50, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
+  const logoBorderRadius = Math.min(100, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
+  const logoShapeStyle = logoBorderRadius >= 100
+    ? { width: '44px', height: '44px', flexBasis: '44px', borderRadius: '50%', objectFit: 'cover' }
+    : { borderRadius: `${logoBorderRadius / 2}%` };
   return (
     <div className="builder-navbar-settings">
       <div className="builder-navbar-settings-heading">
@@ -685,18 +688,18 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
       </div>
       {['image', 'custom'].includes(navSettings.navbar_logo_mode) && (
         <div className="form-group builder-navbar-radius-field">
-          <label htmlFor="builder-navbar-logo-border-radius">Redondez de los bordes del logo: <strong>{logoBorderRadius}px</strong></label>
+          <label htmlFor="builder-navbar-logo-border-radius">Redondez de los bordes del logo: <strong>{logoBorderRadius}%</strong></label>
           <input
             id="builder-navbar-logo-border-radius"
             type="range"
             min="0"
-            max="50"
+            max="100"
             step="1"
             value={logoBorderRadius}
             onChange={(e) => setNavValue('navbar_logo_border_radius', Number(e.target.value))}
             aria-label="Redondez de los bordes del logo"
           />
-          <div className="help">0 px deja las esquinas rectas; 50 px crea un redondeo amplio.</div>
+          <div className="help">0% deja las esquinas rectas; de 1% a 99% redondea hasta formar un óvalo; 100% fuerza un círculo.</div>
         </div>
       )}
       {navSettings.navbar_logo_mode === 'custom' && (
@@ -704,7 +707,11 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           <label>Imagen del logo personalizado</label>
           {navSettings.navbar_custom_logo_url ? (
             <div className="builder-navbar-logo-selected">
-              <img src={navSettings.navbar_custom_logo_url} alt="Vista previa del logo personalizado" />
+              <img
+                src={navSettings.navbar_custom_logo_url}
+                alt="Vista previa del logo personalizado"
+                style={logoShapeStyle}
+              />
               <div>
                 <strong>Logo seleccionado</strong>
                 <span>{navSettings.navbar_custom_logo_url}</span>

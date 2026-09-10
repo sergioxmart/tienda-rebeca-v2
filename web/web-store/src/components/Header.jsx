@@ -45,8 +45,11 @@ export default function Header() {
     : site?.logo_url;
   const rawLogoBorderRadius = Number(site?.navbar_logo_border_radius);
   const logoBorderRadius = Number.isFinite(rawLogoBorderRadius)
-    ? Math.min(50, Math.max(0, rawLogoBorderRadius))
+    ? Math.min(100, Math.max(0, rawLogoBorderRadius))
     : 0;
+  const logoShapeStyle = logoBorderRadius >= 100
+    ? { width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }
+    : { borderRadius: `${logoBorderRadius / 2}%` };
   const textLogo = site?.navbar_logo_text || name;
   const useTextLogo = site?.navbar_logo_mode === 'text';
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;
@@ -186,7 +189,7 @@ export default function Header() {
           {useTextLogo
             ? <span className="logo-text" style={{ fontFamily: logoFontFamily }}>{textLogo}</span>
             : logoUrl
-            ? <img src={logoUrl} alt={name} style={{ borderRadius: `${logoBorderRadius}px` }} />
+            ? <img src={logoUrl} alt={name} style={logoShapeStyle} />
             : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
         </Link>
         <nav className="nav site-nav" aria-label="Navegación principal">

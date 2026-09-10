@@ -272,7 +272,7 @@ p { margin: 0 0 12px; }
   backdrop-filter: blur(12px);
 }
 .login-brand { display: flex; align-items: center; justify-content: center; width: 100%; height: 66px; margin-bottom: 15px; }
-.login-logo { display: block; width: 100%; height: 100%; box-sizing: border-box; padding: 0; border: 1px solid var(--color-border); border-radius: 16px; background: #fff; object-fit: cover; object-position: center; box-shadow: var(--shadow-sm); }
+.login-logo { display: block; width: auto; max-width: 100%; height: auto; max-height: 64px; box-sizing: border-box; padding: 0; border: 1px solid var(--color-border); border-radius: 16px; background: #fff; object-fit: contain; object-position: center; box-shadow: var(--shadow-sm); }
 .login-brand-fallback { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; background: linear-gradient(135deg, var(--color-accent), #ff9b75); color: #fff; font-size: 25px; font-weight: 800; box-shadow: 0 8px 20px rgba(255,107,53,0.25); }
 .login-card-heading { text-align: center; margin-bottom: 24px; }
 .login-card-heading h1 { margin-bottom: 7px; font-size: 24px; letter-spacing: -0.03em; }
@@ -448,7 +448,7 @@ p { margin: 0 0 12px; }
 .builder-custom-code-help { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--color-muted); font-size: 11px; }
 .builder-navbar-custom-toggle { margin-top: 2px; padding: 10px 12px; border: 1px solid #c9dce5; border-radius: 10px; background: #f5fafc; }
 .builder-navbar-logo-selected { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #c9dce5; border-radius: 10px; background: #f5fafc; }
-.builder-navbar-logo-selected img { width: 64px; height: 44px; flex: 0 0 64px; object-fit: contain; border-radius: 6px; background: #e8eef2; }
+.builder-navbar-logo-selected img { width: 64px; height: 44px; flex: 0 0 64px; object-fit: contain; border-radius: 6px; background: #e8eef2; transition: border-radius .15s ease; }
 .builder-navbar-logo-selected > div:not(.builder-navbar-logo-actions) { display: grid; flex: 1; min-width: 0; gap: 2px; }
 .builder-navbar-logo-selected strong { color: var(--color-primary); font-size: 11px; }
 .builder-navbar-logo-selected span { overflow: hidden; color: var(--color-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }

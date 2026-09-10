@@ -43,6 +43,10 @@ export default function Header() {
   const logoUrl = site?.navbar_logo_mode === 'custom'
     ? (site?.navbar_custom_logo_url || site?.logo_url)
     : site?.logo_url;
+  const rawLogoBorderRadius = Number(site?.navbar_logo_border_radius);
+  const logoBorderRadius = Number.isFinite(rawLogoBorderRadius)
+    ? Math.min(50, Math.max(0, rawLogoBorderRadius))
+    : 0;
   const textLogo = site?.navbar_logo_text || name;
   const useTextLogo = site?.navbar_logo_mode === 'text';
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;
@@ -182,7 +186,7 @@ export default function Header() {
           {useTextLogo
             ? <span className="logo-text" style={{ fontFamily: logoFontFamily }}>{textLogo}</span>
             : logoUrl
-            ? <img src={logoUrl} alt={name} />
+            ? <img src={logoUrl} alt={name} style={{ borderRadius: `${logoBorderRadius}px` }} />
             : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
         </Link>
         <nav className="nav site-nav" aria-label="Navegación principal">

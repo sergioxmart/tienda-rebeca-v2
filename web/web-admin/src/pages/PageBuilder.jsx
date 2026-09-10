@@ -265,6 +265,7 @@ const NAV_DEFAULTS = {
   navbar_links: [],
   navbar_logo_mode: 'image',
   navbar_custom_logo_url: '',
+  navbar_logo_border_radius: 0,
   navbar_logo_text: 'Rebeca Andrade',
   navbar_logo_font: 'display',
   navbar_mobile_logo_alignment: 'left',
@@ -660,6 +661,7 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
 
 function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
+  const logoBorderRadius = Math.min(50, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
   return (
     <div className="builder-navbar-settings">
       <div className="builder-navbar-settings-heading">
@@ -681,6 +683,22 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           </div>
         )}
       </div>
+      {['image', 'custom'].includes(navSettings.navbar_logo_mode) && (
+        <div className="form-group builder-navbar-radius-field">
+          <label htmlFor="builder-navbar-logo-border-radius">Redondez de los bordes del logo: <strong>{logoBorderRadius}px</strong></label>
+          <input
+            id="builder-navbar-logo-border-radius"
+            type="range"
+            min="0"
+            max="50"
+            step="1"
+            value={logoBorderRadius}
+            onChange={(e) => setNavValue('navbar_logo_border_radius', Number(e.target.value))}
+            aria-label="Redondez de los bordes del logo"
+          />
+          <div className="help">0 px deja las esquinas rectas; 50 px crea un redondeo amplio.</div>
+        </div>
+      )}
       {navSettings.navbar_logo_mode === 'custom' && (
         <div className="form-group">
           <label>Imagen del logo personalizado</label>

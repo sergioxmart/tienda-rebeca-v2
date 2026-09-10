@@ -447,6 +447,12 @@ p { margin: 0 0 12px; }
 .builder-custom-code-editor .textarea { min-height: 260px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.55; }
 .builder-custom-code-help { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; color: var(--color-muted); font-size: 11px; }
 .builder-navbar-custom-toggle { margin-top: 2px; padding: 10px 12px; border: 1px solid #c9dce5; border-radius: 10px; background: #f5fafc; }
+.builder-navbar-logo-selected { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid #c9dce5; border-radius: 10px; background: #f5fafc; }
+.builder-navbar-logo-selected img { width: 64px; height: 44px; flex: 0 0 64px; object-fit: contain; border-radius: 6px; background: #e8eef2; }
+.builder-navbar-logo-selected > div:not(.builder-navbar-logo-actions) { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.builder-navbar-logo-selected strong { color: var(--color-primary); font-size: 11px; }
+.builder-navbar-logo-selected span { overflow: hidden; color: var(--color-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.builder-navbar-logo-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .hero-custom-code { width: 100%; }
 .builder-media-url-row { display: flex; align-items: center; gap: 8px; }
 .builder-media-url-row .input { min-width: 0; flex: 1; }
@@ -877,6 +883,19 @@ p { margin: 0 0 12px; }
 .variant-media-library { margin-top: 14px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); }
 .variant-media-library-heading { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 12px; }
 .variant-media-library-heading span { color: var(--color-muted); }
+.variant-media-reuse { margin-bottom: 12px; padding: 10px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.variant-media-reuse-label { display: grid; gap: 5px; color: var(--color-muted); font-size: 11px; font-weight: 600; }
+.variant-media-reuse-label .select { width: 100%; font-size: 12px; font-weight: 400; }
+.variant-media-reuse-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+.variant-media-reuse-item { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 6px; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-bg); cursor: pointer; }
+.variant-media-reuse-item.is-attached { opacity: .62; cursor: default; }
+.variant-media-reuse-item > input { flex: 0 0 auto; margin: 0; }
+.variant-media-reuse-item > img, .variant-media-reuse-video { display: block; width: 42px; height: 42px; flex: 0 0 42px; object-fit: cover; border-radius: 4px; background: #E5E7EB; }
+.variant-media-reuse-video { display: grid; place-items: center; color: var(--color-primary); font-size: 12px; }
+.variant-media-reuse-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.variant-media-reuse-copy strong { overflow: hidden; color: var(--color-text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.variant-media-reuse-copy small { color: var(--color-muted); font-size: 10px; }
+.variant-media-reuse > .btn { margin-top: 10px; }
 .variant-media-library-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 220px); gap: 8px; margin-bottom: 12px; }
 .variant-media-library-filter { display: flex; flex-direction: column; gap: 4px; color: var(--color-muted); font-size: 11px; font-weight: 600; }
 .variant-media-library-filter .input, .variant-media-library-filter .select { width: 100%; box-sizing: border-box; font-size: 12px; font-weight: 400; }
@@ -1029,6 +1048,10 @@ p { margin: 0 0 12px; }
   .builder-media-selected .btn { width: 100%; }
   .builder-media-selected-actions { width: 100%; }
   .builder-media-selected-actions .btn { width: auto; }
+  .builder-navbar-logo-selected { align-items: flex-start; flex-wrap: wrap; }
+  .builder-navbar-logo-selected > div:not(.builder-navbar-logo-actions) { min-width: calc(100% - 76px); }
+  .builder-navbar-logo-actions { width: 100%; }
+  .builder-navbar-logo-actions .btn { flex: 1; }
   .builder-media-placement-heading { align-items: stretch; flex-direction: column; }
   .builder-media-placement-tabs { width: 100%; }
   .builder-media-placement-tabs button { flex: 1; }

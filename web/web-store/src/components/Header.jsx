@@ -40,7 +40,9 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const name = site?.site_name || 'Rebeca Andrade';
-  const logoUrl = site?.logo_url;
+  const logoUrl = site?.navbar_logo_mode === 'custom'
+    ? (site?.navbar_custom_logo_url || site?.logo_url)
+    : site?.logo_url;
   const textLogo = site?.navbar_logo_text || name;
   const useTextLogo = site?.navbar_logo_mode === 'text';
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;

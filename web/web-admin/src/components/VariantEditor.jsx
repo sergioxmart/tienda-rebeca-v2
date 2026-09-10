@@ -34,6 +34,13 @@ function ChevronIcon({ direction }) {
   return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
 }
 
+function variantLabel(variant) {
+  const combination = (variant.attribute_values || [])
+    .map((value) => `${value.attribute_name}: ${value.value}`)
+    .join(' · ');
+  return variant.sku ? `${variant.sku}${combination ? ` — ${combination}` : ''}` : combination || `Variante #${variant.id}`;
+}
+
 const EMPTY = {
   sku: '',
   price: '',
@@ -64,6 +71,11 @@ export default function VariantEditor({ productId, variants, attributes, categor
   const [librarySearch, setLibrarySearch] = useState('');
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState('');
   const [categories, setCategories] = useState([]);
+  const [reuseVariantId, setReuseVariantId] = useState('');
+  const [reuseMedia, setReuseMedia] = useState([]);
+  const [reuseSelectedIds, setReuseSelectedIds] = useState(new Set());
+  const [reuseLoading, setReuseLoading] = useState(false);
+  const reuseRequestRef = useRef(0);
 
   // Cargar todos los valores de los atributos del producto
   useEffect(() => {
@@ -107,11 +119,41 @@ export default function VariantEditor({ productId, variants, attributes, categor
     } finally { setLibraryLoading(false); }
   };
 
+  const loadReuseMedia = async (variantId) => {
+    const requestId = ++reuseRequestRef.current;
+    setReuseVariantId(variantId);
+    setReuseMedia([]);
+    setReuseSelectedIds(new Set());
+    setReuseLoading(false);
+    if (!variantId) return;
+
+    setReuseLoading(true);
+    try {
+      const data = await api.get(`/api/admin/media?product_id=${productId}&variant_id=${variantId}`);
+      if (requestId !== reuseRequestRef.current) return;
+      const uniqueMedia = (data.media || []).filter((item, index, list) => list.findIndex((candidate) => (
+        candidate.kind === item.kind && candidate.url === item.url
+      )) === index);
+      setReuseMedia(uniqueMedia);
+      setReuseSelectedIds(new Set(uniqueMedia.map((item) => item.id)));
+    } catch (err) {
+      if (requestId === reuseRequestRef.current) {
+        toast.error('No se pudo cargar la multimedia de la variante', err.message);
+      }
+    } finally {
+      if (requestId === reuseRequestRef.current) setReuseLoading(false);
+    }
+  };
+
   useEffect(() => {
     setVideoUrl('');
     setLibraryOpen(false);
     setLibrarySearch('');
     setLibraryCategoryFilter('');
+    setReuseVariantId('');
+    setReuseMedia([]);
+    setReuseSelectedIds(new Set());
+    setReuseLoading(false);
     if (editing?.id) {
       loadMedia(editing.id);
       loadLibrary('');
@@ -319,6 +361,50 @@ export default function VariantEditor({ productId, variants, attributes, categor
     } finally { setMediaBusy(false); }
   };
 
+  const toggleReuseMedia = (mediaId) => {
+    setReuseSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(mediaId)) next.delete(mediaId);
+      else next.add(mediaId);
+      return next;
+    });
+  };
+
+  const attachSelectedReuseMedia = async () => {
+    if (!editing?.id || mediaBusy || reuseSelectedIds.size === 0) return;
+    const selected = reuseMedia.filter((item) => reuseSelectedIds.has(item.id)
+      && !media.some((current) => current.url === item.url));
+    if (selected.length === 0) {
+      toast.success('La multimedia seleccionada ya está en la variante');
+      return;
+    }
+
+    setMediaBusy(true);
+    let attachedCount = 0;
+    try {
+      for (const item of selected) {
+        await api.post(`/api/admin/media/${item.id}/attach`, {
+          product_id: Number(productId),
+          variant_id: Number(editing.id),
+        });
+        attachedCount += 1;
+      }
+      toast.success(attachedCount === 1 ? 'Multimedia agregada a la variante' : `${attachedCount} archivos agregados a la variante`);
+      await loadMedia(editing.id);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'media_already_attached') {
+        toast.error('Una de las multimedia ya está en la variante');
+      } else {
+        toast.error('No se pudo reutilizar toda la multimedia', err.message);
+      }
+      if (attachedCount > 0) await loadMedia(editing.id);
+    } finally { setMediaBusy(false); }
+  };
+
+  const attachedMediaUrls = new Set(media.map((item) => item.url));
+  const selectedReuseCount = reuseMedia.filter((item) => reuseSelectedIds.has(item.id)
+    && !attachedMediaUrls.has(item.url)).length;
+
   if (attributes.length === 0) {
     return (
       <>
@@ -489,6 +575,50 @@ export default function VariantEditor({ productId, variants, attributes, categor
                   <strong>Multimedia cargada en imágenes</strong>
                   <span>Selecciona una para reutilizarla en esta variante.</span>
                 </div>
+                {variants.some((variant) => variant.id !== editing.id) && <div className="variant-media-reuse">
+                  <label className="variant-media-reuse-label">
+                    <span>Reutilizar multimedia de otra variante</span>
+                    <select className="select" value={reuseVariantId} onChange={(e) => loadReuseMedia(e.target.value)} disabled={mediaBusy || reuseLoading}>
+                      <option value="">No reutilizar desde otra variante</option>
+                      {variants.filter((variant) => variant.id !== editing.id).map((variant) => (
+                        <option key={variant.id} value={variant.id}>{variantLabel(variant)}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="form-hint">Marca las imágenes o videos que quieres copiar y desmarca los que no necesites.</p>
+                  {reuseVariantId && (reuseLoading ? <p className="form-hint">Cargando multimedia de la variante…</p> : reuseMedia.length === 0 ? (
+                    <p className="form-hint">La variante seleccionada no tiene multimedia.</p>
+                  ) : (
+                    <>
+                      <div className="variant-media-reuse-grid">
+                        {reuseMedia.map((item) => {
+                          const alreadyAttached = attachedMediaUrls.has(item.url);
+                          return <label className={`variant-media-reuse-item${alreadyAttached ? ' is-attached' : ''}`} key={item.id}>
+                            <input
+                              type="checkbox"
+                              checked={reuseSelectedIds.has(item.id)}
+                              disabled={mediaBusy || alreadyAttached}
+                              onChange={() => toggleReuseMedia(item.id)}
+                            />
+                            {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <span className="variant-media-reuse-video">▶</span>}
+                            <span className="variant-media-reuse-copy">
+                              <strong>{item.alt_text || (item.kind === 'image' ? 'Imagen sin alt' : 'Video')}</strong>
+                              <small>{alreadyAttached ? 'Ya agregada' : item.kind === 'image' ? 'Imagen' : 'Video'}</small>
+                            </span>
+                          </label>;
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        disabled={mediaBusy || selectedReuseCount === 0}
+                        onClick={attachSelectedReuseMedia}
+                      >
+                        {selectedReuseCount === 1 ? 'Agregar 1 seleccionada' : `Agregar ${selectedReuseCount} seleccionadas`}
+                      </button>
+                    </>
+                  ))}
+                </div>}
                 <div className="variant-media-library-filters">
                   <label className="variant-media-library-filter">
                     <span>Buscar por alt</span>
@@ -517,9 +647,8 @@ export default function VariantEditor({ productId, variants, attributes, categor
                   </label>
                 </div>
                 {libraryLoading ? <p className="form-hint">Cargando biblioteca…</p> : (() => {
-                  const attachedUrls = new Set(media.map((item) => item.url));
                   const search = librarySearch.trim().toLocaleLowerCase();
-                  const available = libraryMedia.filter((item) => !attachedUrls.has(item.url)
+                  const available = libraryMedia.filter((item) => !attachedMediaUrls.has(item.url)
                     && (!search || String(item.alt_text || '').toLocaleLowerCase().includes(search)));
                   if (available.length === 0) {
                     const hasFilters = Boolean(search || libraryCategoryFilter);

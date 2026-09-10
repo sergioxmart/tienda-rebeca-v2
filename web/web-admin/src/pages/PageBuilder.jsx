@@ -264,6 +264,7 @@ const NAV_DEFAULTS = {
   navbar_show_categories: true,
   navbar_links: [],
   navbar_logo_mode: 'image',
+  navbar_custom_logo_url: '',
   navbar_logo_text: 'Rebeca Andrade',
   navbar_logo_font: 'display',
   navbar_mobile_logo_alignment: 'left',
@@ -502,7 +503,7 @@ function normalizeMediaPlacement(value) {
   }));
 }
 
-function MediaPickerModal({ open, onClose, items, loading, value, onSelect }) {
+function MediaPickerModal({ open, onClose, items, loading, value, onSelect, title = 'Elegir imagen de Media' }) {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -523,7 +524,7 @@ function MediaPickerModal({ open, onClose, items, loading, value, onSelect }) {
       open={open}
       onClose={onClose}
       size="lg"
-      title="Elegir imagen de Media"
+      title={title}
       footer={<button className="btn" type="button" onClick={onClose}>Cerrar</button>}
     >
       <div className="builder-media-picker">
@@ -657,7 +658,7 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
   );
 }
 
-function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink }) {
+function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   return (
     <div className="builder-navbar-settings">
@@ -669,6 +670,7 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           <label>Tipo de logo</label>
           <select className="select" value={navSettings.navbar_logo_mode} onChange={(e) => setNavValue('navbar_logo_mode', e.target.value)}>
             <option value="image">Usar logo cargado</option>
+            <option value="custom">Usar logo personalizado</option>
             <option value="text">Usar texto de marca</option>
           </select>
         </div>
@@ -679,6 +681,27 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           </div>
         )}
       </div>
+      {navSettings.navbar_logo_mode === 'custom' && (
+        <div className="form-group">
+          <label>Imagen del logo personalizado</label>
+          {navSettings.navbar_custom_logo_url ? (
+            <div className="builder-navbar-logo-selected">
+              <img src={navSettings.navbar_custom_logo_url} alt="Vista previa del logo personalizado" />
+              <div>
+                <strong>Logo seleccionado</strong>
+                <span>{navSettings.navbar_custom_logo_url}</span>
+              </div>
+              <div className="builder-navbar-logo-actions">
+                <button className="btn btn-sm" type="button" onClick={onOpenLogoPicker}>Cambiar</button>
+                <button className="btn btn-sm" type="button" onClick={() => setNavValue('navbar_custom_logo_url', '')}>Quitar</button>
+              </div>
+            </div>
+          ) : (
+            <button className="btn" type="button" onClick={onOpenLogoPicker}>Elegir imagen de Media</button>
+          )}
+          <div className="help">Selecciona una imagen existente en la biblioteca de Media para usarla en la barra de navegación.</div>
+        </div>
+      )}
       {navSettings.navbar_logo_mode === 'text' && (
         <div className="form-group">
           <label>Fuente del texto</label>
@@ -758,6 +781,7 @@ export default function PageBuilder() {
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [mediaPickerField, setMediaPickerField] = useState(null);
+  const [navLogoPickerOpen, setNavLogoPickerOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -802,6 +826,11 @@ export default function PageBuilder() {
 
   const openMediaPicker = async (fieldKey) => {
     setMediaPickerField(fieldKey);
+    if (!mediaLoaded) await loadMedia();
+  };
+
+  const openNavLogoPicker = async () => {
+    setNavLogoPickerOpen(true);
     if (!mediaLoaded) await loadMedia();
   };
 
@@ -1095,6 +1124,7 @@ export default function PageBuilder() {
           updateNavLink={updateNavLink}
           addNavLink={addNavLink}
           removeNavLink={removeNavLink}
+          onOpenLogoPicker={openNavLogoPicker}
         />
       </Modal>
 
@@ -1215,6 +1245,19 @@ export default function PageBuilder() {
         onSelect={(url) => {
           if (mediaPickerField) setSetting(mediaPickerField, url);
           setMediaPickerField(null);
+        }}
+      />
+
+      <MediaPickerModal
+        open={navLogoPickerOpen}
+        onClose={() => setNavLogoPickerOpen(false)}
+        items={mediaItems}
+        loading={mediaLoading}
+        value={navSettings.navbar_custom_logo_url || ''}
+        title="Elegir logo personalizado"
+        onSelect={(url) => {
+          setNavValue('navbar_custom_logo_url', url);
+          setNavLogoPickerOpen(false);
         }}
       />
 

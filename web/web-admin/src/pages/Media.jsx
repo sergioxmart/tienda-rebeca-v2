@@ -35,6 +35,7 @@ export default function Media() {
   const [categories, setCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [uploadCategory, setUploadCategory] = useState('');
+  const [altSearch, setAltSearch] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -116,6 +117,11 @@ export default function Media() {
     }
   };
 
+  const normalizedAltSearch = altSearch.trim().toLocaleLowerCase();
+  const hasFilters = Boolean(normalizedAltSearch || categoryFilter);
+  const visibleItems = items.filter((item) => !normalizedAltSearch
+    || String(item.alt_text || '').toLocaleLowerCase().includes(normalizedAltSearch));
+
   return (
     <div>
       <div className="page-header">
@@ -136,21 +142,33 @@ export default function Media() {
       </p>
 
       <div className="media-toolbar">
-        <div><strong>Biblioteca multimedia</strong><span>{items.length} archivo{items.length === 1 ? '' : 's'} visibles</span></div>
-        <label>Filtrar por categoría<select className="select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+        <div><strong>Biblioteca multimedia</strong><span>{visibleItems.length} archivo{visibleItems.length === 1 ? '' : 's'} visible{visibleItems.length === 1 ? '' : 's'}</span></div>
+        <div className="media-toolbar-filters">
+          <label>
+            Buscar por alt
+            <input className="input" type="search" placeholder="Ej. vestido blanco" value={altSearch} onChange={(e) => setAltSearch(e.target.value)} />
+          </label>
+          <label>
+            Filtrar por categoría
+            <select className="select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">Todas las categorías</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+          </label>
+        </div>
       </div>
 
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>
-      ) : items.length === 0 ? (
-        <Empty title="Sin imágenes" description="Subí la primera para empezar." />
+      ) : visibleItems.length === 0 ? (
+        <Empty
+          title={items.length === 0 && !hasFilters ? 'Sin imágenes' : 'Sin resultados'}
+          description={items.length === 0 && !hasFilters ? 'Sube la primera para empezar.' : 'No hay imágenes que coincidan con los filtros.'}
+        />
       ) : (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
           gap: 12,
         }}>
-          {items.map((m) => (
+          {visibleItems.map((m) => (
             <div key={m.id} style={{
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',

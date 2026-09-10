@@ -61,6 +61,9 @@ export default function VariantEditor({ productId, variants, attributes, categor
   const [libraryMedia, setLibraryMedia] = useState([]);
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState('');
+  const [categories, setCategories] = useState([]);
 
   // Cargar todos los valores de los atributos del producto
   useEffect(() => {
@@ -92,10 +95,11 @@ export default function VariantEditor({ productId, variants, attributes, categor
     } finally { setMediaLoading(false); }
   };
 
-  const loadLibrary = async () => {
+  const loadLibrary = async (categoryId = libraryCategoryFilter) => {
     setLibraryLoading(true);
     try {
-      const data = await api.get('/api/admin/media');
+      const query = categoryId ? `?category_id=${categoryId}` : '';
+      const data = await api.get(`/api/admin/media${query}`);
       setLibraryMedia(data.media || []);
     } catch (err) {
       toast.error('No se pudo cargar la biblioteca', err.message);
@@ -106,12 +110,18 @@ export default function VariantEditor({ productId, variants, attributes, categor
   useEffect(() => {
     setVideoUrl('');
     setLibraryOpen(false);
+    setLibrarySearch('');
+    setLibraryCategoryFilter('');
     if (editing?.id) {
       loadMedia(editing.id);
-      loadLibrary();
+      loadLibrary('');
+      api.get('/api/admin/categories')
+        .then((data) => setCategories(data.categories || []))
+        .catch(() => setCategories([]));
     } else {
       setMedia([]);
       setLibraryMedia([]);
+      setCategories([]);
     }
   }, [editing?.id]);
 
@@ -476,13 +486,46 @@ export default function VariantEditor({ productId, variants, attributes, categor
               </div>
               {libraryOpen && <div className="variant-media-library">
                 <div className="variant-media-library-heading">
-                  <strong>Multimedia cargada en /media</strong>
+                  <strong>Multimedia cargada en imágenes</strong>
                   <span>Selecciona una para reutilizarla en esta variante.</span>
+                </div>
+                <div className="variant-media-library-filters">
+                  <label className="variant-media-library-filter">
+                    <span>Buscar por alt</span>
+                    <input
+                      className="input"
+                      type="search"
+                      value={librarySearch}
+                      placeholder="Ej. vestido blanco"
+                      onChange={(e) => setLibrarySearch(e.target.value)}
+                    />
+                  </label>
+                  <label className="variant-media-library-filter">
+                    <span>Filtrar por categoría</span>
+                    <select
+                      className="select"
+                      value={libraryCategoryFilter}
+                      onChange={(e) => {
+                        const categoryId = e.target.value;
+                        setLibraryCategoryFilter(categoryId);
+                        loadLibrary(categoryId);
+                      }}
+                    >
+                      <option value="">Todas las categorías</option>
+                      {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </select>
+                  </label>
                 </div>
                 {libraryLoading ? <p className="form-hint">Cargando biblioteca…</p> : (() => {
                   const attachedUrls = new Set(media.map((item) => item.url));
-                  const available = libraryMedia.filter((item) => !attachedUrls.has(item.url));
-                  return available.length === 0 ? <p className="form-hint">No hay archivos disponibles para agregar.</p> : <div className="variant-media-library-grid">
+                  const search = librarySearch.trim().toLocaleLowerCase();
+                  const available = libraryMedia.filter((item) => !attachedUrls.has(item.url)
+                    && (!search || String(item.alt_text || '').toLocaleLowerCase().includes(search)));
+                  if (available.length === 0) {
+                    const hasFilters = Boolean(search || libraryCategoryFilter);
+                    return <p className="form-hint">{hasFilters ? 'No hay archivos que coincidan con los filtros.' : 'No hay archivos disponibles para agregar.'}</p>;
+                  }
+                  return <div className="variant-media-library-grid">
                     {available.map((item) => <button type="button" className="variant-media-library-item" key={item.id} disabled={mediaBusy} onClick={() => attachLibraryMedia(item)}>
                       {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <span className="variant-video-tile">▶ Video</span>}
                       <span>{item.kind === 'image' ? 'Agregar imagen' : 'Agregar video'}</span>

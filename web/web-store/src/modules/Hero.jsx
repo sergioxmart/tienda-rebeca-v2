@@ -24,8 +24,22 @@ export default function Hero({ settings = {} }) {
     visual_placement,
     custom_code_enabled,
     custom_code,
+    content_align = 'center',
+    overlay_enabled = true,
+    content_position,
   } = settings;
   const minimalVisual = visual_mode === 'none';
+  const normalizedContentAlign = ['left', 'center', 'right'].includes(content_align) ? content_align : 'center';
+  const contentPosition = ['desktop', 'mobile'].reduce((result, viewport) => {
+    const source = content_position?.[viewport] || {};
+    const x = Number(source.x);
+    const y = Number(source.y);
+    result[viewport] = {
+      x: Number.isFinite(x) ? Math.min(100, Math.max(0, x)) : 50,
+      y: Number.isFinite(y) ? Math.min(100, Math.max(0, y)) : 50,
+    };
+    return result;
+  }, {});
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
@@ -60,19 +74,27 @@ export default function Hero({ settings = {} }) {
       '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
       '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
       '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
+      '--hero-content-desktop-x': contentPosition.desktop.x,
+      '--hero-content-desktop-y': contentPosition.desktop.y,
+      '--hero-content-mobile-x': contentPosition.mobile.x,
+      '--hero-content-mobile-y': contentPosition.mobile.y,
     }
     : {
       '--hero-visual-desktop-position': `${visualPlacement.desktop.x}% ${visualPlacement.desktop.y}%`,
       '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
       '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
       '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
+      '--hero-content-desktop-x': contentPosition.desktop.x,
+      '--hero-content-desktop-y': contentPosition.desktop.y,
+      '--hero-content-mobile-x': contentPosition.mobile.x,
+      '--hero-content-mobile-y': contentPosition.mobile.y,
     };
   if (custom_code_enabled && custom_code) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
-    <section className={`hero${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
-      {image_url && <div className="hero-image-background" aria-hidden="true" />}
+    <section className={`hero hero-content-align-${normalizedContentAlign}${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
+      {image_url && <div className={`hero-image-background${overlay_enabled === false ? ' is-without-overlay' : ''}`} aria-hidden="true" />}
       {!minimalVisual && <>
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />

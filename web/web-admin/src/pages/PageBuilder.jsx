@@ -25,6 +25,23 @@ import Empty from '../components/Empty.jsx';
 import { STORE_THEME_DEFAULTS, STORE_THEME_FIELDS, STORE_SPACING_FIELDS, normalizeStoreTheme } from '../storeTheme.js';
 import { getStorePreviewUrl } from '../previewUrl.js';
 
+const HERO_POSITION_DEFAULTS = {
+  desktop: { x: 50, y: 50 },
+  mobile: { x: 50, y: 50 },
+};
+
+function normalizeHeroPosition(value) {
+  return Object.fromEntries(Object.entries(HERO_POSITION_DEFAULTS).map(([viewport, defaults]) => {
+    const source = value?.[viewport] || {};
+    const x = Number(source.x);
+    const y = Number(source.y);
+    return [viewport, {
+      x: Number.isFinite(x) ? Math.min(100, Math.max(0, x)) : defaults.x,
+      y: Number.isFinite(y) ? Math.min(100, Math.max(0, y)) : defaults.y,
+    }];
+  }));
+}
+
 // Schema de los settings por tipo. Cada setting tiene key, label y type.
 const MODULE_SCHEMAS = {
   hero: {
@@ -35,6 +52,12 @@ const MODULE_SCHEMAS = {
       { key: 'eyebrow',  label: 'Etiqueta superior', type: 'text', placeholder: 'Tecnología para tu día a día', defaultValue: 'Tecnología para tu día a día' },
       { key: 'title',    label: 'Título',         type: 'text' },
       { key: 'subtitle', label: 'Subtítulo',      type: 'textarea' },
+      { key: 'content_align', label: 'Alineación del contenido', type: 'select', defaultValue: 'center', options: [
+        { value: 'left', label: 'Izquierda' },
+        { value: 'center', label: 'Centro' },
+        { value: 'right', label: 'Derecha' },
+      ] },
+      { key: 'overlay_enabled', label: 'Aplicar color sobre la imagen de fondo', type: 'checkbox', defaultValue: true },
       { key: 'image_url',label: 'Imagen de fondo', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
@@ -402,6 +425,7 @@ function defaultSettingsForType(type) {
     else if (f.type === 'checkbox') out[f.key] = false;
     else out[f.key] = '';
   }
+  if (type === 'hero') out.content_position = normalizeHeroPosition();
   return out;
 }
 
@@ -444,6 +468,81 @@ function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista p
       </div>
     </div>
   );
+}
+
+function HeroVisualEditor({ settings, onChange }) {
+  const [viewport, setViewport] = useState('desktop');
+  const [dragState, setDragState] = useState(null);
+  const position = normalizeHeroPosition(settings.content_position);
+  const currentPosition = position[viewport];
+  const align = ['left', 'center', 'right'].includes(settings.content_align) ? settings.content_align : 'center';
+  const imageUrl = settings.image_url;
+  const canvasStyle = imageUrl
+    ? { backgroundImage: settings.overlay_enabled === false
+      ? `url(${imageUrl})`
+      : `linear-gradient(rgba(15,42,71,.55), rgba(15,42,71,.7)), url(${imageUrl})` }
+    : undefined;
+
+  const updatePosition = (nextPosition) => onChange({ ...position, [viewport]: nextPosition });
+  const beginDrag = (event) => {
+    if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDragState({
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startPosition: currentPosition,
+      width: rect.width,
+      height: rect.height,
+    });
+  };
+  const moveDrag = (event) => {
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+    updatePosition({
+      x: Math.min(100, Math.max(0, dragState.startPosition.x + ((event.clientX - dragState.startX) / dragState.width) * 100)),
+      y: Math.min(100, Math.max(0, dragState.startPosition.y + ((event.clientY - dragState.startY) / dragState.height) * 100)),
+    });
+  };
+  const endDrag = () => setDragState(null);
+
+  return <div className="builder-hero-editor">
+    <div className="builder-hero-editor-heading">
+      <div><strong>Editor visual</strong><span>Arrastra el bloque para ubicar la etiqueta, título, subtítulo y botones como en un editor visual.</span></div>
+      <div className="builder-media-placement-tabs" role="tablist" aria-label="Tamaño de pantalla del Hero">
+        <button className={viewport === 'desktop' ? 'is-active' : ''} type="button" onClick={() => setViewport('desktop')} role="tab" aria-selected={viewport === 'desktop'}>Escritorio</button>
+        <button className={viewport === 'mobile' ? 'is-active' : ''} type="button" onClick={() => setViewport('mobile')} role="tab" aria-selected={viewport === 'mobile'}>Móvil</button>
+      </div>
+    </div>
+    <div
+      className={`builder-hero-editor-canvas is-${viewport}`}
+      style={canvasStyle}
+      onPointerMove={moveDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
+      {!imageUrl && <div className="builder-hero-editor-placeholder">Imagen de fondo del Hero</div>}
+      <div
+        className={`builder-hero-editor-content is-${align}${dragState ? ' is-dragging' : ''}`}
+        style={{ left: `${currentPosition.x}%`, top: `${currentPosition.y}%` }}
+        onPointerDown={beginDrag}
+        role="button"
+        tabIndex={0}
+        aria-label="Arrastrar contenido del Hero"
+      >
+        {settings.eyebrow && <span className="builder-hero-editor-eyebrow">{settings.eyebrow}</span>}
+        <strong>{settings.title || 'Título del Hero'}</strong>
+        <p>{settings.subtitle || 'Subtítulo del Hero'}</p>
+        {settings.cta_text && <span className="builder-hero-editor-button">{settings.cta_text}</span>}
+      </div>
+      <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>
+    </div>
+    <div className="builder-hero-editor-controls">
+      <span>Posición {viewport === 'desktop' ? 'de escritorio' : 'móvil'}: <strong>{Math.round(currentPosition.x)}% horizontal · {Math.round(currentPosition.y)}% vertical</strong></span>
+      <button className="btn btn-sm" type="button" onClick={() => updatePosition({ ...HERO_POSITION_DEFAULTS[viewport] })}>Centrar contenido</button>
+    </div>
+    {settings.overlay_enabled === false && <div className="help">El color sobre la imagen está desactivado; el fondo se muestra sin overlay.</div>}
+  </div>;
 }
 
 function BuilderModuleRow({ icon, label, description, active, onMoveUp, onMoveDown, onToggle, onConfigure, onDelete, disableUp, disableDown, disableDelete, details }) {
@@ -889,7 +988,16 @@ export default function PageBuilder() {
   };
 
   const openNew = () => { setModalTab('edit'); setEditing({ mode: 'new', ...EMPTY_NEW, settings: defaultSettingsForType('hero') }); };
-  const openEdit = (m) => { setModalTab('edit'); setEditing({ mode: 'edit', id: m.id, type: m.type, settings: { ...m.settings }, active: m.active }); };
+  const openEdit = (m) => {
+    setModalTab('edit');
+    setEditing({
+      mode: 'edit',
+      id: m.id,
+      type: m.type,
+      settings: m.type === 'hero' ? { ...m.settings, content_position: normalizeHeroPosition(m.settings?.content_position) } : { ...m.settings },
+      active: m.active,
+    });
+  };
 
   const onTypeChange = (newType) => {
     setEditing((cur) => {
@@ -983,6 +1091,7 @@ export default function PageBuilder() {
           settingsOut[f.mediaPlacementKey] = normalizeMediaPlacement(editing.settings[f.mediaPlacementKey]);
         }
       }
+      if (editing.type === 'hero') settingsOut.content_position = normalizeHeroPosition(editing.settings.content_position);
       const nextModule = { id: editing.id || `draft-${Date.now()}`, type: editing.type, settings: settingsOut, active: editing.active };
       const nextModules = editing.mode === 'new'
         ? [...modules, nextModule]
@@ -1162,6 +1271,7 @@ export default function PageBuilder() {
         footer={
           <>
             <button className="btn" onClick={() => setEditing(null)} disabled={saving}>Cancelar</button>
+            {editing?.type === 'hero' && <button className={`btn${modalTab === 'visual' ? ' btn-primary' : ''}`} type="button" onClick={() => setModalTab('visual')} disabled={saving}>Editor visual</button>}
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? <span className="spinner" /> : 'Guardar'}
             </button>
@@ -1245,7 +1355,9 @@ export default function PageBuilder() {
                 )}
               </div>;
             })}
-          </form> : <LiveStorePreview modules={[editing]} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
+          </form> : modalTab === 'visual' ? (
+            <HeroVisualEditor settings={editing.settings} onChange={(value) => setSetting('content_position', value)} />
+          ) : <LiveStorePreview modules={[editing]} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
           </>
         )}
       </Modal>

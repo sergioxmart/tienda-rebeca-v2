@@ -1,6 +1,6 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-09-05**
+> **Última actualización: 2026-09-11**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
@@ -33,6 +33,9 @@ guardar/exportar el resultado completo como **tema**. Endpoints en
   textual con familia tipográfica predefinida; las claves
   `navbar_logo_mode`, `navbar_logo_text`, `navbar_logo_font` y
   `navbar_show_store` viajan en el mismo subset de `site_config`.
+- El módulo Hero permite alinear su contenido, activar o quitar el overlay
+  de color de la imagen de fondo y mover el bloque de contenido con posiciones
+  independientes para escritorio y móvil desde el Editor visual del modal.
 
 ## Agregar un tipo de módulo nuevo (toca 3 archivos)
 

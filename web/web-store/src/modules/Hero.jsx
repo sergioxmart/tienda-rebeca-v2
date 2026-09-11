@@ -7,6 +7,17 @@ import Price from '../components/Price.jsx';
 import CustomCode from './CustomCode.jsx';
 import { normalizeMediaPlacement } from './mediaPlacement.js';
 
+const HERO_FONT_FAMILIES = {
+  display: 'var(--font-display)',
+  serif: 'Georgia, "Times New Roman", serif',
+  sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  script: '"Brush Script MT", "Segoe Script", cursive',
+};
+
+function colorValue(value, fallback) {
+  return /^#[0-9A-Fa-f]{6}$/.test(String(value || '')) ? value : fallback;
+}
+
 export default function Hero({ settings = {} }) {
   const {
     title,
@@ -27,6 +38,13 @@ export default function Hero({ settings = {} }) {
     content_align = 'center',
     overlay_enabled = true,
     content_position,
+    text_color,
+    text_font,
+    button_background_color,
+    button_text_color,
+    button_font,
+    shadow_enabled = false,
+    shadow_intensity = 45,
   } = settings;
   const minimalVisual = visual_mode === 'none';
   const normalizedContentAlign = ['left', 'center', 'right'].includes(content_align) ? content_align : 'center';
@@ -40,6 +58,18 @@ export default function Hero({ settings = {} }) {
     };
     return result;
   }, {});
+  const textColor = colorValue(text_color, '#FFFFFF');
+  const buttonBackgroundColor = colorValue(button_background_color, '#FFFFFF');
+  const buttonTextColor = colorValue(button_text_color, '#0F2A47');
+  const shadowIntensity = Number.isFinite(Number(shadow_intensity))
+    ? Math.min(100, Math.max(0, Number(shadow_intensity)))
+    : 45;
+  const shadowBlur = Math.max(1, Math.round(shadowIntensity / 8));
+  const shadowAlpha = (0.12 + (shadowIntensity / 100) * 0.5).toFixed(2);
+  const textShadow = shadow_enabled ? `0 2px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none';
+  const buttonShadow = shadow_enabled ? `0 8px ${shadowBlur + 7}px rgba(0,0,0,${shadowAlpha})` : 'none';
+  const textFontFamily = HERO_FONT_FAMILIES[text_font];
+  const buttonFontFamily = HERO_FONT_FAMILIES[button_font];
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
@@ -74,20 +104,42 @@ export default function Hero({ settings = {} }) {
       '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
       '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
       '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
-      '--hero-content-desktop-x': contentPosition.desktop.x,
-      '--hero-content-desktop-y': contentPosition.desktop.y,
-      '--hero-content-mobile-x': contentPosition.mobile.x,
-      '--hero-content-mobile-y': contentPosition.mobile.y,
+      '--hero-content-desktop-offset-x': `${contentPosition.desktop.x - 50}%`,
+      '--hero-content-desktop-offset-y': `${contentPosition.desktop.y - 50}%`,
+      '--hero-content-desktop-anchor-x': `${50 - contentPosition.desktop.x}%`,
+      '--hero-content-desktop-anchor-y': `${50 - contentPosition.desktop.y}%`,
+      '--hero-content-mobile-offset-x': `${contentPosition.mobile.x - 50}%`,
+      '--hero-content-mobile-offset-y': `${contentPosition.mobile.y - 50}%`,
+      '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
+      '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
+      '--hero-text-color': textColor,
+      '--hero-button-background': buttonBackgroundColor,
+      '--hero-button-text-color': buttonTextColor,
+      '--hero-text-shadow': textShadow,
+      '--hero-button-shadow': buttonShadow,
+      ...(textFontFamily ? { '--hero-text-font-family': textFontFamily } : {}),
+      ...(buttonFontFamily ? { '--hero-button-font-family': buttonFontFamily } : {}),
     }
     : {
       '--hero-visual-desktop-position': `${visualPlacement.desktop.x}% ${visualPlacement.desktop.y}%`,
       '--hero-visual-desktop-zoom': visualPlacement.desktop.zoom / 100,
       '--hero-visual-mobile-position': `${visualPlacement.mobile.x}% ${visualPlacement.mobile.y}%`,
       '--hero-visual-mobile-zoom': visualPlacement.mobile.zoom / 100,
-      '--hero-content-desktop-x': contentPosition.desktop.x,
-      '--hero-content-desktop-y': contentPosition.desktop.y,
-      '--hero-content-mobile-x': contentPosition.mobile.x,
-      '--hero-content-mobile-y': contentPosition.mobile.y,
+      '--hero-content-desktop-offset-x': `${contentPosition.desktop.x - 50}%`,
+      '--hero-content-desktop-offset-y': `${contentPosition.desktop.y - 50}%`,
+      '--hero-content-desktop-anchor-x': `${50 - contentPosition.desktop.x}%`,
+      '--hero-content-desktop-anchor-y': `${50 - contentPosition.desktop.y}%`,
+      '--hero-content-mobile-offset-x': `${contentPosition.mobile.x - 50}%`,
+      '--hero-content-mobile-offset-y': `${contentPosition.mobile.y - 50}%`,
+      '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
+      '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
+      '--hero-text-color': textColor,
+      '--hero-button-background': buttonBackgroundColor,
+      '--hero-button-text-color': buttonTextColor,
+      '--hero-text-shadow': textShadow,
+      '--hero-button-shadow': buttonShadow,
+      ...(textFontFamily ? { '--hero-text-font-family': textFontFamily } : {}),
+      ...(buttonFontFamily ? { '--hero-button-font-family': buttonFontFamily } : {}),
     };
   if (custom_code_enabled && custom_code) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;

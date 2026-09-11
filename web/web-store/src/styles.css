@@ -333,7 +333,11 @@ p { margin: 0 0 12px; }
 .hero-glow-one { width: 300px; height: 300px; top: -160px; right: 35%; background: rgba(255, 107, 53, 0.23); }
 .hero-glow-two { width: 200px; height: 200px; left: 43%; bottom: -130px; background: rgba(44, 188, 197, 0.2); }
 .hero-content { position: relative; z-index: 1; max-width: 620px; }
-.hero-content { left: calc((var(--hero-content-desktop-x, 50) - 50) * 1%); top: calc((var(--hero-content-desktop-y, 50) - 50) * 1%); }
+.hero-content { font-family: var(--hero-text-font-family, inherit); }
+.hero .hero-eyebrow, .hero h1, .hero p, .hero .hero-secondary-link, .hero-proof strong, .hero-proof small { color: var(--hero-text-color, #fff); text-shadow: var(--hero-text-shadow, none); }
+.hero h1 { font-family: var(--hero-text-font-family, var(--font-display)); }
+.hero .hero-actions .btn { color: var(--hero-button-text-color, #fff); background: var(--hero-button-background, var(--color-accent)); border-color: var(--hero-button-background, var(--color-accent)); font-family: var(--hero-button-font-family, inherit); text-shadow: var(--hero-text-shadow, none); box-shadow: var(--hero-button-shadow, 0 10px 20px var(--color-accent-shadow)); }
+.hero-content { left: var(--hero-content-desktop-offset-x, 0%); top: var(--hero-content-desktop-offset-y, 0%); transform: translate(var(--hero-content-desktop-anchor-x, 0%), var(--hero-content-desktop-anchor-y, 0%)); }
 .hero.hero-content-align-left .hero-content { margin-right: auto; margin-left: 0; text-align: left; }
 .hero.hero-content-align-left .hero-eyebrow { justify-content: flex-start; }
 .hero.hero-content-align-left h1, .hero.hero-content-align-left p { margin-right: auto; margin-left: 0; }
@@ -809,6 +813,7 @@ p { margin: 0 0 12px; }
   .site-header .mobile-menu.site-mobile-menu.is-open { max-height: calc(100vh - 64px); padding: 12px 16px; }
   .page-content { padding: 24px var(--global-padding-mobile, 18px) 42px; }
   .hero { min-height: 620px; margin-bottom: 52px; padding: 62px 24px 48px; }
+  .hero-content { left: var(--hero-content-mobile-offset-x, 0%); top: var(--hero-content-mobile-offset-y, 0%); transform: translate(var(--hero-content-mobile-anchor-x, 0%), var(--hero-content-mobile-anchor-y, 0%)); }
   .hero h1 { font-size: clamp(40px,12vw,62px); }
   .hero-visual { opacity: .3; }
   .hero-image-background { background-position: var(--hero-image-mobile-position, 50% 50%); transform: scale(var(--hero-image-mobile-zoom, 1)); transform-origin: var(--hero-image-mobile-position, 50% 50%); }

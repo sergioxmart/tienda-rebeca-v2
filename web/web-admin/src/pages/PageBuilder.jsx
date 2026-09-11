@@ -30,6 +30,27 @@ const HERO_POSITION_DEFAULTS = {
   mobile: { x: 50, y: 50 },
 };
 
+const HERO_FONT_FAMILIES = {
+  display: 'var(--font-display)',
+  serif: 'Georgia, "Times New Roman", serif',
+  sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  script: '"Brush Script MT", "Segoe Script", cursive',
+};
+
+const HERO_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+
+function pickerColor(value, fallback = '#FFFFFF') {
+  return HERO_COLOR_RE.test(String(value || '')) ? value : fallback;
+}
+
+function normalizeHeroShadow(settings = {}) {
+  const intensity = Number(settings.shadow_intensity);
+  return {
+    enabled: settings.shadow_enabled === true,
+    intensity: Number.isFinite(intensity) ? Math.min(100, Math.max(0, intensity)) : 45,
+  };
+}
+
 function normalizeHeroPosition(value) {
   return Object.fromEntries(Object.entries(HERO_POSITION_DEFAULTS).map(([viewport, defaults]) => {
     const source = value?.[viewport] || {};
@@ -58,6 +79,25 @@ const MODULE_SCHEMAS = {
         { value: 'right', label: 'Derecha' },
       ] },
       { key: 'overlay_enabled', label: 'Aplicar color sobre la imagen de fondo', type: 'checkbox', defaultValue: true },
+      { key: 'text_color', label: 'Color de los textos', type: 'color', defaultValue: '#FFFFFF' },
+      { key: 'text_font', label: 'Fuente de los textos', type: 'select', defaultValue: 'default', options: [
+        { value: 'default', label: 'Predeterminada de la tienda' },
+        { value: 'display', label: 'Editorial' },
+        { value: 'serif', label: 'Clásica · serif' },
+        { value: 'sans', label: 'Limpia · sans serif' },
+        { value: 'script', label: 'Manuscrita · cursiva' },
+      ] },
+      { key: 'button_background_color', label: 'Color de fondo del botón', type: 'color', defaultValue: '#FFFFFF' },
+      { key: 'button_text_color', label: 'Color del texto del botón', type: 'color', defaultValue: '#0F2A47' },
+      { key: 'button_font', label: 'Fuente del botón', type: 'select', defaultValue: 'default', options: [
+        { value: 'default', label: 'Predeterminada de la tienda' },
+        { value: 'display', label: 'Editorial' },
+        { value: 'serif', label: 'Clásica · serif' },
+        { value: 'sans', label: 'Limpia · sans serif' },
+        { value: 'script', label: 'Manuscrita · cursiva' },
+      ] },
+      { key: 'shadow_enabled', label: 'Añadir sombreado a los elementos', type: 'checkbox', defaultValue: false },
+      { key: 'shadow_intensity', label: 'Intensidad del sombreado', type: 'range', defaultValue: 45, min: 0, max: 100, step: 1 },
       { key: 'image_url',label: 'Imagen de fondo', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
@@ -477,6 +517,11 @@ function HeroVisualEditor({ settings, onChange }) {
   const currentPosition = position[viewport];
   const align = ['left', 'center', 'right'].includes(settings.content_align) ? settings.content_align : 'center';
   const imageUrl = settings.image_url;
+  const shadow = normalizeHeroShadow(settings);
+  const textFont = HERO_FONT_FAMILIES[settings.text_font];
+  const buttonFont = HERO_FONT_FAMILIES[settings.button_font];
+  const shadowBlur = Math.max(1, Math.round(shadow.intensity / 8));
+  const shadowAlpha = (0.12 + (shadow.intensity / 100) * 0.5).toFixed(2);
   const canvasStyle = imageUrl
     ? { backgroundImage: settings.overlay_enabled === false
       ? `url(${imageUrl})`
@@ -524,16 +569,20 @@ function HeroVisualEditor({ settings, onChange }) {
       {!imageUrl && <div className="builder-hero-editor-placeholder">Imagen de fondo del Hero</div>}
       <div
         className={`builder-hero-editor-content is-${align}${dragState ? ' is-dragging' : ''}`}
-        style={{ left: `${currentPosition.x}%`, top: `${currentPosition.y}%` }}
+        style={{
+          left: `${currentPosition.x}%`,
+          top: `${currentPosition.y}%`,
+          transform: `translate(${currentPosition.x * -1}%, ${currentPosition.y * -1}%)`,
+        }}
         onPointerDown={beginDrag}
         role="button"
         tabIndex={0}
         aria-label="Arrastrar contenido del Hero"
       >
-        {settings.eyebrow && <span className="builder-hero-editor-eyebrow">{settings.eyebrow}</span>}
-        <strong>{settings.title || 'Título del Hero'}</strong>
-        <p>{settings.subtitle || 'Subtítulo del Hero'}</p>
-        {settings.cta_text && <span className="builder-hero-editor-button">{settings.cta_text}</span>}
+        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color) }}>{settings.eyebrow}</span>}
+        <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
+        <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
+        {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.cta_text}</span>}
       </div>
       <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>
     </div>
@@ -542,6 +591,7 @@ function HeroVisualEditor({ settings, onChange }) {
       <button className="btn btn-sm" type="button" onClick={() => updatePosition({ ...HERO_POSITION_DEFAULTS[viewport] })}>Centrar contenido</button>
     </div>
     {settings.overlay_enabled === false && <div className="help">El color sobre la imagen está desactivado; el fondo se muestra sin overlay.</div>}
+    {shadow.enabled && <div className="help">Sombreado activo al {shadow.intensity}% de intensidad.</div>}
   </div>;
 }
 
@@ -1086,7 +1136,7 @@ export default function PageBuilder() {
       for (const f of (schema?.settings || [])) {
         const raw = editing.settings[f.key];
         if (raw === '' || raw === undefined || raw === null) continue;
-        settingsOut[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? Boolean(raw) : raw;
+        settingsOut[f.key] = ['number', 'range'].includes(f.type) ? Number(raw) : f.type === 'checkbox' ? Boolean(raw) : raw;
         if (f.type === 'media' && f.mediaPlacementKey) {
           settingsOut[f.mediaPlacementKey] = normalizeMediaPlacement(editing.settings[f.mediaPlacementKey]);
         }
@@ -1309,6 +1359,7 @@ export default function PageBuilder() {
               const customCodeEnabled = Boolean(editing.settings.custom_code_enabled);
               if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
               if (f.type === 'custom_code' && !customCodeEnabled) return null;
+              if (f.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return null;
               if (f.type === 'checkbox') {
                 return <label className="builder-checkbox-field" key={f.key}>
                   <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
@@ -1324,7 +1375,38 @@ export default function PageBuilder() {
               />;
               return <div className="form-group" key={f.key}>
                 <label>{f.label}</label>
-                {f.type === 'media' ? (
+                {f.type === 'color' ? (
+                  <div className="color-field">
+                    <input
+                      className="color-picker"
+                      type="color"
+                      value={pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF')}
+                      onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
+                      aria-label={`Elegir ${f.label.toLowerCase()}`}
+                    />
+                    <input
+                      className="input color-hex-input"
+                      type="text"
+                      value={editing.settings[f.key] ?? f.defaultValue ?? ''}
+                      onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
+                      placeholder={f.defaultValue || '#FFFFFF'}
+                    />
+                    <span className="color-preview" style={{ background: pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF') }} aria-hidden="true" />
+                  </div>
+                ) : f.type === 'range' ? (
+                  <div className="builder-hero-range-field">
+                    <input
+                      type="range"
+                      min={f.min}
+                      max={f.max}
+                      step={f.step || 1}
+                      value={Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}
+                      onChange={(e) => setSetting(f.key, Number(e.target.value))}
+                      aria-label={f.label}
+                    />
+                    <strong>{Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}%</strong>
+                  </div>
+                ) : f.type === 'media' ? (
                   <MediaField
                     field={f}
                     value={editing.settings[f.key] ?? ''}

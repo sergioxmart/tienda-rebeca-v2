@@ -455,6 +455,9 @@ p { margin: 0 0 12px; }
 .builder-navbar-logo-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .builder-navbar-radius-field { max-width: 520px; }
 .builder-navbar-radius-field input[type="range"] { width: 100%; accent-color: var(--color-primary); }
+.builder-hero-range-field { display: flex; align-items: center; gap: 12px; }
+.builder-hero-range-field input[type="range"] { min-width: 0; flex: 1; accent-color: var(--color-accent); }
+.builder-hero-range-field strong { min-width: 42px; color: var(--color-primary); font-size: 12px; text-align: right; }
 .hero-custom-code { width: 100%; }
 .builder-media-url-row { display: flex; align-items: center; gap: 8px; }
 .builder-media-url-row .input { min-width: 0; flex: 1; }

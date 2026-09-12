@@ -113,6 +113,7 @@ export async function listProducts(req, res) {
   const { rows: products } = await query(
     `SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.description, p.brand,
             p.base_price, p.compare_at, p.featured, p.display_order,
+            p.catalog_image_position_x, p.catalog_image_position_y, p.catalog_image_zoom,
             c.slug AS category_slug, c.name AS category_name,
             COALESCE(SUM(CASE WHEN v.active THEN v.stock ELSE 0 END), 0) AS total_stock
        FROM products p

@@ -137,6 +137,9 @@ export async function updateProduct(req, res, id) {
     p.base_price !== undefined && validators.int(Number(p.base_price), 'base_price', { min: 0 }),
     p.compare_at !== undefined && (p.compare_at === null ? null : validators.int(Number(p.compare_at), 'compare_at', { min: 0 })),
     p.category_id !== undefined && validators.int(Number(p.category_id), 'category_id'),
+    p.catalog_image_position_x !== undefined && validators.int(Number(p.catalog_image_position_x), 'catalog_image_position_x', { min: 0, max: 100 }),
+    p.catalog_image_position_y !== undefined && validators.int(Number(p.catalog_image_position_y), 'catalog_image_position_y', { min: 0, max: 100 }),
+    p.catalog_image_zoom !== undefined && validators.int(Number(p.catalog_image_zoom), 'catalog_image_zoom', { min: 100, max: 220 }),
     p.active !== undefined && validators.bool(p.active, 'active'),
     p.featured !== undefined && validators.bool(p.featured, 'featured'),
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),
@@ -159,6 +162,9 @@ export async function updateProduct(req, res, id) {
   if (p.base_price !== undefined)    { fields.push(`base_price = $${i++}`);    values.push(Number(p.base_price)); }
   if (p.compare_at !== undefined)    { fields.push(`compare_at = $${i++}`);    values.push(p.compare_at === null ? null : Number(p.compare_at)); }
   if (p.category_id !== undefined)   { fields.push(`category_id = $${i++}`);   values.push(Number(p.category_id)); }
+  if (p.catalog_image_position_x !== undefined) { fields.push(`catalog_image_position_x = $${i++}`); values.push(Number(p.catalog_image_position_x)); }
+  if (p.catalog_image_position_y !== undefined) { fields.push(`catalog_image_position_y = $${i++}`); values.push(Number(p.catalog_image_position_y)); }
+  if (p.catalog_image_zoom !== undefined)       { fields.push(`catalog_image_zoom = $${i++}`); values.push(Number(p.catalog_image_zoom)); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);        values.push(p.active); }
   if (p.featured !== undefined)      { fields.push(`featured = $${i++}`);      values.push(p.featured); }
   if (p.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(p.display_order); }

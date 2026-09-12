@@ -30,6 +30,10 @@ El runner de `core/scripts/migrate.js` lee `migrations/*.sql` en orden
 lexicográfico, aplica los archivos que no estén registrados en `_migrations`
 y ejecuta cada archivo dentro de una transacción.
 
+La migración `009_product_image_position.sql` agrega al producto el encuadre
+de la imagen principal que usa el `product-grid`: posición horizontal,
+posición vertical y zoom.
+
 ## Regla para cambios futuros
 
 El baseline ya representa la historia condensada y no debe editarse en una

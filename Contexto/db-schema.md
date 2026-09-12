@@ -96,7 +96,7 @@ globales y los valores los crea el admin.
 - `attribute_values.hex` guarda opcionalmente el color visual en formato `#RRGGBB`.
 - `attribute_values(attribute_id, value)` es UNIQUE.
 
-### `products` (`001_initial_schema.sql`)
+### `products` (`001_initial_schema.sql` + `009_product_image_position.sql`)
 
 **Template** del producto. "Funda iPhone transparente" — sin color ni
 modelo. El precio default es `base_price`; cada variante puede override.
@@ -106,6 +106,11 @@ modelo. El precio default es `base_price`; cada variante puede override.
 - `brand` opcional ("Apple", "Samsung", "Spigen", "Anker").
 - `featured` aparece en el carrusel del home.
 - Foto: en v1, las fotos son DEL PRODUCTO (template), no por variante.
+- `catalog_image_position_x` y `catalog_image_position_y` guardan el punto
+  focal de la imagen principal en las tarjetas del catálogo (0–100%).
+- `catalog_image_zoom` guarda el acercamiento de esa imagen (100–220%).
+  Estos valores solo cambian el encuadre visual; el archivo original no se
+  modifica.
 
 ### `product_attributes` (`001_initial_schema.sql`)
 

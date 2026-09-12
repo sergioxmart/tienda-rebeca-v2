@@ -19,6 +19,15 @@ const EMPTY = {
   name: '', slug: '', sku: '', description: '', brand: '',
   category_id: '', base_price: '', compare_at: '',
   featured: false, active: true,
+  catalog_image_position_x: 50,
+  catalog_image_position_y: 50,
+  catalog_image_zoom: 100,
+};
+
+const DEFAULT_IMAGE_POSITION = {
+  catalog_image_position_x: 50,
+  catalog_image_position_y: 50,
+  catalog_image_zoom: 100,
 };
 
 function integerPrice(value) {
@@ -36,6 +45,55 @@ function slugify(s) {
     .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
     .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u').replace(/ñ/g, 'n')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function numberInRange(value, fallback, min, max) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+function ProductImagePositionEditor({ imageUrl, position, onChange }) {
+  const positionX = numberInRange(position.catalog_image_position_x, 50, 0, 100);
+  const positionY = numberInRange(position.catalog_image_position_y, 50, 0, 100);
+  const zoom = numberInRange(position.catalog_image_zoom, 100, 100, 220);
+
+  return (
+    <div className="product-image-position-editor">
+      <div className="product-image-position-preview" aria-label="Vista previa de la imagen en el catálogo">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt="Vista previa de la imagen principal"
+            style={{
+              objectPosition: `${positionX}% ${positionY}%`,
+              transform: `scale(${zoom / 100})`,
+            }}
+          />
+        ) : (
+          <span>No hay una imagen principal cargada para previsualizar.</span>
+        )}
+        <small>Así se verá en las tarjetas del catálogo</small>
+      </div>
+      <div className="product-image-position-controls">
+        <label>
+          <span>Posición horizontal <strong>{positionX}%</strong></span>
+          <input type="range" min="0" max="100" step="1" value={positionX} onChange={(e) => onChange('catalog_image_position_x', Number(e.target.value))} />
+        </label>
+        <label>
+          <span>Posición vertical <strong>{positionY}%</strong></span>
+          <input type="range" min="0" max="100" step="1" value={positionY} onChange={(e) => onChange('catalog_image_position_y', Number(e.target.value))} />
+        </label>
+        <label>
+          <span>Zoom <strong>{zoom}%</strong></span>
+          <input type="range" min="100" max="220" step="1" value={zoom} onChange={(e) => onChange('catalog_image_zoom', Number(e.target.value))} />
+        </label>
+        <button className="btn btn-sm" type="button" onClick={() => onChange(null, DEFAULT_IMAGE_POSITION)}>
+          Restablecer encuadre
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function ProductForm() {
@@ -57,6 +115,7 @@ export default function ProductForm() {
   const [loadError, setLoadError] = useState('');
   const [selectedAttributeId, setSelectedAttributeId] = useState(null);
   const [movingAttribute, setMovingAttribute] = useState(false);
+  const [mainImage, setMainImage] = useState(null);
 
   // Cargar catálogos
   useEffect(() => {
@@ -84,6 +143,13 @@ export default function ProductForm() {
           api.get(`/api/admin/products/${id}`),
           api.get(`/api/admin/products/${id}/variants`),
         ]);
+        let media = [];
+        try {
+          const mediaResponse = await api.get(`/api/admin/media?product_id=${id}&kind=image`);
+          media = mediaResponse.media || [];
+        } catch {
+          // La ficha sigue siendo usable aunque falle la carga de la preview.
+        }
         setForm({
           name: product.name,
           slug: product.slug,
@@ -95,7 +161,11 @@ export default function ProductForm() {
           compare_at: integerPrice(product.compare_at),
           featured: product.featured,
           active: product.active,
+          catalog_image_position_x: numberInRange(product.catalog_image_position_x, 50, 0, 100),
+          catalog_image_position_y: numberInRange(product.catalog_image_position_y, 50, 0, 100),
+          catalog_image_zoom: numberInRange(product.catalog_image_zoom, 100, 100, 220),
         });
+        setMainImage(media[0]?.url || null);
         setProductAttributes((product.attributes || []).sort((a, b) => a.display_order - b.display_order || a.attribute_name.localeCompare(b.attribute_name)));
         setVariants(vs.variants || []);
       } catch (err) {
@@ -124,6 +194,9 @@ export default function ProductForm() {
         compare_at: form.compare_at === '' ? null : Number(form.compare_at),
         featured: !!form.featured,
         active: !!form.active,
+        catalog_image_position_x: numberInRange(form.catalog_image_position_x, 50, 0, 100),
+        catalog_image_position_y: numberInRange(form.catalog_image_position_y, 50, 0, 100),
+        catalog_image_zoom: numberInRange(form.catalog_image_zoom, 100, 100, 220),
       };
       if (productId) {
         await api.patch(`/api/admin/products/${productId}`, body);
@@ -388,6 +461,27 @@ export default function ProductForm() {
             categoryId={selectedCategoryId}
             onChange={reloadVariants}
           />
+          </section>
+
+          <section className="editor-card">
+            <div className="editor-section-heading">
+              <div><span className="eyebrow">Catálogo</span><h2>Encuadre de la imagen principal</h2></div>
+              <p className="form-hint">Ajusta la foto que aparece en las tarjetas de productos de la tienda.</p>
+            </div>
+            <ProductImagePositionEditor
+              imageUrl={mainImage}
+              position={form}
+              onChange={(key, value) => {
+                if (key === null) {
+                  setForm((current) => ({ ...current, ...value }));
+                  return;
+                }
+                setField(key, value);
+              }}
+            />
+            <p className="form-hint product-image-position-note">
+              La posición horizontal y vertical mueve el punto visible de la foto; el zoom permite acercar la imagen sin cambiar el archivo original. Guarda el producto para publicar el ajuste.
+            </p>
           </section>
         </>
       )}

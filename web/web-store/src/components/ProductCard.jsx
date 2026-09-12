@@ -7,10 +7,22 @@ import Price from './Price.jsx';
 export default function ProductCard({ product }) {
   const outOfStock = (product.total_stock ?? 1) === 0;
   const image = product.image_url || product.thumb_url;
+  const positionX = Number.isFinite(Number(product.catalog_image_position_x)) ? Number(product.catalog_image_position_x) : 50;
+  const positionY = Number.isFinite(Number(product.catalog_image_position_y)) ? Number(product.catalog_image_position_y) : 50;
+  const zoom = Number.isFinite(Number(product.catalog_image_zoom)) ? Number(product.catalog_image_zoom) : 100;
   return (
     <Link to={`/producto/${product.slug}`} className="product-card">
       <div className="image">
-        {image && <img src={image} alt={product.name || 'Producto'} loading="lazy" decoding="async" />}
+        {image && <img
+          src={image}
+          alt={product.name || 'Producto'}
+          loading="lazy"
+          decoding="async"
+          style={{
+            objectPosition: `${positionX}% ${positionY}%`,
+            transform: `scale(${zoom / 100})`,
+          }}
+        />}
         {outOfStock && <span className="badge-stock">Agotado</span>}
       </div>
       <div className="info">

@@ -43,11 +43,18 @@ function pickerColor(value, fallback = '#FFFFFF') {
   return HERO_COLOR_RE.test(String(value || '')) ? value : fallback;
 }
 
+function colorToRgba(value, alpha) {
+  const hex = pickerColor(value, '#000000').slice(1);
+  const channels = [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+  return `rgba(${channels.join(',')},${alpha})`;
+}
+
 function normalizeHeroShadow(settings = {}) {
   const intensity = Number(settings.shadow_intensity);
   return {
     enabled: settings.shadow_enabled === true,
     intensity: Number.isFinite(intensity) ? Math.min(100, Math.max(0, intensity)) : 45,
+    color: pickerColor(settings.shadow_color, '#000000'),
   };
 }
 
@@ -98,6 +105,7 @@ const MODULE_SCHEMAS = {
       ] },
       { key: 'shadow_enabled', label: 'Añadir sombreado a los elementos', type: 'checkbox', defaultValue: false },
       { key: 'shadow_intensity', label: 'Intensidad del sombreado', type: 'range', defaultValue: 45, min: 0, max: 100, step: 1 },
+      { key: 'shadow_color', label: 'Color del sombreado', type: 'color', defaultValue: '#000000' },
       { key: 'image_url',label: 'Imagen de fondo', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Opcional: pega una URL o elige una imagen de Media' },
       { key: 'visual_mode', label: 'Visual del lado derecho', type: 'select', defaultValue: 'abstract', options: [
         { value: 'none', label: 'Ninguno' },
@@ -522,6 +530,7 @@ function HeroVisualEditor({ settings, onChange }) {
   const buttonFont = HERO_FONT_FAMILIES[settings.button_font];
   const shadowBlur = Math.max(1, Math.round(shadow.intensity / 8));
   const shadowAlpha = (0.12 + (shadow.intensity / 100) * 0.5).toFixed(2);
+  const shadowColor = colorToRgba(shadow.color, shadowAlpha);
   const canvasStyle = imageUrl
     ? { backgroundImage: settings.overlay_enabled === false
       ? `url(${imageUrl})`
@@ -580,9 +589,9 @@ function HeroVisualEditor({ settings, onChange }) {
         aria-label="Arrastrar contenido del Hero"
       >
         {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color) }}>{settings.eyebrow}</span>}
-        <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
-        <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
-        {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px rgba(0,0,0,${shadowAlpha})` : 'none' }}>{settings.cta_text}</span>}
+        <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
+        <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
+        {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px ${shadowColor}` : 'none' }}>{settings.cta_text}</span>}
       </div>
       <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>
     </div>
@@ -1360,6 +1369,7 @@ export default function PageBuilder() {
               if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
               if (f.type === 'custom_code' && !customCodeEnabled) return null;
               if (f.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return null;
+              if (f.key === 'shadow_color' && !editing.settings.shadow_enabled) return null;
               if (f.type === 'checkbox') {
                 return <label className="builder-checkbox-field" key={f.key}>
                   <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />

@@ -18,6 +18,12 @@ function colorValue(value, fallback) {
   return /^#[0-9A-Fa-f]{6}$/.test(String(value || '')) ? value : fallback;
 }
 
+function colorToRgba(value, alpha) {
+  const hex = colorValue(value, '#000000').slice(1);
+  const channels = [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+  return `rgba(${channels.join(',')},${alpha})`;
+}
+
 export default function Hero({ settings = {} }) {
   const {
     title,
@@ -45,6 +51,7 @@ export default function Hero({ settings = {} }) {
     button_font,
     shadow_enabled = false,
     shadow_intensity = 45,
+    shadow_color = '#000000',
   } = settings;
   const minimalVisual = visual_mode === 'none';
   const normalizedContentAlign = ['left', 'center', 'right'].includes(content_align) ? content_align : 'center';
@@ -66,8 +73,9 @@ export default function Hero({ settings = {} }) {
     : 45;
   const shadowBlur = Math.max(1, Math.round(shadowIntensity / 8));
   const shadowAlpha = (0.12 + (shadowIntensity / 100) * 0.5).toFixed(2);
-  const textShadow = shadow_enabled ? `0 2px ${shadowBlur}px rgba(0,0,0,${shadowAlpha})` : 'none';
-  const buttonShadow = shadow_enabled ? `0 8px ${shadowBlur + 7}px rgba(0,0,0,${shadowAlpha})` : 'none';
+  const shadowColor = colorToRgba(shadow_color, shadowAlpha);
+  const textShadow = shadow_enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none';
+  const buttonShadow = shadow_enabled ? `0 8px ${shadowBlur + 7}px ${shadowColor}` : 'none';
   const textFontFamily = HERO_FONT_FAMILIES[text_font];
   const buttonFontFamily = HERO_FONT_FAMILIES[button_font];
   const [product, setProduct] = useState(null);

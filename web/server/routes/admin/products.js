@@ -41,12 +41,42 @@ export async function listProducts(req, res) {
   const sql = `SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.description,
                        p.brand, p.base_price, p.compare_at, p.active, p.featured,
                        p.display_order, p.created_at, p.updated_at,
+                       p.catalog_image_media_id,
                        c.slug AS category_slug, c.name AS category_name
                   FROM products p
                   JOIN categories c ON c.id = p.category_id
                  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
                  ORDER BY p.display_order, p.name`;
   const { rows } = await query(sql, params);
+  if (rows.length > 0) {
+    const ids = rows.map((product) => product.id);
+    const { rows: media } = await query(
+      `SELECT DISTINCT pm.id, pm.product_id, pm.variant_id, pm.url, pm.alt_text, pm.display_order,
+              COALESCE(pm.product_id, direct_variant.product_id, linked_variant.product_id) AS owner_product_id
+         FROM product_media pm
+         LEFT JOIN product_variants direct_variant ON direct_variant.id = pm.variant_id
+         LEFT JOIN product_media_variants pmv ON pmv.media_id = pm.id
+         LEFT JOIN product_variants linked_variant ON linked_variant.id = pmv.variant_id
+        WHERE pm.deleted_at IS NULL AND pm.kind = 'image' AND (
+          pm.product_id = ANY($1)
+          OR direct_variant.product_id = ANY($1)
+          OR linked_variant.product_id = ANY($1)
+        )
+        ORDER BY owner_product_id, pm.display_order, pm.id`,
+      [ids],
+    );
+    const mediaByProduct = new Map();
+    for (const item of media) {
+      if (!mediaByProduct.has(item.owner_product_id)) mediaByProduct.set(item.owner_product_id, []);
+      mediaByProduct.get(item.owner_product_id).push(item);
+    }
+    for (const product of rows) {
+      const productMedia = mediaByProduct.get(product.id) || [];
+      const selected = productMedia.find((item) => item.id === product.catalog_image_media_id);
+      product.image_url = selected?.url || productMedia[0]?.url || null;
+      product.thumb_url = product.image_url;
+    }
+  }
   return json(res, 200, { ok: true, products: rows });
 }
 

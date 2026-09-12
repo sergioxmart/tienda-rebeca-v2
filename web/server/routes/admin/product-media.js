@@ -17,8 +17,9 @@
 //   DELETE /api/admin/media/:id/variants/:id    → desvincula de una variante
 //   POST   /api/admin/media/cleanup             → borra huérfanas >30d
 //
-// El borrado desde la biblioteca es definitivo. El editor de variantes usa
-// la ruta de desvinculación y nunca elimina el archivo central.
+// El borrado desde la biblioteca es definitivo y solo aplica a multimedia
+// huérfana. El editor de variantes usa la ruta de desvinculación y nunca
+// elimina directamente un archivo que todavía esté en uso.
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -88,7 +89,29 @@ export async function listMedia(req, res) {
 
   const { rows } = await query(
     `SELECT id, product_id, category_id, variant_id, kind, url, mime, size_bytes, width, height,
-            alt_text, display_order, created_at
+            alt_text, display_order, created_at,
+            (
+              product_id IS NULL
+              AND variant_id IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM product_media_variants pmv_current
+                 WHERE pmv_current.media_id = product_media.id
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM product_media pm_reference
+                 WHERE pm_reference.id <> product_media.id
+                   AND pm_reference.deleted_at IS NULL
+                   AND pm_reference.url = product_media.url
+                   AND (
+                     pm_reference.product_id IS NOT NULL
+                     OR pm_reference.variant_id IS NOT NULL
+                     OR EXISTS (
+                       SELECT 1 FROM product_media_variants pmv_reference
+                        WHERE pmv_reference.media_id = pm_reference.id
+                     )
+                   )
+              )
+            ) AS can_delete
        FROM product_media
        WHERE ${where.join(' AND ')}
        ORDER BY display_order, id`,
@@ -302,7 +325,10 @@ export async function detachMediaFromVariant(req, res, mediaId, variantId) {
   let detached = relation.rowCount > 0;
   if (media[0].variant_id === Number(variantId)) {
     const result = await query(
-      'UPDATE product_media SET variant_id = NULL WHERE id = $1 AND variant_id = $2',
+      // Las cargas directas de una variante guardan ambos IDs. Al quitar la
+      // variante también se quita la pertenencia al producto; de lo contrario
+      // la imagen reaparece como candidata en el encuadre del catálogo.
+      'UPDATE product_media SET product_id = NULL, variant_id = NULL WHERE id = $1 AND variant_id = $2',
       [mediaId, variantId],
     );
     detached = detached || result.rowCount > 0;
@@ -314,15 +340,45 @@ export async function detachMediaFromVariant(req, res, mediaId, variantId) {
 }
 
 export async function deleteMedia(req, res, id) {
-  const { rows: existing } = await query('SELECT id, url FROM product_media WHERE id = $1 AND deleted_at IS NULL', [id]);
+  const { rows: existing } = await query(
+    `SELECT id, url, product_id, variant_id,
+            EXISTS (
+              SELECT 1 FROM product_media_variants pmv
+               WHERE pmv.media_id = product_media.id
+            ) AS has_variant_relations
+       FROM product_media
+      WHERE id = $1 AND deleted_at IS NULL`,
+    [id],
+  );
   if (existing.length === 0) return notFound(res);
 
-  await query('DELETE FROM product_media WHERE id = $1', [id]);
-  const { rows: references } = await query(
-    'SELECT id FROM product_media WHERE url = $1 AND deleted_at IS NULL LIMIT 1',
-    [existing[0].url],
+  const item = existing[0];
+  if (item.product_id !== null || item.variant_id !== null || item.has_variant_relations) {
+    return conflict(res, 'media_in_use');
+  }
+  const { rows: associatedReferences } = await query(
+    `SELECT 1
+       FROM product_media pm
+      WHERE pm.id <> $1 AND pm.url = $2 AND pm.deleted_at IS NULL
+        AND (
+          pm.product_id IS NOT NULL
+          OR pm.variant_id IS NOT NULL
+          OR EXISTS (
+            SELECT 1 FROM product_media_variants pmv
+             WHERE pmv.media_id = pm.id
+          )
+        )
+      LIMIT 1`,
+    [id, item.url],
   );
-  if (references.length === 0) await deleteUploadFile(existing[0].url);
+  if (associatedReferences.length > 0) return conflict(res, 'media_in_use');
+
+  await query('DELETE FROM product_media WHERE id = $1', [id]);
+  const { rows: remainingReferences } = await query(
+    'SELECT id FROM product_media WHERE url = $1 AND deleted_at IS NULL LIMIT 1',
+    [item.url],
+  );
+  if (remainingReferences.length === 0) await deleteUploadFile(item.url);
   await recordAudit(req.user?.id, 'media.delete', req.ip, { id });
   return json(res, 200, { ok: true });
 }

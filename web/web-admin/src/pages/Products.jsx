@@ -119,6 +119,7 @@ export default function Products() {
         <table className="data-table products-table">
           <thead>
             <tr>
+              <th>Imagen</th>
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio base</th>
@@ -129,6 +130,13 @@ export default function Products() {
           <tbody>
             {items.map((p) => (
               <tr key={p.id} className={selectedId === p.id ? 'row-selected' : ''} onClick={() => setSelectedId(p.id)}>
+                <td>
+                  <div className="product-table-thumbnail">
+                    {p.thumb_url || p.image_url
+                      ? <img src={p.thumb_url || p.image_url} alt={`Miniatura de ${p.name || 'producto'}`} loading="lazy" />
+                      : <span aria-hidden="true">—</span>}
+                  </div>
+                </td>
                 <td>
                   <div style={{ fontWeight: 500 }}>{p.name}</div>
                   <div style={{ color: 'var(--color-muted)', fontSize: 12 }}><code>{p.slug}</code></div>

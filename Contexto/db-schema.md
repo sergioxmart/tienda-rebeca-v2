@@ -129,7 +129,9 @@ anteriores y `product_media_variants` permite reutilizar la misma pieza en
 varias combinaciones, soft-delete con
 `deleted_at` se conserva para compatibilidad con registros heredados; las
 eliminaciones actuales desde la biblioteca son definitivas y las huérfanas
-antiguas se limpian con un cron (no en SQL).
+antiguas se limpian con un cron (no en SQL). Al desvincular una carga directa
+de una variante, también se limpian sus IDs de producto y variante para que
+quede en la biblioteca sin seguir apareciendo como media del producto.
 
 ### `product_variants` (`001_initial_schema.sql`)
 

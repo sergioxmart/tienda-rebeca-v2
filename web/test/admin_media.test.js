@@ -5,6 +5,7 @@ import { strict as assert } from 'node:assert';
 import { query, pool } from '../server/lib/db.js';
 import {
   detachMediaFromVariant,
+  deleteMedia,
   matchProductMediaRoute,
 } from '../server/routes/admin/product-media.js';
 import { mockReq, mockRes, parse } from './_helpers.js';
@@ -63,7 +64,15 @@ test('el router conserva mediaId y variantId en la ruta de desvinculación', () 
   assert.deepEqual(match.params, ['2', '18']);
 });
 
-test('detachMediaFromVariant elimina la relación y limpia variant_id', async () => {
+test('deleteMedia rechaza multimedia que todavía está asociada', async () => {
+  const res = mockRes();
+  await deleteMedia(mockReq(), res, mediaId);
+
+  assert.equal(res.statusCode, 409);
+  assert.equal(parse(res).error, 'media_in_use');
+});
+
+test('detachMediaFromVariant elimina la relación y deja la carga como huérfana', async () => {
   const res = mockRes();
   await detachMediaFromVariant(mockReq(), res, mediaId, variantId);
 
@@ -71,13 +80,14 @@ test('detachMediaFromVariant elimina la relación y limpia variant_id', async ()
   assert.equal(parse(res).ok, true);
 
   const { rows: media } = await query(
-    'SELECT variant_id FROM product_media WHERE id = $1',
+    'SELECT product_id, variant_id FROM product_media WHERE id = $1',
     [mediaId],
   );
   const { rows: relation } = await query(
     'SELECT 1 FROM product_media_variants WHERE media_id = $1 AND variant_id = $2',
     [mediaId, variantId],
   );
+  assert.equal(media[0].product_id, null);
   assert.equal(media[0].variant_id, null);
   assert.equal(relation.length, 0);
 });

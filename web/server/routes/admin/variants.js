@@ -422,7 +422,10 @@ export async function deleteVariant(req, res, id) {
   await tx(async (client) => {
     // La multimedia central debe sobrevivir al borrar una variante: primero
     // quitamos ambas formas de asociación para dejar el archivo disponible.
-    await client.query('UPDATE product_media SET variant_id = NULL WHERE variant_id = $1', [id]);
+    // Las cargas directas de una variante guardan también product_id. Al
+    // eliminarla deben quedar huérfanas en la biblioteca, no como media del
+    // producto, para que no contaminen el selector de imagen principal.
+    await client.query('UPDATE product_media SET product_id = NULL, variant_id = NULL WHERE variant_id = $1', [id]);
     await client.query('DELETE FROM product_media_variants WHERE variant_id = $1', [id]);
     await client.query('DELETE FROM product_variants WHERE id = $1', [id]);
   });

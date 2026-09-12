@@ -16,6 +16,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '../api.js';
 import { useToast } from './Toast.jsx';
 import Modal from './Modal.jsx';
+import Confirm from './Confirm.jsx';
 import Empty from './Empty.jsx';
 import MoneyInput from './MoneyInput.jsx';
 
@@ -32,6 +33,10 @@ function integerPrice(value) {
 
 function ChevronIcon({ direction }) {
   return <svg className="icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d={direction === 'up' ? 'm6 14 6-6 6 6' : 'm6 10 6 6 6-6'} /></svg>;
+}
+
+function TrashIcon() {
+  return <svg className="icon-trash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h8l1-13M10 11v6m4-6v6" /></svg>;
 }
 
 function variantLabel(variant) {
@@ -70,6 +75,7 @@ export default function VariantEditor({ productId, variants, attributes, categor
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState('');
+  const [deletingOrphanMedia, setDeletingOrphanMedia] = useState(null);
   const [categories, setCategories] = useState([]);
   const [reuseVariantId, setReuseVariantId] = useState('');
   const [reuseMedia, setReuseMedia] = useState([]);
@@ -338,6 +344,44 @@ export default function VariantEditor({ productId, variants, attributes, categor
     finally {
       mediaBusyRef.current = false;
       setMediaBusy(false);
+    }
+  };
+
+  const moveMedia = async (index, direction) => {
+    if (mediaBusy || index < 0 || index >= media.length) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= media.length) return;
+
+    const previousOrder = new Map(media.map((item) => [item.id, Number(item.display_order)]));
+    const reordered = [...media];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+    const nextMedia = reordered.map((item, nextIndex) => ({ ...item, display_order: nextIndex }));
+    const updates = nextMedia.filter((item) => previousOrder.get(item.id) !== item.display_order);
+
+    setMedia(nextMedia);
+    setMediaBusy(true);
+    try {
+      await Promise.all(updates.map((item) => api.patch(`/api/admin/media/${item.id}`, {
+        display_order: item.display_order,
+      })));
+      toast.success('Orden de multimedia actualizado');
+      await loadMedia(editing.id);
+    } catch (err) {
+      toast.error('No se pudo cambiar el orden', err.message);
+      await loadMedia(editing.id);
+    } finally { setMediaBusy(false); }
+  };
+
+  const deleteOrphanMedia = async () => {
+    if (!deletingOrphanMedia) return;
+    const item = deletingOrphanMedia;
+    try {
+      await api.delete(`/api/admin/media/${item.id}`);
+      setLibraryMedia((current) => current.filter((mediaItem) => mediaItem.id !== item.id));
+      setDeletingOrphanMedia(null);
+      toast.success('Imagen eliminada definitivamente');
+    } catch (err) {
+      toast.error('No se pudo eliminar la imagen', err.message);
     }
   };
 
@@ -655,10 +699,22 @@ export default function VariantEditor({ productId, variants, attributes, categor
                     return <p className="form-hint">{hasFilters ? 'No hay archivos que coincidan con los filtros.' : 'No hay archivos disponibles para agregar.'}</p>;
                   }
                   return <div className="variant-media-library-grid">
-                    {available.map((item) => <button type="button" className="variant-media-library-item" key={item.id} disabled={mediaBusy} onClick={() => attachLibraryMedia(item)}>
-                      {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <span className="variant-video-tile">▶ Video</span>}
-                      <span>{item.kind === 'image' ? 'Agregar imagen' : 'Agregar video'}</span>
-                    </button>)}
+                    {available.map((item) => <div className="variant-media-library-item-wrap" key={item.id}>
+                      <button type="button" className="variant-media-library-item" disabled={mediaBusy} onClick={() => attachLibraryMedia(item)}>
+                        {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <span className="variant-video-tile">▶ Video</span>}
+                        <span>{item.kind === 'image' ? 'Agregar imagen' : 'Agregar video'}</span>
+                      </button>
+                      {item.can_delete && <button
+                        type="button"
+                        className="btn btn-sm btn-danger variant-media-library-delete"
+                        aria-label={`Eliminar definitivamente ${item.alt_text || 'imagen'}`}
+                        title="Eliminar definitivamente"
+                        disabled={mediaBusy}
+                        onClick={(event) => { event.stopPropagation(); setDeletingOrphanMedia(item); }}
+                      >
+                        <TrashIcon />
+                      </button>}
+                    </div>)}
                   </div>;
                 })()}
               </div>}
@@ -666,12 +722,21 @@ export default function VariantEditor({ productId, variants, attributes, categor
                 <input className="input" type="url" placeholder="https://… enlace de video" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
                 <button className="btn btn-sm" type="button" disabled={mediaBusy || !videoUrl.trim()} onClick={addVideo}>Agregar video</button>
               </div>
-              {mediaLoading ? <p className="form-hint">Cargando multimedia…</p> : media.length === 0 ? <p className="form-hint">Aún no hay imágenes ni videos para esta variante.</p> : <div className="variant-media-grid">
-                {media.map((item) => <div className="variant-media-item" key={item.id}>
+              {mediaLoading ? <p className="form-hint">Cargando multimedia…</p> : media.length === 0 ? <p className="form-hint">Aún no hay imágenes ni videos para esta variante.</p> : <>
+                <p className="form-hint variant-media-order-hint">Usa las flechas para definir el orden en que aparecerá esta multimedia en la tienda.</p>
+                <div className="variant-media-grid">
+                {media.map((item, index) => <div className="variant-media-item" key={item.id}>
                   {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <div className="variant-video-tile">▶ Video</div>}
-                  <button type="button" className="btn btn-sm btn-danger" disabled={mediaBusy} onClick={() => removeMedia(item)}>Desvincular</button>
+                  <div className="variant-media-item-actions">
+                    <div className="variant-media-order-actions">
+                      <button type="button" className="btn btn-sm variant-media-order-btn" aria-label={`Subir multimedia ${index + 1}`} title="Subir" disabled={mediaBusy || index === 0} onClick={(e) => { e.stopPropagation(); moveMedia(index, -1); }}><ChevronIcon direction="up" /></button>
+                      <button type="button" className="btn btn-sm variant-media-order-btn" aria-label={`Bajar multimedia ${index + 1}`} title="Bajar" disabled={mediaBusy || index === media.length - 1} onClick={(e) => { e.stopPropagation(); moveMedia(index, 1); }}><ChevronIcon direction="down" /></button>
+                    </div>
+                    <button type="button" className="btn btn-sm btn-danger" disabled={mediaBusy} onClick={() => removeMedia(item)}>Desvincular</button>
+                  </div>
                 </div>)}
-              </div>}
+                </div>
+              </>}
             </div>}
           </form>
         )}
@@ -709,6 +774,16 @@ export default function VariantEditor({ productId, variants, attributes, categor
           <p style={{ margin: 0 }}>La variante se eliminará y su multimedia solo se desvinculará. Esta acción no se puede deshacer.</p>
         )}
       </Modal>
+
+      <Confirm
+        open={!!deletingOrphanMedia}
+        title="¿Eliminar imagen definitivamente?"
+        message="Esta imagen no está asociada a ningún producto ni variante. Se eliminarán el registro y el archivo físico; esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        danger
+        onCancel={() => setDeletingOrphanMedia(null)}
+        onConfirm={deleteOrphanMedia}
+      />
     </>
   );
 }

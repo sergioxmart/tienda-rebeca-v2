@@ -194,7 +194,7 @@ export default function Media() {
                 </select>
                 <div className="table-actions" style={{ marginTop: 6 }}>
                   <button className="btn btn-sm" onClick={() => openAlt(m)}>Alt</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => setDeleting(m)}>×</button>
+                  {m.can_delete && <button className="btn btn-sm btn-danger" aria-label={`Eliminar definitivamente ${m.alt_text || 'imagen'}`} title="Eliminar definitivamente" onClick={() => setDeleting(m)}>×</button>}
                 </div>
               </div>
             </div>

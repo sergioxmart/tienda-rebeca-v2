@@ -128,6 +128,10 @@ export async function updateProduct(req, res, id) {
   if (existing.length === 0) return notFound(res);
 
   const p = req.body || {};
+  // Los bundles anteriores enviaban una cadena vacía cuando se dejaba
+  // activa la selección automática de la imagen principal. Para el API
+  // representa lo mismo que NULL y no debe bloquear el guardado del encuadre.
+  if (p.catalog_image_media_id === '') p.catalog_image_media_id = null;
   if (!validate(res, p, [
     validators.optionalString(p.name, 'name', { max: 200 }),
     validators.optionalString(p.slug, 'slug', { max: 80 }),
@@ -140,7 +144,7 @@ export async function updateProduct(req, res, id) {
     p.catalog_image_position_x !== undefined && validators.int(Number(p.catalog_image_position_x), 'catalog_image_position_x', { min: 0, max: 100 }),
     p.catalog_image_position_y !== undefined && validators.int(Number(p.catalog_image_position_y), 'catalog_image_position_y', { min: 0, max: 100 }),
     p.catalog_image_zoom !== undefined && validators.int(Number(p.catalog_image_zoom), 'catalog_image_zoom', { min: 100, max: 220 }),
-    p.catalog_image_media_id !== undefined && (p.catalog_image_media_id === null || validators.int(Number(p.catalog_image_media_id), 'catalog_image_media_id', { min: 1 })),
+    p.catalog_image_media_id !== undefined && p.catalog_image_media_id !== null && validators.int(Number(p.catalog_image_media_id), 'catalog_image_media_id', { min: 1 }),
     p.active !== undefined && validators.bool(p.active, 'active'),
     p.featured !== undefined && validators.bool(p.featured, 'featured'),
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),

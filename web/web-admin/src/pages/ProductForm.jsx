@@ -54,6 +54,13 @@ function numberInRange(value, fallback, min, max) {
   return Math.min(max, Math.max(min, Math.round(parsed)));
 }
 
+function productImageTransform(positionX, positionY, zoom) {
+  const panFactor = (zoom - 100) / 100;
+  const translateX = ((50 - positionX) * panFactor).toFixed(2);
+  const translateY = ((50 - positionY) * panFactor).toFixed(2);
+  return `translate(${translateX}%, ${translateY}%) scale(${zoom / 100})`;
+}
+
 function ProductImagePositionEditor({ imageUrl, position, onChange }) {
   const positionX = numberInRange(position.catalog_image_position_x, 50, 0, 100);
   const positionY = numberInRange(position.catalog_image_position_y, 50, 0, 100);
@@ -68,7 +75,7 @@ function ProductImagePositionEditor({ imageUrl, position, onChange }) {
             alt="Vista previa de la imagen principal"
             style={{
               objectPosition: `${positionX}% ${positionY}%`,
-              transform: `scale(${zoom / 100})`,
+              transform: productImageTransform(positionX, positionY, zoom),
             }}
           />
         ) : (

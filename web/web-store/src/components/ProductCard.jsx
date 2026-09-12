@@ -4,6 +4,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Price from './Price.jsx';
 
+function productImageTransform(positionX, positionY, zoom) {
+  const panFactor = (zoom - 100) / 100;
+  const translateX = ((50 - positionX) * panFactor).toFixed(2);
+  const translateY = ((50 - positionY) * panFactor).toFixed(2);
+  return `translate(${translateX}%, ${translateY}%) scale(${zoom / 100})`;
+}
+
 export default function ProductCard({ product }) {
   const outOfStock = (product.total_stock ?? 1) === 0;
   const image = product.image_url || product.thumb_url;
@@ -20,7 +27,7 @@ export default function ProductCard({ product }) {
           decoding="async"
           style={{
             objectPosition: `${positionX}% ${positionY}%`,
-            transform: `scale(${zoom / 100})`,
+            transform: productImageTransform(positionX, positionY, zoom),
           }}
         />}
         {outOfStock && <span className="badge-stock">Agotado</span>}

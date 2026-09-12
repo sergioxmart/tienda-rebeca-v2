@@ -18,6 +18,7 @@ export async function getProductBySlug(req, res, slug) {
     `SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.description, p.brand,
             p.base_price, p.compare_at, p.featured, p.display_order,
             p.catalog_image_position_x, p.catalog_image_position_y, p.catalog_image_zoom,
+            p.catalog_image_media_id,
             c.slug AS category_slug, c.name AS category_name
        FROM products p
        JOIN categories c ON c.id = p.category_id

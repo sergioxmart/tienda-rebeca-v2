@@ -34,6 +34,9 @@ La migración `009_product_image_position.sql` agrega al producto el encuadre
 de la imagen principal que usa el `product-grid`: posición horizontal,
 posición vertical y zoom.
 
+La migración `010_product_catalog_image.sql` permite seleccionar como imagen
+principal cualquier media de producto o de sus variantes.
+
 ## Regla para cambios futuros
 
 El baseline ya representa la historia condensada y no debe editarse en una

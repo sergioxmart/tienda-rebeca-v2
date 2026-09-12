@@ -893,6 +893,7 @@ p { margin: 0 0 12px; }
 .editor-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--color-border); }
 .editor-section-heading h2 { margin: 3px 0 0; }
 .product-image-position-editor { display: grid; grid-template-columns: minmax(210px, 280px) minmax(0, 1fr); align-items: start; gap: 24px; }
+.product-image-position-selector { max-width: 720px; margin-bottom: 20px; }
 .product-image-position-preview { position: relative; overflow: hidden; aspect-ratio: 1 / 1.06; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-muted); background: linear-gradient(145deg, #f1f5f8, #e6edf2); display: flex; align-items: center; justify-content: center; text-align: center; }
 .product-image-position-preview img { display: block; width: 100%; height: 100%; object-fit: cover; transition: object-position .12s ease, transform .12s ease; }
 .product-image-position-preview small { position: absolute; right: 8px; bottom: 8px; left: 8px; padding: 6px 8px; border-radius: 7px; color: #fff; background: rgba(15, 42, 71, .72); font-size: 11px; }

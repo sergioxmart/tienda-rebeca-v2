@@ -140,6 +140,7 @@ export async function updateProduct(req, res, id) {
     p.catalog_image_position_x !== undefined && validators.int(Number(p.catalog_image_position_x), 'catalog_image_position_x', { min: 0, max: 100 }),
     p.catalog_image_position_y !== undefined && validators.int(Number(p.catalog_image_position_y), 'catalog_image_position_y', { min: 0, max: 100 }),
     p.catalog_image_zoom !== undefined && validators.int(Number(p.catalog_image_zoom), 'catalog_image_zoom', { min: 100, max: 220 }),
+    p.catalog_image_media_id !== undefined && (p.catalog_image_media_id === null || validators.int(Number(p.catalog_image_media_id), 'catalog_image_media_id', { min: 1 })),
     p.active !== undefined && validators.bool(p.active, 'active'),
     p.featured !== undefined && validators.bool(p.featured, 'featured'),
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),
@@ -149,6 +150,26 @@ export async function updateProduct(req, res, id) {
   if (p.category_id !== undefined) {
     const { rows: cat } = await query('SELECT id FROM categories WHERE id = $1', [Number(p.category_id)]);
     if (cat.length === 0) return notFound(res);
+  }
+
+  if (p.catalog_image_media_id !== undefined && p.catalog_image_media_id !== null) {
+    const { rows: media } = await query(
+      `SELECT pm.id
+         FROM product_media pm
+        WHERE pm.id = $1 AND pm.kind = 'image' AND pm.deleted_at IS NULL
+          AND (pm.product_id = $2 OR pm.variant_id IN (
+            SELECT id FROM product_variants WHERE product_id = $2
+          ) OR EXISTS (
+            SELECT 1
+              FROM product_media_variants pmv
+              JOIN product_variants linked_variant ON linked_variant.id = pmv.variant_id
+             WHERE pmv.media_id = pm.id AND linked_variant.product_id = $2
+          ))`,
+      [Number(p.catalog_image_media_id), id],
+    );
+    if (media.length === 0) {
+      return json(res, 400, { ok: false, error: 'catalog_image_media_invalid' });
+    }
   }
 
   const fields = [];
@@ -165,6 +186,7 @@ export async function updateProduct(req, res, id) {
   if (p.catalog_image_position_x !== undefined) { fields.push(`catalog_image_position_x = $${i++}`); values.push(Number(p.catalog_image_position_x)); }
   if (p.catalog_image_position_y !== undefined) { fields.push(`catalog_image_position_y = $${i++}`); values.push(Number(p.catalog_image_position_y)); }
   if (p.catalog_image_zoom !== undefined)       { fields.push(`catalog_image_zoom = $${i++}`); values.push(Number(p.catalog_image_zoom)); }
+  if (p.catalog_image_media_id !== undefined)   { fields.push(`catalog_image_media_id = $${i++}`); values.push(p.catalog_image_media_id === null ? null : Number(p.catalog_image_media_id)); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);        values.push(p.active); }
   if (p.featured !== undefined)      { fields.push(`featured = $${i++}`);      values.push(p.featured); }
   if (p.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(p.display_order); }

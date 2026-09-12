@@ -114,6 +114,7 @@ export async function listProducts(req, res) {
     `SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.description, p.brand,
             p.base_price, p.compare_at, p.featured, p.display_order,
             p.catalog_image_position_x, p.catalog_image_position_y, p.catalog_image_zoom,
+            p.catalog_image_media_id,
             c.slug AS category_slug, c.name AS category_name,
             COALESCE(SUM(CASE WHEN v.active THEN v.stock ELSE 0 END), 0) AS total_stock
        FROM products p
@@ -130,22 +131,31 @@ export async function listProducts(req, res) {
   if (products.length > 0) {
     const ids = products.map(p => p.id);
     const { rows: media } = await query(
-      `SELECT product_id, variant_id, kind, url, alt_text, display_order
-         FROM product_media
-        WHERE product_id = ANY($1) AND deleted_at IS NULL
-        ORDER BY product_id, display_order, id`,
+      `SELECT DISTINCT pm.id, pm.product_id, pm.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order,
+              COALESCE(pm.product_id, direct_variant.product_id, linked_variant.product_id) AS owner_product_id
+         FROM product_media pm
+         LEFT JOIN product_variants direct_variant ON direct_variant.id = pm.variant_id
+         LEFT JOIN product_media_variants pmv ON pmv.media_id = pm.id
+         LEFT JOIN product_variants linked_variant ON linked_variant.id = pmv.variant_id
+        WHERE pm.deleted_at IS NULL AND (
+          pm.product_id = ANY($1)
+          OR direct_variant.product_id = ANY($1)
+          OR linked_variant.product_id = ANY($1)
+        )
+        ORDER BY owner_product_id, pm.display_order, pm.id`,
       [ids],
     );
     const mediaByProduct = new Map();
     for (const m of media) {
-      if (!mediaByProduct.has(m.product_id)) mediaByProduct.set(m.product_id, []);
-      mediaByProduct.get(m.product_id).push(m);
+      if (!mediaByProduct.has(m.owner_product_id)) mediaByProduct.set(m.owner_product_id, []);
+      mediaByProduct.get(m.owner_product_id).push(m);
     }
     for (const p of products) {
       p.media = mediaByProduct.get(p.id) ?? [];
-      // Si no existe una imagen general, usamos la primera imagen de
-      // variante para que las tarjetas y sugerencias nunca queden vacías.
-      p.image_url = p.media.find((item) => item.kind === 'image')?.url || null;
+      const selected = p.media.find((item) => item.id === p.catalog_image_media_id && item.kind === 'image');
+      // Si no hay selección explícita, usamos la primera imagen de producto
+      // o variante para que las tarjetas nunca queden vacías.
+      p.image_url = selected?.url || p.media.find((item) => item.kind === 'image')?.url || null;
       p.thumb_url = p.image_url;
     }
   }

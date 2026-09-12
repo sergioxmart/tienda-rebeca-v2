@@ -22,6 +22,7 @@ const EMPTY = {
   catalog_image_position_x: 50,
   catalog_image_position_y: 50,
   catalog_image_zoom: 100,
+  catalog_image_media_id: null,
 };
 
 const DEFAULT_IMAGE_POSITION = {
@@ -115,7 +116,7 @@ export default function ProductForm() {
   const [loadError, setLoadError] = useState('');
   const [selectedAttributeId, setSelectedAttributeId] = useState(null);
   const [movingAttribute, setMovingAttribute] = useState(false);
-  const [mainImage, setMainImage] = useState(null);
+  const [productMedia, setProductMedia] = useState([]);
 
   // Cargar catálogos
   useEffect(() => {
@@ -164,8 +165,9 @@ export default function ProductForm() {
           catalog_image_position_x: numberInRange(product.catalog_image_position_x, 50, 0, 100),
           catalog_image_position_y: numberInRange(product.catalog_image_position_y, 50, 0, 100),
           catalog_image_zoom: numberInRange(product.catalog_image_zoom, 100, 100, 220),
+          catalog_image_media_id: product.catalog_image_media_id ?? null,
         });
-        setMainImage(media[0]?.url || null);
+        setProductMedia(media.filter((item) => item.kind === 'image'));
         setProductAttributes((product.attributes || []).sort((a, b) => a.display_order - b.display_order || a.attribute_name.localeCompare(b.attribute_name)));
         setVariants(vs.variants || []);
       } catch (err) {
@@ -197,6 +199,9 @@ export default function ProductForm() {
         catalog_image_position_x: numberInRange(form.catalog_image_position_x, 50, 0, 100),
         catalog_image_position_y: numberInRange(form.catalog_image_position_y, 50, 0, 100),
         catalog_image_zoom: numberInRange(form.catalog_image_zoom, 100, 100, 220),
+        catalog_image_media_id: form.catalog_image_media_id === null || form.catalog_image_media_id === ''
+          ? null
+          : Number(form.catalog_image_media_id),
       };
       if (productId) {
         await api.patch(`/api/admin/products/${productId}`, body);
@@ -233,6 +238,7 @@ export default function ProductForm() {
   };
 
   const totalProductStock = variants.reduce((total, variant) => total + Math.max(0, Number(variant.stock) || 0), 0);
+  const selectedMainImage = productMedia.find((item) => Number(item.id) === Number(form.catalog_image_media_id)) || productMedia[0];
 
   // --- Atributos ---------------------------------------------------------
   const productAttributeIds = productAttributes.map((item) => item.attribute_id);
@@ -468,8 +474,28 @@ export default function ProductForm() {
               <div><span className="eyebrow">Catálogo</span><h2>Encuadre de la imagen principal</h2></div>
               <p className="form-hint">Ajusta la foto que aparece en las tarjetas de productos de la tienda.</p>
             </div>
+            <div className="form-group product-image-position-selector">
+              <label htmlFor="catalog-image-media">Imagen principal del catálogo</label>
+              <select
+                id="catalog-image-media"
+                className="select"
+                value={form.catalog_image_media_id ?? ''}
+                onChange={(e) => setField('catalog_image_media_id', e.target.value === '' ? null : Number(e.target.value))}
+                disabled={productMedia.length === 0}
+              >
+                <option value="">Usar la primera imagen disponible automáticamente</option>
+                {productMedia.map((media, index) => (
+                  <option key={media.id} value={media.id}>
+                    {`Imagen ${index + 1}${media.variant_id ? ` · Variante #${media.variant_id}` : ''}${media.alt_text ? ` · ${media.alt_text}` : ''}`}
+                  </option>
+                ))}
+              </select>
+              <p className="form-hint">
+                Puedes elegir cualquier imagen del producto o de sus variantes. Las imágenes disponibles se actualizan al volver a cargar la ficha.
+              </p>
+            </div>
             <ProductImagePositionEditor
-              imageUrl={mainImage}
+              imageUrl={selectedMainImage?.url || null}
               position={form}
               onChange={(key, value) => {
                 if (key === null) {

@@ -72,7 +72,16 @@ export async function listMedia(req, res) {
     }
   } else if (productId) {
     params.push(Number(productId));
-    where.push(`product_id = $${params.length}`);
+    const productParam = params.length;
+    where.push(`(product_media.product_id = $${productParam} OR product_media.variant_id IN (
+      SELECT id FROM product_variants WHERE product_id = $${productParam}
+    ) OR EXISTS (
+      SELECT 1
+        FROM product_media_variants pmv_product
+        JOIN product_variants linked_variant ON linked_variant.id = pmv_product.variant_id
+       WHERE pmv_product.media_id = product_media.id
+         AND linked_variant.product_id = $${productParam}
+    ))`);
   }
   if (kind)      { params.push(kind);                  where.push(`kind = $${params.length}`); }
   if (categoryId) { params.push(Number(categoryId));  where.push(`category_id = $${params.length}`); }

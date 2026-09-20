@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Propuestas de estilos Hero · Rebeca Andrade</title>
+  <style>
+    :root {
+      --navy: #0f2a47;
+      --deep: #081d34;
+      --ink: #172b3d;
+      --muted: #647589;
+      --line: #dbe4eb;
+      --ivory: #fffaf3;
+      --orange: #ff6b35;
+      --gold: #b89a5e;
+      --teal: #2cbcc5;
+      --hero-image: url('/media/2026/09/e3561813-317f-4e6a-a9b1-426c9b3c67a3.jpg');
+      --shadow: 0 22px 55px rgba(15, 42, 71, .12);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #f4f7f9;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: radial-gradient(circle at 8% 0%, #fff, transparent 35%), #f4f7f9; }
+    button, a { font: inherit; }
+    a { color: inherit; }
+    .page { width: min(1440px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 70px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 42px; }
+    .brand { display: flex; align-items: center; gap: 12px; color: var(--navy); text-decoration: none; }
+    .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: #fff; background: linear-gradient(135deg, var(--orange), #a84a35); font: 700 22px Georgia, serif; }
+    .brand-copy strong, .brand-copy small { display: block; }
+    .brand-copy strong { font: 700 18px Georgia, serif; letter-spacing: .03em; }
+    .brand-copy small { margin-top: 2px; color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .back-link { padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; color: var(--navy); background: #fff; font-size: 12px; font-weight: 750; text-decoration: none; }
+    .back-link:hover { border-color: var(--navy); background: #f8fbfd; }
+    .intro { max-width: 780px; margin-bottom: 28px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; margin-bottom: 13px; color: var(--orange); font-size: 11px; font-weight: 850; letter-spacing: .17em; text-transform: uppercase; }
+    .eyebrow::before { content: ''; width: 25px; height: 2px; border-radius: 99px; background: currentColor; }
+    h1 { margin: 0; color: var(--navy); font: 400 clamp(35px, 5vw, 66px)/.98 Georgia, "Times New Roman", serif; letter-spacing: -.055em; }
+    .intro p { max-width: 680px; margin: 20px 0 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
+    .notice { display: flex; align-items: flex-start; gap: 12px; margin: 25px 0 34px; padding: 15px 17px; border: 1px solid rgba(184, 154, 94, .38); border-radius: 15px; color: #5e4b27; background: #fffaf0; font-size: 13px; line-height: 1.55; }
+    .notice strong { display: block; margin-bottom: 2px; color: var(--navy); }
+    .notice-icon { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; color: #fff; background: var(--gold); font-weight: 900; }
+    .selection-bar { position: sticky; z-index: 5; top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 22px; padding: 13px 16px; border: 1px solid rgba(15,42,71,.1); border-radius: 15px; color: var(--navy); background: rgba(255,255,255,.91); box-shadow: 0 10px 26px rgba(15,42,71,.08); backdrop-filter: blur(12px); }
+    .selection-bar strong, .selection-bar span { display: block; }
+    .selection-bar strong { font-size: 12px; }
+    .selection-bar span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .clear-selection { padding: 7px 10px; border: 0; color: var(--muted); background: transparent; font-size: 11px; cursor: pointer; text-decoration: underline; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .card { overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: #fff; box-shadow: 0 12px 30px rgba(15,42,71,.06); transition: border-color .2s, box-shadow .2s, transform .2s; }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .card.is-selected { border: 2px solid var(--orange); box-shadow: 0 0 0 4px rgba(255,107,53,.12), var(--shadow); }
+    .preview { position: relative; min-height: 320px; overflow: hidden; isolation: isolate; color: #fff; background: var(--navy); }
+    .preview::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(135deg, rgba(8,29,52,.9), rgba(23,78,112,.75)); }
+    .preview-art { position: absolute; z-index: -2; inset: 0; background: linear-gradient(90deg, rgba(8,29,52,.82), rgba(8,29,52,.08)), var(--hero-image); background-position: center; background-size: cover; }
+    .preview-copy { position: relative; z-index: 1; max-width: 68%; padding: 42px 38px; }
+    .preview-kicker { display: block; margin-bottom: 14px; color: #f7cf8a; font-size: 9px; font-weight: 850; letter-spacing: .18em; text-transform: uppercase; }
+    .preview h2 { max-width: 12ch; margin: 0 0 13px; color: inherit; font: 400 clamp(27px, 4vw, 48px)/.98 Georgia, serif; letter-spacing: -.05em; }
+    .preview p { max-width: 32ch; margin: 0 0 20px; color: rgba(255,255,255,.78); font-size: 11px; line-height: 1.55; }
+    .mini-button { display: inline-flex; align-items: center; min-height: 29px; padding: 0 11px; color: var(--navy); background: #fff; font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+    .preview-side { position: absolute; right: 19px; bottom: 18px; left: 19px; display: flex; justify-content: space-between; color: rgba(255,255,255,.72); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
+    .card-info { padding: 19px 20px 20px; }
+    .card-info h3 { margin: 0; color: var(--navy); font-size: 18px; }
+    .card-info p { min-height: 42px; margin: 8px 0 16px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .tag { padding: 5px 8px; border-radius: 999px; color: var(--navy); background: #edf4f8; font-size: 10px; font-weight: 800; }
+    .choose { min-height: 34px; padding: 0 12px; border: 1px solid var(--navy); border-radius: 9px; color: #fff; background: var(--navy); font-size: 11px; font-weight: 800; cursor: pointer; }
+    .choose:hover, .card.is-selected .choose { border-color: var(--orange); background: var(--orange); }
+    .choose[aria-pressed="true"]::after { content: ' ✓'; }
+
+    /* 01 · Actual */
+    .style-classic .preview-art { background-image: linear-gradient(90deg, rgba(8,29,52,.82), rgba(8,29,52,.16)), var(--hero-image); }
+    .style-classic .preview-copy { padding-top: 70px; }
+    .style-classic .preview::after { content: ''; position: absolute; right: -90px; bottom: -180px; width: 330px; height: 330px; border: 1px solid rgba(255,255,255,.25); border-radius: 50%; box-shadow: 0 0 0 26px rgba(255,255,255,.06), 0 0 0 52px rgba(255,255,255,.04); }
+
+    /* 02 · Panel lateral: el texto no pisa la fotografía */
+    .style-side { display: grid; grid-template-columns: 43% 57%; background: var(--ivory); color: var(--navy); }
+    .style-side::before { display: none; }
+    .style-side .preview-art { position: relative; inset: auto; grid-column: 2; grid-row: 1; background: var(--hero-image); }
+    .style-side .preview-copy { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: center; max-width: none; padding: 34px 27px; background: var(--ivory); }
+    .style-side .preview-kicker { color: var(--orange); }
+    .style-side h2 { color: var(--navy); font-size: clamp(25px, 3vw, 40px); }
+    .style-side p { color: #637488; }
+    .style-side .mini-button { color: #fff; background: var(--orange); }
+    .style-side .preview-side { right: auto; bottom: 18px; left: 27px; color: #718194; }
+
+    /* 03 · Franja inferior: el foco de la imagen queda limpio */
+    .style-bottom .preview-art { background-image: var(--hero-image); }
+    .style-bottom::before { background: linear-gradient(180deg, transparent 28%, rgba(8,29,52,.12) 45%, rgba(8,29,52,.93) 100%); }
+    .style-bottom .preview-copy { display: flex; align-items: flex-end; gap: 22px; max-width: none; padding: 185px 33px 38px; }
+    .style-bottom .preview-copy > div { flex: 1; }
+    .style-bottom .preview-copy h2 { margin-bottom: 7px; }
+    .style-bottom .preview-copy p { margin: 0; }
+    .style-bottom .mini-button { flex: 0 0 auto; margin-bottom: 2px; }
+
+    /* 04 · Editorial dividido */
+    .style-split { display: grid; grid-template-columns: 50% 50%; background: #f4eee6; color: var(--navy); }
+    .style-split::before { display: none; }
+    .style-split .preview-copy { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: center; max-width: none; padding: 36px 31px; }
+    .style-split .preview-art { grid-column: 2; grid-row: 1; position: relative; inset: auto; background: var(--hero-image); }
+    .style-split .preview-kicker { color: var(--orange); }
+    .style-split h2 { color: var(--navy); font-size: clamp(25px, 3vw, 42px); }
+    .style-split p { color: #637488; }
+    .style-split .mini-button { color: #fff; background: var(--navy); }
+
+    /* 05 · Marco editorial */
+    .style-frame { background: #eadcc8; color: var(--navy); }
+    .style-frame .preview-art { inset: 20px; background-image: var(--hero-image); box-shadow: 0 20px 35px rgba(8,29,52,.2); }
+    .style-frame::before { background: linear-gradient(90deg, rgba(8,29,52,.76), rgba(8,29,52,.1)); inset: 20px; }
+    .style-frame .preview-copy { padding-top: 62px; padding-left: 48px; }
+    .style-frame .preview-side { right: 45px; bottom: 38px; left: 45px; }
+
+    /* 06 · Minimal con tarjeta */
+    .style-minimal .preview-art { background-image: var(--hero-image); filter: saturate(.8); }
+    .style-minimal::before { background: linear-gradient(90deg, rgba(8,29,52,.4), rgba(8,29,52,.05)); }
+    .style-minimal .preview-copy { max-width: 72%; margin: 0 auto; padding: 56px 30px; text-align: center; }
+    .style-minimal .preview-kicker { justify-content: center; }
+    .style-minimal h2 { max-width: none; margin-right: auto; margin-left: auto; }
+    .style-minimal p { margin-right: auto; margin-left: auto; }
+    .style-minimal .mini-button { color: var(--navy); background: #f7cf8a; }
+
+    .footer-note { margin-top: 35px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+    :focus-visible { outline: 3px solid rgba(255,107,53,.48); outline-offset: 3px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .preview { min-height: 330px; } }
+    @media (max-width: 600px) {
+      .page { width: min(100% - 24px, 520px); padding-top: 20px; }
+      .topbar { align-items: flex-start; margin-bottom: 30px; }
+      .brand-copy strong { font-size: 16px; }
+      .back-link { font-size: 10px; }
+      .selection-bar { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .clear-selection { padding: 0; }
+      .preview-copy { max-width: 83%; padding: 37px 25px; }
+      .style-bottom .preview-copy { align-items: flex-start; flex-direction: column; padding: 180px 25px 28px; gap: 12px; }
+      .style-side, .style-split { grid-template-columns: 44% 56%; }
+      .style-side .preview-copy, .style-split .preview-copy { padding: 23px 17px; }
+      .style-frame .preview-copy { padding-left: 37px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <a class="brand" href="/builder">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <span class="brand-copy"><strong>Rebeca Andrade.</strong><small>Propuestas de Hero</small></span>
+      </a>
+      <a class="back-link" href="/builder">← Volver al Builder</a>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <span class="eyebrow">Dirección visual</span>
+      <h1 id="page-title">Elige cómo quieres presentar la primera impresión.</h1>
+      <p>Estas son propuestas de composición para el módulo Hero. La primera conserva el diseño actual. Las demás son conceptos para comparar con la clienta antes de convertirlos en estilos disponibles dentro del Builder.</p>
+    </section>
+
+    <aside class="notice">
+      <span class="notice-icon" aria-hidden="true">i</span>
+      <div><strong>La propuesta recomendada para que el texto no afecte la imagen es “Panel lateral”.</strong> Mantiene el texto en una columna sólida y deja la fotografía limpia, sin overlay ni elementos encima del motivo principal.</div>
+    </aside>
+
+    <section class="selection-bar" aria-live="polite">
+      <div><strong>Propuestas seleccionadas</strong><span id="selection-summary">Todavía no has seleccionado ninguna.</span></div>
+      <button class="clear-selection" id="clear-selection" type="button">Limpiar selección</button>
+    </section>
+
+    <section class="grid" aria-label="Opciones de diseño Hero">
+      <article class="card" data-card="classic-overlay">
+        <div class="preview style-classic">
+          <div class="preview-art"></div>
+          <div class="preview-copy"><span class="preview-kicker">Diseño actual</span><h2>Tu vestido ideal para un momento inolvidable</h2><p>Texto sobre la imagen con contraste controlado y una composición flexible.</p><span class="mini-button">Ver catálogo&nbsp; →</span></div>
+          <div class="preview-side"><span>Compra segura</span><span>Envíos nacionales</span></div>
+        </div>
+        <div class="card-info"><h3>01 · Clásico superpuesto</h3><p>El Hero que ya tienes: contenido sobre la imagen, overlay configurable y visual lateral opcional.</p><div class="card-meta"><span class="tag">Actual</span><button class="choose" type="button" data-choice="classic-overlay" aria-pressed="false">Elegir</button></div></div>
+      </article>
+
+      <article class="card" data-card="side-panel">
+        <div class="preview style-side">
+          <div class="preview-copy"><span class="preview-kicker">Colección 2026</span><h2>Diseño que deja respirar la imagen</h2><p>La fotografía queda completamente limpia en su propia columna.</p><span class="mini-button">Ver colección&nbsp; →</span></div><div class="preview-art"></div><div class="preview-side"><span>Rebeca Andrade.</span></div>
+        </div>
+        <div class="card-info"><h3>02 · Panel lateral</h3><p>Texto en un panel independiente y fondo fotográfico sin texto encima. Ideal cuando el producto o la persona deben ser protagonistas.</p><div class="card-meta"><span class="tag">Recomendada</span><button class="choose" type="button" data-choice="side-panel" aria-pressed="false">Elegir</button></div></div>
+      </article>
+
+      <article class="card" data-card="bottom-band">
+        <div class="preview style-bottom">
+          <div class="preview-art"></div><div class="preview-copy"><div><span class="preview-kicker">Momentos inolvidables</span><h2>Una historia para vestir</h2><p>La franja inferior concentra el mensaje y protege el centro de la imagen.</p></div><span class="mini-button">Explorar&nbsp; →</span></div>
+          <div class="preview-side"><span>Edición especial</span></div>
+        </div>
+        <div class="card-info"><h3>03 · Franja inferior</h3><p>El contenido vive en una banda inferior. Conserva el impacto visual de la imagen y funciona muy bien con fotografías panorámicas.</p><div class="card-meta"><span class="tag">Fotografía protagonista</span><button class="choose" type="button" data-choice="bottom-band" aria-pressed="false">Elegir</button></div></div>
+      </article>
+
+      <article class="card" data-card="editorial-split">
+        <div class="preview style-split">
+          <div class="preview-copy"><span class="preview-kicker">Selección editorial</span><h2>Menos ruido, más intención</h2><p>Dos columnas equilibradas para una presentación sobria y elegante.</p><span class="mini-button">Descubrir&nbsp; →</span></div><div class="preview-art"></div>
+        </div>
+        <div class="card-info"><h3>04 · Editorial dividido</h3><p>Una mitad para el mensaje y otra para la fotografía. El sistema se adapta bien a escritorio y puede apilarse en móvil.</p><div class="card-meta"><span class="tag">Editorial</span><button class="choose" type="button" data-choice="editorial-split" aria-pressed="false">Elegir</button></div></div>
+      </article>
+
+      <article class="card" data-card="editorial-frame">
+        <div class="preview style-frame">
+          <div class="preview-art"></div><div class="preview-copy"><span class="preview-kicker">Atelier Rebeca</span><h2>El detalle hace la diferencia</h2><p>Un marco editorial que separa la imagen del resto del contenido.</p><span class="mini-button">Conocer más&nbsp; →</span></div><div class="preview-side"><span>Edición limitada</span></div>
+        </div>
+        <div class="card-info"><h3>05 · Marco editorial</h3><p>La fotografía se presenta como una pieza enmarcada, con una sensación de catálogo premium y mucho aire alrededor.</p><div class="card-meta"><span class="tag">Premium</span><button class="choose" type="button" data-choice="editorial-frame" aria-pressed="false">Elegir</button></div></div>
+      </article>
+
+      <article class="card" data-card="minimal-card">
+        <div class="preview style-minimal">
+          <div class="preview-art"></div><div class="preview-copy"><span class="preview-kicker">Nueva colección</span><h2>Tu momento empieza aquí</h2><p>Una tarjeta breve y centrada, con poca intervención sobre la imagen.</p><span class="mini-button">Ver catálogo&nbsp; →</span></div>
+        </div>
+        <div class="card-info"><h3>06 · Minimal con tarjeta</h3><p>Contenido corto dentro de una composición ligera. Recomendado cuando la fotografía ya comunica casi todo.</p><div class="card-meta"><span class="tag">Minimalista</span><button class="choose" type="button" data-choice="minimal-card" aria-pressed="false">Elegir</button></div></div>
+      </article>
+    </section>
+
+    <p class="footer-note">Selecciona una o varias propuestas y compárteme los números elegidos. Después incorporaré únicamente esas variantes al selector “Estilo del Hero” del Builder, conservando el diseño actual como primera opción.</p>
+  </main>
+  <script>
+    const storageKey = 'rebeca-hero-design-selections';
+    const labels = {
+      'classic-overlay': '01 · Clásico superpuesto',
+      'side-panel': '02 · Panel lateral',
+      'bottom-band': '03 · Franja inferior',
+      'editorial-split': '04 · Editorial dividido',
+      'editorial-frame': '05 · Marco editorial',
+      'minimal-card': '06 · Minimal con tarjeta'
+    };
+    const selections = new Set(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+    const summary = document.querySelector('#selection-summary');
+    function renderSelections() {
+      document.querySelectorAll('[data-choice]').forEach((button) => {
+        const selected = selections.has(button.dataset.choice);
+        button.setAttribute('aria-pressed', String(selected));
+        button.textContent = selected ? 'Seleccionada' : 'Elegir';
+        button.closest('.card').classList.toggle('is-selected', selected);
+      });
+      const names = [...selections].map((key) => labels[key]).filter(Boolean);
+      summary.textContent = names.length ? names.join(' · ') : 'Todavía no has seleccionado ninguna.';
+      localStorage.setItem(storageKey, JSON.stringify([...selections]));
+    }
+    document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => {
+      if (selections.has(button.dataset.choice)) selections.delete(button.dataset.choice);
+      else selections.add(button.dataset.choice);
+      renderSelections();
+    }));
+    document.querySelector('#clear-selection').addEventListener('click', () => {
+      selections.clear();
+      renderSelections();
+    });
+    renderSelections();
+  </script>
+</body>
+</html>

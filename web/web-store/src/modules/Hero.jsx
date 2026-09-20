@@ -47,6 +47,7 @@ export default function Hero({ settings = {} }) {
     custom_code_enabled,
     custom_code,
     content_align = 'center',
+    hero_style = 'classic-overlay',
     overlay_enabled = true,
     content_position,
     text_color,
@@ -65,6 +66,7 @@ export default function Hero({ settings = {} }) {
     shadow_color = '#000000',
   } = settings;
   const minimalVisual = visual_mode === 'none';
+  const normalizedHeroStyle = ['classic-overlay', 'side-panel'].includes(hero_style) ? hero_style : 'classic-overlay';
   const normalizedContentAlign = ['left', 'center', 'right'].includes(content_align) ? content_align : 'center';
   const contentPosition = ['desktop', 'mobile'].reduce((result, viewport) => {
     const source = content_position?.[viewport] || {};
@@ -181,7 +183,7 @@ export default function Hero({ settings = {} }) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
-    <section className={`hero hero-content-align-${normalizedContentAlign}${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
+    <section className={`hero hero-style-${normalizedHeroStyle} hero-content-align-${normalizedContentAlign}${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
       {image_url && <div className={`hero-image-background${overlay_enabled === false ? ' is-without-overlay' : ''}`} aria-hidden="true" />}
       {!minimalVisual && <>
         <div className="hero-glow hero-glow-one" />

@@ -36,6 +36,11 @@ guardar/exportar el resultado completo como **tema**. Endpoints en
 - El módulo Hero permite alinear su contenido, activar o quitar el overlay
   de color de la imagen de fondo y mover el bloque de contenido con posiciones
   independientes para escritorio y móvil desde el Editor visual del modal.
+- El Hero ofrece `classic-overlay` y `side-panel` mediante el selector
+  `hero_style`. `side-panel` separa el texto de la fotografía en escritorio y
+  apila ambos bloques en móvil. Las demás propuestas visuales viven en
+  `web/web-admin/public/hero-design-options.html`; solo se incorporan al
+  selector después de que se aprueben.
 
 ## Agregar un tipo de módulo nuevo (toca 3 archivos)
 

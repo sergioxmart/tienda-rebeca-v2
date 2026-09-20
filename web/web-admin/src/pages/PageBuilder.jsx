@@ -80,6 +80,10 @@ const MODULE_SCHEMAS = {
       { key: 'eyebrow',  label: 'Etiqueta superior', type: 'text', placeholder: 'Tecnología para tu día a día', defaultValue: 'Tecnología para tu día a día' },
       { key: 'title',    label: 'Título',         type: 'text' },
       { key: 'subtitle', label: 'Subtítulo',      type: 'textarea' },
+      { key: 'hero_style', label: 'Estilo del Hero', type: 'select', defaultValue: 'classic-overlay', options: [
+        { value: 'classic-overlay', label: 'Clásico · texto sobre imagen' },
+        { value: 'side-panel', label: 'Panel lateral · texto separado' },
+      ] },
       { key: 'content_align', label: 'Alineación del contenido', type: 'select', defaultValue: 'center', options: [
         { value: 'left', label: 'Izquierda' },
         { value: 'center', label: 'Centro' },
@@ -329,7 +333,7 @@ const HERO_SETTING_GROUPS = [
     key: 'content',
     label: 'Contenido',
     description: 'Texto principal y ubicación del contenido.',
-    fields: ['eyebrow', 'title', 'subtitle', 'content_align'],
+    fields: ['eyebrow', 'title', 'subtitle', 'hero_style', 'content_align'],
   },
   {
     key: 'appearance',
@@ -370,6 +374,11 @@ const HERO_VISUAL_LABELS = {
   image: 'Imagen personalizada',
 };
 
+const HERO_STYLE_LABELS = {
+  'classic-overlay': 'Clásico',
+  'side-panel': 'Panel lateral',
+};
+
 const HERO_TEXT_SCALE_LABELS = {
   title: 'Título',
   subtitle: 'Subtítulo',
@@ -379,7 +388,10 @@ const HERO_TEXT_SCALE_LABELS = {
 };
 
 function heroGroupSummary(groupKey, settings = {}) {
-  if (groupKey === 'content') return settings.title ? 'Título configurado' : 'Sin título';
+  if (groupKey === 'content') {
+    const style = HERO_STYLE_LABELS[settings.hero_style] || HERO_STYLE_LABELS['classic-overlay'];
+    return `${settings.title ? 'Título configurado' : 'Sin título'} · ${style}`;
+  }
   if (groupKey === 'appearance') {
     const target = HERO_TEXT_SCALE_LABELS[settings.text_scale_target];
     const scale = Number(settings[`${settings.text_scale_target}_text_scale`]);
@@ -679,6 +691,7 @@ function HeroVisualEditor({ settings, onChange }) {
   const position = normalizeHeroPosition(settings.content_position);
   const currentPosition = position[viewport];
   const align = ['left', 'center', 'right'].includes(settings.content_align) ? settings.content_align : 'center';
+  const heroStyle = settings.hero_style === 'side-panel' ? 'side-panel' : 'classic-overlay';
   const imageUrl = settings.image_url;
   const shadow = normalizeHeroShadow(settings);
   const textFont = HERO_FONT_FAMILIES[settings.text_font];
@@ -698,9 +711,11 @@ function HeroVisualEditor({ settings, onChange }) {
   const shadowAlpha = (0.12 + (shadow.intensity / 100) * 0.5).toFixed(2);
   const shadowColor = colorToRgba(shadow.color, shadowAlpha);
   const canvasStyle = imageUrl
-    ? { backgroundImage: settings.overlay_enabled === false
-      ? `url(${imageUrl})`
-      : `linear-gradient(rgba(15,42,71,.55), rgba(15,42,71,.7)), url(${imageUrl})` }
+    ? heroStyle === 'side-panel'
+      ? { '--builder-hero-image': `url(${imageUrl})`, backgroundImage: 'none' }
+      : { backgroundImage: settings.overlay_enabled === false
+        ? `url(${imageUrl})`
+        : `linear-gradient(rgba(15,42,71,.55), rgba(15,42,71,.7)), url(${imageUrl})` }
     : undefined;
 
   const updatePosition = (nextPosition) => onChange({ ...position, [viewport]: nextPosition });
@@ -735,40 +750,42 @@ function HeroVisualEditor({ settings, onChange }) {
       </div>
     </div>
     <div
-      className={`builder-hero-editor-canvas is-${viewport}`}
+      className={`builder-hero-editor-canvas is-${viewport}${heroStyle === 'side-panel' ? ' is-side-panel' : ''}`}
       style={canvasStyle}
       onPointerMove={moveDrag}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
       {!imageUrl && <div className="builder-hero-editor-placeholder">Imagen de fondo del Hero</div>}
+      {heroStyle === 'side-panel' && imageUrl && <div className="builder-hero-editor-image" style={{ backgroundImage: `url(${imageUrl})` }} aria-hidden="true" />}
       <div
         className={`builder-hero-editor-content is-${align}${dragState ? ' is-dragging' : ''}`}
         style={{
-          left: `${currentPosition.x}%`,
-          top: `${currentPosition.y}%`,
+          left: heroStyle === 'side-panel' ? undefined : `${currentPosition.x}%`,
+          top: heroStyle === 'side-panel' ? undefined : `${currentPosition.y}%`,
           '--hero-title-scale': textScales.title,
           '--hero-subtitle-scale': textScales.subtitle,
           '--hero-eyebrow-scale': textScales.eyebrow,
           '--hero-button-scale': textScales.button,
           '--hero-secondary-scale': textScales.secondary,
-          transform: `translate(${currentPosition.x * -1}%, ${currentPosition.y * -1}%)`,
+          transform: heroStyle === 'side-panel' ? undefined : `translate(${currentPosition.x * -1}%, ${currentPosition.y * -1}%)`,
         }}
-        onPointerDown={beginDrag}
-        role="button"
-        tabIndex={0}
-        aria-label="Arrastrar contenido del Hero"
+        onPointerDown={heroStyle === 'side-panel' ? undefined : beginDrag}
+        role={heroStyle === 'side-panel' ? undefined : 'button'}
+        tabIndex={heroStyle === 'side-panel' ? undefined : 0}
+        aria-label={heroStyle === 'side-panel' ? undefined : 'Arrastrar contenido del Hero'}
       >
-        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.eyebrow}</span>}
-        <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
-        <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
+        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: heroStyle === 'side-panel' ? '#FF6B35' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.eyebrow}</span>}
+        <strong style={{ color: heroStyle === 'side-panel' ? '#0F2A47' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
+        <p style={{ color: heroStyle === 'side-panel' ? '#637488' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
         {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none', boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px ${shadowColor}` : 'none' }}>{settings.cta_text}</span>}
       </div>
-      <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>
+      {heroStyle !== 'side-panel' && <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>}
     </div>
     <div className="builder-hero-editor-controls">
-      <span>Posición {viewport === 'desktop' ? 'de escritorio' : 'móvil'}: <strong>{Math.round(currentPosition.x)}% horizontal · {Math.round(currentPosition.y)}% vertical</strong></span>
-      <button className="btn btn-sm" type="button" onClick={() => updatePosition({ ...HERO_POSITION_DEFAULTS[viewport] })}>Centrar contenido</button>
+      {heroStyle === 'side-panel'
+        ? <span>Composición lateral: <strong>texto separado de la imagen</strong></span>
+        : <><span>Posición {viewport === 'desktop' ? 'de escritorio' : 'móvil'}: <strong>{Math.round(currentPosition.x)}% horizontal · {Math.round(currentPosition.y)}% vertical</strong></span><button className="btn btn-sm" type="button" onClick={() => updatePosition({ ...HERO_POSITION_DEFAULTS[viewport] })}>Centrar contenido</button></>}
     </div>
     {settings.overlay_enabled === false && <div className="help">El color sobre la imagen está desactivado; el fondo se muestra sin overlay.</div>}
     {shadow.enabled && <div className="help">Sombreado activo al {shadow.intensity}% de intensidad.</div>}

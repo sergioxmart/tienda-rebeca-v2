@@ -311,6 +311,72 @@ for (const schema of Object.values(MODULE_SCHEMAS)) {
   );
 }
 
+const HERO_SETTING_GROUPS = [
+  {
+    key: 'content',
+    label: 'Contenido',
+    description: 'Texto principal y ubicación del contenido.',
+    fields: ['eyebrow', 'title', 'subtitle', 'content_align'],
+  },
+  {
+    key: 'appearance',
+    label: 'Apariencia',
+    description: 'Colores, tipografías y sombreado.',
+    fields: ['overlay_enabled', 'text_color', 'text_font', 'shadow_enabled', 'shadow_intensity', 'shadow_color'],
+  },
+  {
+    key: 'background',
+    label: 'Imagen de fondo',
+    description: 'Imagen y encuadre del fondo del Hero.',
+    fields: ['image_url'],
+  },
+  {
+    key: 'visual',
+    label: 'Visual lateral',
+    description: 'El elemento que aparece al lado derecho.',
+    fields: ['visual_mode', 'product_slug', 'visual_image_url'],
+  },
+  {
+    key: 'buttons',
+    label: 'Botones y enlaces',
+    description: 'Acciones y estilos de los botones.',
+    fields: ['button_background_color', 'button_text_color', 'button_font', 'cta_text', 'cta_link', 'secondary_cta_text', 'secondary_cta_link'],
+  },
+  {
+    key: 'advanced',
+    label: 'Avanzado',
+    description: 'Reemplaza el diseño estándar con código personalizado.',
+    fields: ['custom_code_enabled', 'custom_code'],
+  },
+];
+
+const HERO_VISUAL_LABELS = {
+  none: 'Ninguno',
+  abstract: 'Abstracto Rebeca Andrade',
+  product: 'Producto destacado',
+  image: 'Imagen personalizada',
+};
+
+function heroGroupSummary(groupKey, settings = {}) {
+  if (groupKey === 'content') return settings.title ? 'Título configurado' : 'Sin título';
+  if (groupKey === 'appearance') {
+    return [settings.overlay_enabled !== false ? 'Overlay activo' : 'Overlay desactivado', settings.shadow_enabled ? 'Sombra activa' : 'Sin sombra'].join(' · ');
+  }
+  if (groupKey === 'background') return settings.image_url ? 'Imagen seleccionada' : 'Sin imagen';
+  if (groupKey === 'visual') {
+    const mode = settings.visual_mode || 'abstract';
+    if (mode === 'product' && settings.product_slug) return 'Producto seleccionado';
+    if (mode === 'image' && settings.visual_image_url) return 'Imagen seleccionada';
+    return HERO_VISUAL_LABELS[mode] || HERO_VISUAL_LABELS.abstract;
+  }
+  if (groupKey === 'buttons') {
+    const ctaText = String(settings.cta_text || '').trim();
+    if (!ctaText) return 'Sin botón principal';
+    return `CTA: ${ctaText.length > 28 ? `${ctaText.slice(0, 28)}…` : ctaText}`;
+  }
+  return settings.custom_code_enabled ? 'Código personalizado activo' : 'Configuración estándar';
+}
+
 function downloadModuleTemplate(type) {
   const template = CUSTOM_CODE_TEMPLATES[type] || CUSTOM_CODE_TEMPLATES.hero;
   const blob = new Blob([template], { type: 'text/html;charset=utf-8' });
@@ -965,6 +1031,11 @@ export default function PageBuilder() {
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [mediaPickerField, setMediaPickerField] = useState(null);
   const [navLogoPickerOpen, setNavLogoPickerOpen] = useState(false);
+  const [openHeroSection, setOpenHeroSection] = useState('content');
+
+  const setHeroSectionOpen = (key, isOpen) => {
+    setOpenHeroSection(isOpen ? key : null);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -1215,6 +1286,98 @@ export default function PageBuilder() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
   const schema = editing ? MODULE_SCHEMAS[editing.type] : null;
+  const customCodeEnabled = Boolean(editing?.settings?.custom_code_enabled);
+  const heroVisualMode = editing?.type === 'hero' ? editing.settings.visual_mode : null;
+  const isSettingVisible = (field) => {
+    if (!editing) return false;
+    if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(field.key)) return false;
+    if (field.type === 'custom_code' && !customCodeEnabled) return false;
+    if (field.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return false;
+    if (field.key === 'shadow_color' && !editing.settings.shadow_enabled) return false;
+    if (field.key === 'product_slug' && heroVisualMode !== 'product') return false;
+    if (field.key === 'visual_image_url' && heroVisualMode !== 'image') return false;
+    return true;
+  };
+  const renderSettingField = (f) => {
+    if (!isSettingVisible(f)) return null;
+    if (f.type === 'checkbox') {
+      return <label className="builder-checkbox-field" key={f.key}>
+        <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
+        <span>{f.label}</span>
+      </label>;
+    }
+    if (f.type === 'custom_code') return <CustomCodeEditor
+      key={f.key}
+      value={editing.settings[f.key]}
+      onChange={(value) => setSetting(f.key, value)}
+      moduleType={editing.type}
+      idPrefix={`builder-${editing.type}-custom-code`}
+    />;
+    return <div className="form-group" key={f.key}>
+      <label>{f.label}</label>
+      {f.type === 'color' ? (
+        <div className="color-field">
+          <input
+            className="color-picker"
+            type="color"
+            value={pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF')}
+            onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
+            aria-label={`Elegir ${f.label.toLowerCase()}`}
+          />
+          <input
+            className="input color-hex-input"
+            type="text"
+            value={editing.settings[f.key] ?? f.defaultValue ?? ''}
+            onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
+            placeholder={f.defaultValue || '#FFFFFF'}
+          />
+          <span className="color-preview" style={{ background: pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF') }} aria-hidden="true" />
+        </div>
+      ) : f.type === 'range' ? (
+        <div className="builder-hero-range-field">
+          <input
+            type="range"
+            min={f.min}
+            max={f.max}
+            step={f.step || 1}
+            value={Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}
+            onChange={(e) => setSetting(f.key, Number(e.target.value))}
+            aria-label={f.label}
+          />
+          <strong>{Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}%</strong>
+        </div>
+      ) : f.type === 'media' ? (
+        <MediaField
+          field={f}
+          value={editing.settings[f.key] ?? ''}
+          placement={f.mediaPlacementKey ? editing.settings[f.mediaPlacementKey] : undefined}
+          onChange={(value) => setSetting(f.key, value)}
+          onPlacementChange={(value) => f.mediaPlacementKey && setSetting(f.mediaPlacementKey, value)}
+          onOpenPicker={() => openMediaPicker(f.key)}
+        />
+      ) : f.type === 'textarea' ? (
+        <textarea className="textarea"
+                  value={editing.settings[f.key] ?? ''}
+                  onChange={(e) => setSetting(f.key, e.target.value)} />
+      ) : f.type === 'select' ? (
+        <select className="select" value={editing.settings[f.key] ?? f.defaultValue ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
+          {(f.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      ) : f.type === 'product' ? (
+        <select className="select" value={editing.settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
+          <option value="">{f.placeholder || 'Selecciona un producto'}</option>
+          {products.map((product) => <option key={product.id} value={product.slug}>{product.name}{product.brand ? ` · ${product.brand}` : ''}</option>)}
+        </select>
+      ) : (
+        <input className="input"
+               type={f.type === 'number' ? 'number' : (f.type === 'url' ? 'url' : 'text')}
+               value={editing.settings[f.key] ?? ''}
+               placeholder={f.placeholder || ''}
+               onChange={(e) => setSetting(f.key, e.target.value)} />
+      )}
+    </div>;
+  };
+  const heroFields = new Map((schema?.settings || []).map((field) => [field.key, field]));
 
   return (
     <div>
@@ -1364,92 +1527,37 @@ export default function PageBuilder() {
               </div>
             </div>
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '12px 0' }} />
-            {schema.settings.map((f) => {
-              const customCodeEnabled = Boolean(editing.settings.custom_code_enabled);
-              const heroVisualMode = editing.type === 'hero' ? editing.settings.visual_mode : null;
-              if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
-              if (f.type === 'custom_code' && !customCodeEnabled) return null;
-              if (f.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return null;
-              if (f.key === 'shadow_color' && !editing.settings.shadow_enabled) return null;
-              if (f.key === 'product_slug' && heroVisualMode !== 'product') return null;
-              if (f.key === 'visual_image_url' && heroVisualMode !== 'image') return null;
-              if (f.type === 'checkbox') {
-                return <label className="builder-checkbox-field" key={f.key}>
-                  <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
-                  <span>{f.label}</span>
-                </label>;
-              }
-              if (f.type === 'custom_code') return <CustomCodeEditor
-                key={f.key}
-                value={editing.settings[f.key]}
-                onChange={(value) => setSetting(f.key, value)}
-                moduleType={editing.type}
-                idPrefix={`builder-${editing.type}-custom-code`}
-              />;
-              return <div className="form-group" key={f.key}>
-                <label>{f.label}</label>
-                {f.type === 'color' ? (
-                  <div className="color-field">
-                    <input
-                      className="color-picker"
-                      type="color"
-                      value={pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF')}
-                      onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
-                      aria-label={`Elegir ${f.label.toLowerCase()}`}
-                    />
-                    <input
-                      className="input color-hex-input"
-                      type="text"
-                      value={editing.settings[f.key] ?? f.defaultValue ?? ''}
-                      onChange={(e) => setSetting(f.key, e.target.value.toUpperCase())}
-                      placeholder={f.defaultValue || '#FFFFFF'}
-                    />
-                    <span className="color-preview" style={{ background: pickerColor(editing.settings[f.key], f.defaultValue || '#FFFFFF') }} aria-hidden="true" />
-                  </div>
-                ) : f.type === 'range' ? (
-                  <div className="builder-hero-range-field">
-                    <input
-                      type="range"
-                      min={f.min}
-                      max={f.max}
-                      step={f.step || 1}
-                      value={Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}
-                      onChange={(e) => setSetting(f.key, Number(e.target.value))}
-                      aria-label={f.label}
-                    />
-                    <strong>{Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}%</strong>
-                  </div>
-                ) : f.type === 'media' ? (
-                  <MediaField
-                    field={f}
-                    value={editing.settings[f.key] ?? ''}
-                    placement={f.mediaPlacementKey ? editing.settings[f.mediaPlacementKey] : undefined}
-                    onChange={(value) => setSetting(f.key, value)}
-                    onPlacementChange={(value) => f.mediaPlacementKey && setSetting(f.mediaPlacementKey, value)}
-                    onOpenPicker={() => openMediaPicker(f.key)}
-                  />
-                ) : f.type === 'textarea' ? (
-                  <textarea className="textarea"
-                            value={editing.settings[f.key] ?? ''}
-                            onChange={(e) => setSetting(f.key, e.target.value)} />
-                ) : f.type === 'select' ? (
-                  <select className="select" value={editing.settings[f.key] ?? f.defaultValue ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
-                    {(f.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                ) : f.type === 'product' ? (
-                  <select className="select" value={editing.settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
-                    <option value="">{f.placeholder || 'Selecciona un producto'}</option>
-                    {products.map((product) => <option key={product.id} value={product.slug}>{product.name}{product.brand ? ` · ${product.brand}` : ''}</option>)}
-                  </select>
-                ) : (
-                  <input className="input"
-                         type={f.type === 'number' ? 'number' : (f.type === 'url' ? 'url' : 'text')}
-                         value={editing.settings[f.key] ?? ''}
-                         placeholder={f.placeholder || ''}
-                         onChange={(e) => setSetting(f.key, e.target.value)} />
-                )}
-              </div>;
-            })}
+            {editing.type === 'hero' ? (
+              <div className="builder-settings-sections">
+                {HERO_SETTING_GROUPS.map((group) => {
+                  const fields = group.fields
+                    .map((key) => heroFields.get(key))
+                    .filter(Boolean)
+                    .filter(isSettingVisible);
+                  if (fields.length === 0) return null;
+                  const isOpen = openHeroSection === group.key;
+                  return (
+                    <div className={`builder-settings-section${isOpen ? ' is-open' : ''}`} key={group.key}>
+                      <button
+                        className="builder-settings-section-toggle"
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`builder-settings-section-${group.key}`}
+                        onClick={() => setHeroSectionOpen(group.key, !isOpen)}
+                      >
+                        <span className="builder-settings-section-heading">
+                          <strong>{group.label}</strong>
+                          <small>{group.description}</small>
+                        </span>
+                        <span className="builder-settings-section-summary">{heroGroupSummary(group.key, editing.settings)}</span>
+                        <span className="builder-settings-section-icon" aria-hidden="true">{isOpen ? '−' : '+'}</span>
+                      </button>
+                      {isOpen && <div className="builder-settings-section-body" id={`builder-settings-section-${group.key}`}>{fields.map(renderSettingField)}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : schema.settings.map(renderSettingField)}
           </form> : modalTab === 'visual' ? (
             <HeroVisualEditor settings={editing.settings} onChange={(value) => setSetting('content_position', value)} />
           ) : <LiveStorePreview modules={[editing]} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}

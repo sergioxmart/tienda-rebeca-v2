@@ -503,6 +503,19 @@ p { margin: 0 0 12px; }
 .builder-modal-tabs { display: flex; gap: 4px; margin-bottom: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
 .builder-modal-tab { padding: 8px 13px; border: 0; border-radius: 8px; color: var(--color-muted); background: transparent; cursor: pointer; font: inherit; font-size: 12px; }
 .builder-modal-tab:hover, .builder-modal-tab.is-active { color: var(--color-primary); background: #eaf3f8; font-weight: 700; }
+.builder-settings-sections { display: grid; gap: 8px; }
+.builder-settings-section { overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+.builder-settings-section.is-open { border: 2px solid #8eafbf; box-shadow: 0 0 0 2px rgba(142, 175, 191, .16); }
+.builder-settings-section-toggle { display: flex; align-items: center; width: 100%; gap: 16px; padding: 13px 15px; border: 0; color: var(--color-primary); background: transparent; cursor: pointer; font: inherit; text-align: left; }
+.builder-settings-section-toggle[aria-expanded="true"] { border-bottom: 1px solid var(--color-border); background: #fbfcfd; }
+.builder-settings-section-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.builder-settings-section-heading { display: grid; min-width: 0; gap: 3px; }
+.builder-settings-section-heading strong { font-size: 13px; }
+.builder-settings-section-heading small { overflow: hidden; color: var(--color-muted); font-size: 11px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.builder-settings-section-summary { flex: 0 1 auto; max-width: 42%; overflow: hidden; color: var(--color-muted); font-size: 11px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.builder-settings-section-icon { display: grid; flex: 0 0 auto; place-items: center; width: 24px; height: 24px; margin-left: auto; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-muted); font-size: 17px; line-height: 1; }
+.builder-settings-section-toggle[aria-expanded="true"] .builder-settings-section-icon { color: var(--color-primary); background: #eaf3f8; }
+.builder-settings-section-body { padding: 15px 15px 1px; }
 .builder-hero-editor { display: grid; gap: 12px; }
 .builder-hero-editor-heading, .builder-hero-editor-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .builder-hero-editor-heading > div:first-child { display: grid; gap: 3px; }
@@ -1086,6 +1099,8 @@ p { margin: 0 0 12px; }
   .builder-link-row .btn-danger { width: 100%; }
   .builder-media-url-row { align-items: stretch; flex-direction: column; }
   .builder-media-url-row .btn { width: 100%; }
+  .builder-settings-section-toggle { align-items: flex-start; }
+  .builder-settings-section-summary { max-width: 100%; text-align: left; }
   .builder-media-selected { align-items: flex-start; flex-wrap: wrap; }
   .builder-media-selected > div { min-width: calc(100% - 76px); }
   .builder-media-selected .btn { width: 100%; }

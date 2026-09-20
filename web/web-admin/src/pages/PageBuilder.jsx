@@ -1366,10 +1366,13 @@ export default function PageBuilder() {
             <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '12px 0' }} />
             {schema.settings.map((f) => {
               const customCodeEnabled = Boolean(editing.settings.custom_code_enabled);
+              const heroVisualMode = editing.type === 'hero' ? editing.settings.visual_mode : null;
               if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(f.key)) return null;
               if (f.type === 'custom_code' && !customCodeEnabled) return null;
               if (f.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return null;
               if (f.key === 'shadow_color' && !editing.settings.shadow_enabled) return null;
+              if (f.key === 'product_slug' && heroVisualMode !== 'product') return null;
+              if (f.key === 'visual_image_url' && heroVisualMode !== 'image') return null;
               if (f.type === 'checkbox') {
                 return <label className="builder-checkbox-field" key={f.key}>
                   <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />

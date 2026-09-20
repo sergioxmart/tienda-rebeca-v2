@@ -51,6 +51,7 @@ export default function Hero({ settings = {} }) {
     overlay_enabled = true,
     content_position,
     text_color,
+    content_background_color,
     text_font,
     text_scale,
     title_text_scale,
@@ -79,6 +80,7 @@ export default function Hero({ settings = {} }) {
     return result;
   }, {});
   const textColor = colorValue(text_color, '#FFFFFF');
+  const contentBackgroundColor = colorValue(content_background_color, '#FFFAF3');
   const textScales = {
     title: normalizeTextScale(title_text_scale ?? text_scale),
     subtitle: normalizeTextScale(subtitle_text_scale),
@@ -141,6 +143,7 @@ export default function Hero({ settings = {} }) {
       '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
       '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
       '--hero-text-color': textColor,
+      '--hero-content-background': contentBackgroundColor,
       '--hero-title-scale': textScales.title,
       '--hero-subtitle-scale': textScales.subtitle,
       '--hero-eyebrow-scale': textScales.eyebrow,
@@ -167,6 +170,7 @@ export default function Hero({ settings = {} }) {
       '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
       '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
       '--hero-text-color': textColor,
+      '--hero-content-background': contentBackgroundColor,
       '--hero-title-scale': textScales.title,
       '--hero-subtitle-scale': textScales.subtitle,
       '--hero-eyebrow-scale': textScales.eyebrow,

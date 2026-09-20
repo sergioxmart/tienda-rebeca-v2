@@ -91,6 +91,7 @@ const MODULE_SCHEMAS = {
       ] },
       { key: 'overlay_enabled', label: 'Aplicar color sobre la imagen de fondo', type: 'checkbox', defaultValue: true },
       { key: 'text_color', label: 'Color de los textos', type: 'color', defaultValue: '#FFFFFF' },
+      { key: 'content_background_color', label: 'Color de fondo del contenido', type: 'color', defaultValue: '#FFFAF3' },
       { key: 'text_font', label: 'Fuente de los textos', type: 'select', defaultValue: 'default', options: [
         { value: 'default', label: 'Predeterminada de la tienda' },
         { value: 'display', label: 'Editorial' },
@@ -339,7 +340,7 @@ const HERO_SETTING_GROUPS = [
     key: 'appearance',
     label: 'Apariencia',
     description: 'Colores, tipografías y sombreado.',
-    fields: ['overlay_enabled', 'text_color', 'text_font', 'text_scale_target', 'title_text_scale', 'subtitle_text_scale', 'eyebrow_text_scale', 'button_text_scale', 'secondary_cta_text_scale', 'shadow_enabled', 'shadow_intensity', 'shadow_color'],
+    fields: ['overlay_enabled', 'text_color', 'content_background_color', 'text_font', 'text_scale_target', 'title_text_scale', 'subtitle_text_scale', 'eyebrow_text_scale', 'button_text_scale', 'secondary_cta_text_scale', 'shadow_enabled', 'shadow_intensity', 'shadow_color'],
   },
   {
     key: 'background',
@@ -710,6 +711,7 @@ function HeroVisualEditor({ settings, onChange }) {
   const shadowBlur = Math.max(1, Math.round(shadow.intensity / 8));
   const shadowAlpha = (0.12 + (shadow.intensity / 100) * 0.5).toFixed(2);
   const shadowColor = colorToRgba(shadow.color, shadowAlpha);
+  const contentBackgroundColor = pickerColor(settings.content_background_color, '#FFFAF3');
   const canvasStyle = imageUrl
     ? heroStyle === 'side-panel'
       ? { '--builder-hero-image': `url(${imageUrl})`, backgroundImage: 'none' }
@@ -768,6 +770,7 @@ function HeroVisualEditor({ settings, onChange }) {
           '--hero-eyebrow-scale': textScales.eyebrow,
           '--hero-button-scale': textScales.button,
           '--hero-secondary-scale': textScales.secondary,
+          '--builder-hero-content-background': contentBackgroundColor,
           transform: heroStyle === 'side-panel' ? undefined : `translate(${currentPosition.x * -1}%, ${currentPosition.y * -1}%)`,
         }}
         onPointerDown={heroStyle === 'side-panel' ? undefined : beginDrag}
@@ -775,9 +778,9 @@ function HeroVisualEditor({ settings, onChange }) {
         tabIndex={heroStyle === 'side-panel' ? undefined : 0}
         aria-label={heroStyle === 'side-panel' ? undefined : 'Arrastrar contenido del Hero'}
       >
-        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: heroStyle === 'side-panel' ? '#FF6B35' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.eyebrow}</span>}
-        <strong style={{ color: heroStyle === 'side-panel' ? '#0F2A47' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
-        <p style={{ color: heroStyle === 'side-panel' ? '#637488' : pickerColor(settings.text_color), fontFamily: textFont, textShadow: heroStyle === 'side-panel' ? 'none' : shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
+        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.eyebrow}</span>}
+        <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
+        <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
         {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none', boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px ${shadowColor}` : 'none' }}>{settings.cta_text}</span>}
       </div>
       {heroStyle !== 'side-panel' && <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>}
@@ -1417,6 +1420,8 @@ export default function PageBuilder() {
     if (field.type === 'custom_code' && !customCodeEnabled) return false;
     if (field.key === 'shadow_intensity' && !editing.settings.shadow_enabled) return false;
     if (field.key === 'shadow_color' && !editing.settings.shadow_enabled) return false;
+    if (field.key === 'overlay_enabled' && editing.type === 'hero' && editing.settings.hero_style === 'side-panel') return false;
+    if (field.key === 'content_background_color' && editing.type === 'hero' && editing.settings.hero_style !== 'side-panel') return false;
     if (field.key === 'product_slug' && heroVisualMode !== 'product') return false;
     if (field.key === 'visual_image_url' && heroVisualMode !== 'image') return false;
     if (field.key.endsWith('_text_scale') && field.key !== `${heroTextScaleTarget}_text_scale`) return false;
@@ -1654,6 +1659,7 @@ export default function PageBuilder() {
             {editing.type === 'hero' ? (
               <div className="builder-settings-sections">
                 {HERO_SETTING_GROUPS.map((group) => {
+                  if (group.key === 'visual' && editing.settings.hero_style === 'side-panel') return null;
                   const fields = group.fields
                     .map((key) => heroFields.get(key))
                     .filter(Boolean)

@@ -539,14 +539,14 @@ p { margin: 0 0 12px; }
 .builder-hero-editor-canvas.is-side-panel::before, .builder-hero-editor-canvas.is-side-panel::after { display: none; }
 .builder-hero-editor-image { position: relative; z-index: 0; grid-column: 2; grid-row: 1; min-height: 100%; background-position: center; background-size: cover; }
 .builder-hero-editor-canvas.is-side-panel .builder-hero-editor-placeholder { top: 0; right: 0; bottom: 0; left: 44%; color: rgba(15,42,71,.48); }
-.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content { position: relative; grid-column: 1; grid-row: 1; width: auto; min-height: 100%; padding: 28px 22px; border: 0; border-right: 1px solid rgba(184,154,94,.35); border-radius: 0; color: #0f2a47; background: #fffaf3; cursor: default; transform: none !important; }
-.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content:hover { background: #fffaf3; box-shadow: none; cursor: default; }
+.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content { position: relative; grid-column: 1; grid-row: 1; width: auto; min-height: 100%; padding: 28px 22px; border: 0; border-right: 1px solid rgba(184,154,94,.35); border-radius: 0; color: #0f2a47; background: var(--builder-hero-content-background, #fffaf3); cursor: default; transform: none !important; }
+.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content:hover { background: var(--builder-hero-content-background, #fffaf3); box-shadow: none; cursor: default; }
 .builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content.is-left,
 .builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content.is-center,
 .builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content.is-right { align-self: stretch; display: flex; flex-direction: column; justify-content: center; text-align: left; }
-.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content strong { color: #0f2a47 !important; }
-.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content p { color: #637488 !important; }
-.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-eyebrow { color: #ff6b35 !important; }
+.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content strong { color: inherit; }
+.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-content p { color: inherit; }
+.builder-hero-editor-canvas.is-side-panel .builder-hero-editor-eyebrow { color: inherit; }
 .builder-hero-editor-canvas.is-side-panel .builder-hero-editor-button { align-self: flex-start; color: #fff; background: #ff6b35; }
 .builder-hero-editor-canvas.is-side-panel.is-mobile { grid-template-columns: 1fr; grid-template-rows: 46% 54%; }
 .builder-hero-editor-canvas.is-side-panel.is-mobile .builder-hero-editor-image { grid-column: 1; grid-row: 1; min-height: 0; }

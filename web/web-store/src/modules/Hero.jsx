@@ -24,6 +24,11 @@ function colorToRgba(value, alpha) {
   return `rgba(${channels.join(',')},${alpha})`;
 }
 
+function normalizeTextScale(value, fallback = 100) {
+  const numericValue = Number(value ?? fallback);
+  return Number.isFinite(numericValue) ? Math.min(1.2, Math.max(0.1, numericValue / 100)) : 1;
+}
+
 export default function Hero({ settings = {} }) {
   const {
     title,
@@ -46,6 +51,12 @@ export default function Hero({ settings = {} }) {
     content_position,
     text_color,
     text_font,
+    text_scale,
+    title_text_scale,
+    subtitle_text_scale,
+    eyebrow_text_scale,
+    button_text_scale,
+    secondary_cta_text_scale,
     button_background_color,
     button_text_color,
     button_font,
@@ -66,6 +77,13 @@ export default function Hero({ settings = {} }) {
     return result;
   }, {});
   const textColor = colorValue(text_color, '#FFFFFF');
+  const textScales = {
+    title: normalizeTextScale(title_text_scale ?? text_scale),
+    subtitle: normalizeTextScale(subtitle_text_scale),
+    eyebrow: normalizeTextScale(eyebrow_text_scale),
+    button: normalizeTextScale(button_text_scale),
+    secondary: normalizeTextScale(secondary_cta_text_scale),
+  };
   const buttonBackgroundColor = colorValue(button_background_color, '#FFFFFF');
   const buttonTextColor = colorValue(button_text_color, '#0F2A47');
   const shadowIntensity = Number.isFinite(Number(shadow_intensity))
@@ -121,6 +139,11 @@ export default function Hero({ settings = {} }) {
       '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
       '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
       '--hero-text-color': textColor,
+      '--hero-title-scale': textScales.title,
+      '--hero-subtitle-scale': textScales.subtitle,
+      '--hero-eyebrow-scale': textScales.eyebrow,
+      '--hero-button-scale': textScales.button,
+      '--hero-secondary-scale': textScales.secondary,
       '--hero-button-background': buttonBackgroundColor,
       '--hero-button-text-color': buttonTextColor,
       '--hero-text-shadow': textShadow,
@@ -142,6 +165,11 @@ export default function Hero({ settings = {} }) {
       '--hero-content-mobile-anchor-x': `${50 - contentPosition.mobile.x}%`,
       '--hero-content-mobile-anchor-y': `${50 - contentPosition.mobile.y}%`,
       '--hero-text-color': textColor,
+      '--hero-title-scale': textScales.title,
+      '--hero-subtitle-scale': textScales.subtitle,
+      '--hero-eyebrow-scale': textScales.eyebrow,
+      '--hero-button-scale': textScales.button,
+      '--hero-secondary-scale': textScales.secondary,
       '--hero-button-background': buttonBackgroundColor,
       '--hero-button-text-color': buttonTextColor,
       '--hero-text-shadow': textShadow,

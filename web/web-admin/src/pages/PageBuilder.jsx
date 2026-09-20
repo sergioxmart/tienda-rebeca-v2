@@ -94,6 +94,19 @@ const MODULE_SCHEMAS = {
         { value: 'sans', label: 'Limpia · sans serif' },
         { value: 'script', label: 'Manuscrita · cursiva' },
       ] },
+      { key: 'text_scale_target', label: 'Texto a ajustar', type: 'select', defaultValue: '', options: [
+        { value: '', label: 'Selecciona un texto' },
+        { value: 'title', label: 'Título' },
+        { value: 'subtitle', label: 'Subtítulo' },
+        { value: 'eyebrow', label: 'Etiqueta superior' },
+        { value: 'button', label: 'Texto del botón' },
+        { value: 'secondary_cta', label: 'Segundo enlace' },
+      ] },
+      { key: 'title_text_scale', label: 'Tamaño del título', type: 'range', defaultValue: 100, min: 10, max: 120, step: 5, unit: '%' },
+      { key: 'subtitle_text_scale', label: 'Tamaño del subtítulo', type: 'range', defaultValue: 100, min: 10, max: 120, step: 5, unit: '%' },
+      { key: 'eyebrow_text_scale', label: 'Tamaño de la etiqueta superior', type: 'range', defaultValue: 100, min: 10, max: 120, step: 5, unit: '%' },
+      { key: 'button_text_scale', label: 'Tamaño del texto del botón', type: 'range', defaultValue: 100, min: 10, max: 120, step: 5, unit: '%' },
+      { key: 'secondary_cta_text_scale', label: 'Tamaño del segundo enlace', type: 'range', defaultValue: 100, min: 10, max: 120, step: 5, unit: '%' },
       { key: 'button_background_color', label: 'Color de fondo del botón', type: 'color', defaultValue: '#FFFFFF' },
       { key: 'button_text_color', label: 'Color del texto del botón', type: 'color', defaultValue: '#0F2A47' },
       { key: 'button_font', label: 'Fuente del botón', type: 'select', defaultValue: 'default', options: [
@@ -322,7 +335,7 @@ const HERO_SETTING_GROUPS = [
     key: 'appearance',
     label: 'Apariencia',
     description: 'Colores, tipografías y sombreado.',
-    fields: ['overlay_enabled', 'text_color', 'text_font', 'shadow_enabled', 'shadow_intensity', 'shadow_color'],
+    fields: ['overlay_enabled', 'text_color', 'text_font', 'text_scale_target', 'title_text_scale', 'subtitle_text_scale', 'eyebrow_text_scale', 'button_text_scale', 'secondary_cta_text_scale', 'shadow_enabled', 'shadow_intensity', 'shadow_color'],
   },
   {
     key: 'background',
@@ -357,10 +370,21 @@ const HERO_VISUAL_LABELS = {
   image: 'Imagen personalizada',
 };
 
+const HERO_TEXT_SCALE_LABELS = {
+  title: 'Título',
+  subtitle: 'Subtítulo',
+  eyebrow: 'Etiqueta',
+  button: 'Botón',
+  secondary_cta: 'Segundo enlace',
+};
+
 function heroGroupSummary(groupKey, settings = {}) {
   if (groupKey === 'content') return settings.title ? 'Título configurado' : 'Sin título';
   if (groupKey === 'appearance') {
-    return [settings.overlay_enabled !== false ? 'Overlay activo' : 'Overlay desactivado', settings.shadow_enabled ? 'Sombra activa' : 'Sin sombra'].join(' · ');
+    const target = HERO_TEXT_SCALE_LABELS[settings.text_scale_target];
+    const scale = Number(settings[`${settings.text_scale_target}_text_scale`]);
+    const textLabel = target && Number.isFinite(scale) ? `${target} ${scale}%` : 'Sin ajuste de tamaño';
+    return [settings.overlay_enabled !== false ? 'Overlay activo' : 'Overlay desactivado', textLabel, settings.shadow_enabled ? 'Sombra activa' : 'Sin sombra'].join(' · ');
   }
   if (groupKey === 'background') return settings.image_url ? 'Imagen seleccionada' : 'Sin imagen';
   if (groupKey === 'visual') {
@@ -545,12 +569,22 @@ function defaultSettingsForType(type) {
 
 function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista previa real de la tienda' }) {
   const frameRef = useRef(null);
+  const viewportRef = useRef(null);
   const [previewMode, setPreviewMode] = useState('desktop');
+  const [desktopScale, setDesktopScale] = useState(1);
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const desktopPreviewWidth = 1280;
+  const desktopPreviewHeight = 720;
   const payload = useMemo(() => ({
     modules: modules || [],
     site_config_subset: { ...(navSettings || {}), ...(globalStyles || {}) },
   }), [modules, navSettings, globalStyles]);
   const payloadKey = useMemo(() => JSON.stringify(payload), [payload]);
+  const previewSrc = useMemo(() => {
+    const url = new URL(getStorePreviewUrl());
+    url.searchParams.set('builder_preview_version', 'text-scale-v2');
+    return url.toString();
+  }, []);
 
   const sendDraft = () => {
     frameRef.current?.contentWindow?.postMessage({ type: 'techstore-builder-preview', draft: payload }, '*');
@@ -565,19 +599,74 @@ function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista p
     return () => window.removeEventListener('message', handleReady);
   }, [payload]);
 
+  useEffect(() => {
+    if (previewMode !== 'desktop') {
+      setDesktopScale(1);
+      return undefined;
+    }
+
+    const viewport = viewportRef.current;
+    if (!viewport) return undefined;
+
+    const updateScale = () => {
+      const availableWidth = Math.max(viewport.clientWidth - 28, 280);
+      setDesktopScale(Math.min(1, availableWidth / desktopPreviewWidth));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [previewMode]);
+
+  const effectiveDesktopScale = desktopScale * (previewZoom / 100);
+  const scaledDesktopFrameStyle = previewMode === 'desktop'
+    ? {
+        width: `${desktopPreviewWidth * effectiveDesktopScale}px`,
+        height: `${desktopPreviewHeight * effectiveDesktopScale}px`,
+      }
+    : undefined;
+
   return (
     <div className="builder-real-preview">
       <div className="builder-real-preview-heading">
         <div className="builder-real-preview-copy"><strong>{title}</strong><span>Renderiza la misma tienda y los mismos datos del catálogo.</span></div>
-        <div className="builder-preview-switch" role="tablist" aria-label="Tamaño de la vista previa">
-          <button className={previewMode === 'desktop' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'desktop'} onClick={() => setPreviewMode('desktop')}>Escritorio</button>
-          <button className={previewMode === 'mobile' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'mobile'} onClick={() => setPreviewMode('mobile')}>Móvil</button>
+        <div className="builder-preview-tools">
+          {previewMode === 'desktop' && (
+            <div className="builder-preview-zoom" role="group" aria-label="Zoom de la vista previa de escritorio">
+              <button type="button" aria-label="Reducir zoom" disabled={previewZoom <= 60} onClick={() => setPreviewZoom((value) => Math.max(60, value - 10))}>−</button>
+              <button type="button" className="builder-preview-zoom-value" aria-label="Restablecer zoom al 100 por ciento" onClick={() => setPreviewZoom(100)}>{previewZoom}%</button>
+              <button type="button" aria-label="Aumentar zoom" disabled={previewZoom >= 100} onClick={() => setPreviewZoom((value) => Math.min(100, value + 10))}>+</button>
+            </div>
+          )}
+          <div className="builder-preview-switch" role="tablist" aria-label="Tamaño de la vista previa">
+            <button className={previewMode === 'desktop' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'desktop'} onClick={() => setPreviewMode('desktop')}>Escritorio</button>
+            <button className={previewMode === 'mobile' ? 'is-active' : ''} type="button" role="tab" aria-selected={previewMode === 'mobile'} onClick={() => setPreviewMode('mobile')}>Móvil</button>
+          </div>
         </div>
       </div>
       <div className={`builder-real-preview-viewport is-${previewMode}`}>
         <div className="builder-real-preview-device">
-          <span className="builder-real-preview-device-label">{previewMode === 'mobile' ? 'Móvil · 390 × 844' : 'Escritorio · adaptable'}</span>
-          <iframe key={payloadKey} className={`builder-real-preview-frame is-${previewMode}`} ref={frameRef} title={title} src={getStorePreviewUrl()} onLoad={sendDraft} />
+          <span className="builder-real-preview-device-label">{previewMode === 'mobile' ? 'Móvil · 390 × 844' : 'Escritorio · 1280 × 720'}</span>
+          {previewMode === 'desktop' ? (
+            <div className="builder-real-preview-frame-shell is-desktop" style={scaledDesktopFrameStyle}>
+              <iframe
+                key={payloadKey}
+                className="builder-real-preview-frame is-desktop"
+                ref={frameRef}
+                title={title}
+                src={previewSrc}
+                onLoad={sendDraft}
+                style={{
+                  width: `${desktopPreviewWidth}px`,
+                  height: `${desktopPreviewHeight}px`,
+                  transform: `scale(${effectiveDesktopScale})`,
+                }}
+              />
+            </div>
+          ) : (
+            <iframe key={payloadKey} className="builder-real-preview-frame is-mobile" ref={frameRef} title={title} src={previewSrc} onLoad={sendDraft} />
+          )}
         </div>
       </div>
     </div>
@@ -594,6 +683,17 @@ function HeroVisualEditor({ settings, onChange }) {
   const shadow = normalizeHeroShadow(settings);
   const textFont = HERO_FONT_FAMILIES[settings.text_font];
   const buttonFont = HERO_FONT_FAMILIES[settings.button_font];
+  const scaleFor = (key) => {
+    const value = Number(settings[key]);
+    return Number.isFinite(value) ? Math.min(1.2, Math.max(0.1, value / 100)) : 1;
+  };
+  const textScales = {
+    title: scaleFor('title_text_scale'),
+    subtitle: scaleFor('subtitle_text_scale'),
+    eyebrow: scaleFor('eyebrow_text_scale'),
+    button: scaleFor('button_text_scale'),
+    secondary: scaleFor('secondary_cta_text_scale'),
+  };
   const shadowBlur = Math.max(1, Math.round(shadow.intensity / 8));
   const shadowAlpha = (0.12 + (shadow.intensity / 100) * 0.5).toFixed(2);
   const shadowColor = colorToRgba(shadow.color, shadowAlpha);
@@ -647,6 +747,11 @@ function HeroVisualEditor({ settings, onChange }) {
         style={{
           left: `${currentPosition.x}%`,
           top: `${currentPosition.y}%`,
+          '--hero-title-scale': textScales.title,
+          '--hero-subtitle-scale': textScales.subtitle,
+          '--hero-eyebrow-scale': textScales.eyebrow,
+          '--hero-button-scale': textScales.button,
+          '--hero-secondary-scale': textScales.secondary,
           transform: `translate(${currentPosition.x * -1}%, ${currentPosition.y * -1}%)`,
         }}
         onPointerDown={beginDrag}
@@ -654,10 +759,10 @@ function HeroVisualEditor({ settings, onChange }) {
         tabIndex={0}
         aria-label="Arrastrar contenido del Hero"
       >
-        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color) }}>{settings.eyebrow}</span>}
+        {settings.eyebrow && <span className="builder-hero-editor-eyebrow" style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.eyebrow}</span>}
         <strong style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.title || 'Título del Hero'}</strong>
         <p style={{ color: pickerColor(settings.text_color), fontFamily: textFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none' }}>{settings.subtitle || 'Subtítulo del Hero'}</p>
-        {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px ${shadowColor}` : 'none' }}>{settings.cta_text}</span>}
+        {settings.cta_text && <span className="builder-hero-editor-button" style={{ color: pickerColor(settings.button_text_color, '#0F2A47'), background: pickerColor(settings.button_background_color), fontFamily: buttonFont, textShadow: shadow.enabled ? `0 1px ${shadowBlur}px ${shadowColor}` : 'none', boxShadow: shadow.enabled ? `0 4px ${shadowBlur + 3}px ${shadowColor}` : 'none' }}>{settings.cta_text}</span>}
       </div>
       <span className="builder-hero-editor-hint">↔ Arrastra para mover</span>
     </div>
@@ -1288,6 +1393,7 @@ export default function PageBuilder() {
   const schema = editing ? MODULE_SCHEMAS[editing.type] : null;
   const customCodeEnabled = Boolean(editing?.settings?.custom_code_enabled);
   const heroVisualMode = editing?.type === 'hero' ? editing.settings.visual_mode : null;
+  const heroTextScaleTarget = editing?.type === 'hero' ? editing.settings.text_scale_target : '';
   const isSettingVisible = (field) => {
     if (!editing) return false;
     if (customCodeEnabled && !['custom_code_enabled', 'custom_code'].includes(field.key)) return false;
@@ -1296,6 +1402,7 @@ export default function PageBuilder() {
     if (field.key === 'shadow_color' && !editing.settings.shadow_enabled) return false;
     if (field.key === 'product_slug' && heroVisualMode !== 'product') return false;
     if (field.key === 'visual_image_url' && heroVisualMode !== 'image') return false;
+    if (field.key.endsWith('_text_scale') && field.key !== `${heroTextScaleTarget}_text_scale`) return false;
     return true;
   };
   const renderSettingField = (f) => {
@@ -1344,7 +1451,7 @@ export default function PageBuilder() {
             onChange={(e) => setSetting(f.key, Number(e.target.value))}
             aria-label={f.label}
           />
-          <strong>{Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}%</strong>
+          <strong>{Number(editing.settings[f.key] ?? f.defaultValue ?? f.min)}{f.unit || '%'}</strong>
         </div>
       ) : f.type === 'media' ? (
         <MediaField

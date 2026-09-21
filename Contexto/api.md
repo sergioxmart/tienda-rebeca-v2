@@ -59,11 +59,12 @@ no tiene `section`, devuelve 403.
 | Método | Path | Query / Body | Notas |
 | ------ | ---- | ------------ | ----- |
 | GET | `/api/public/site-config` | — | `site_name`, contacto, moneda, branding. Cacheable. |
-| GET | `/api/public/categories` | — | Lista categorías activas. Para el nav. |
+| GET | `/api/public/categories` | — | Lista categorías activas. Incluye `is_service` para distinguir landings de servicios. |
 | GET | `/api/public/categories/:slug` | — | Detalle de una categoría. |
 | GET | `/api/public/attributes` | — | Lista de atributos globales con sus valores. Para los filtros del catálogo. |
 | GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
+| GET | `/api/public/page-modules` | `?page_key=store` o `?page_key=service:<slug>` | Lista módulos publicados activos de esa página. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
 | GET | `/api/public/geocode` | `?address=&city=` | Geocodifica una dirección del checkout para ubicar el pin opcional. Está limitado por cliente. |
 | GET | `/api/public/locations/colombia` | — | Lista departamentos y municipios de Colombia para los selectores dependientes de envío. Se cachea en el backend y tiene fallback local. |
@@ -110,7 +111,7 @@ cuenta.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/categories` | — | `categories` |
 | GET | `/api/admin/categories/:id` | — | `categories` |
-| POST | `/api/admin/categories` | `{ slug, name, description?, hero_image?, display_order?, active? }` | `categories` |
+| POST | `/api/admin/categories` | `{ slug, name, description?, hero_image?, is_service?, display_order?, active? }` | `categories` |
 | PATCH | `/api/admin/categories/:id` | (cualquier subset) | `categories` |
 | PATCH | `/api/admin/categories/reorder` | `{ ids: number[] }` en el orden deseado | `categories` |
 | DELETE | `/api/admin/categories/:id` | — | `categories` |
@@ -218,7 +219,7 @@ administrador confirma la publicación.
 | Método | Path | Body / Resultado | Section |
 | ------ | ---- | --------------- | ------- |
 | GET | `/api/admin/builder/draft` | Devuelve el borrador o un snapshot del estado publicado si no existe | `site_config` |
-| POST | `/api/admin/builder/draft` | `{ modules, site_config_subset }` | `site_config` |
+| POST | `/api/admin/builder/draft` | `{ modules, site_config_subset }`; cada módulo puede incluir `page_key` (`store` o `service:<slug>`) | `site_config` |
 | POST | `/api/admin/builder/draft/from-theme/:id` | Carga un tema al borrador | `site_config` |
 | DELETE | `/api/admin/builder/draft` | Descarta el borrador | `site_config` |
 | POST | `/api/admin/builder/publish` | Copia el borrador al estado publicado y lo elimina | `site_config` |

@@ -4,6 +4,7 @@ const BuilderPreviewContext = createContext({ active: false, draft: null });
 
 export function BuilderPreviewProvider({ children }) {
   const active = useMemo(() => new URLSearchParams(window.location.search).has('builder_preview'), []);
+  const pageKey = useMemo(() => new URLSearchParams(window.location.search).get('builder_preview_page_key') || 'store', []);
   const [draft, setDraft] = useState(null);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ export function BuilderPreviewProvider({ children }) {
   }, [active]);
 
   return (
-    <BuilderPreviewContext.Provider value={{ active, draft }}>
+    <BuilderPreviewContext.Provider value={{ active, draft, pageKey }}>
       {children}
     </BuilderPreviewContext.Provider>
   );

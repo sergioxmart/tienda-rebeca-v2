@@ -70,9 +70,9 @@ const SITE_CONFIG_KEYS_THAT_MATTER = [
 async function snapshotCurrent() {
   // Toma los page_modules activos y un subset de site_config.
   const { rows: modules } = await query(
-    `SELECT type, position, settings, active
+    `SELECT type, page_key, position, settings, active
        FROM page_modules
-      ORDER BY position, id`,
+      ORDER BY page_key, position, id`,
   );
   const { rows: cfgRows } = await query(
     `SELECT key, value FROM site_config WHERE key = ANY($1)`,
@@ -213,6 +213,7 @@ function previewFromTheme(theme) {
       index,
       type: module.type,
       active: module.active !== false,
+      page_key: module.page_key || 'store',
       settings: module.settings || {},
     })),
     site_config_subset: theme.site_config_subset || {},

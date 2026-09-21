@@ -9,12 +9,13 @@ export default function Collections({ settings = {} }) {
   const { title = 'Explora nuestras categorías', variant = 'classic' } = settings;
   const { categories } = useSite();
   if (settings.custom_code_enabled && settings.custom_code) return <CustomCode code={settings.custom_code} className="collections-custom-code" />;
-  if (!categories?.length) return null;
+  const productCategories = categories?.filter((category) => !category.is_service) || [];
+  if (!productCategories.length) return null;
   return (
     <section className={`editorial-collections editorial-collections--${variant}`}>
       {title && <h2>{title}</h2>}
       <div className="editorial-collections__grid">
-        {categories.map((category) => (
+        {productCategories.map((category) => (
           <Link key={category.id} to={`/categoria/${category.slug}`} className="editorial-collection" style={category.hero_image ? { backgroundImage: `url(${category.hero_image})` } : undefined}>
             <span><strong>{category.name}</strong><small>Explorar →</small></span>
           </Link>

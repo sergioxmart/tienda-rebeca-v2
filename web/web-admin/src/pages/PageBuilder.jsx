@@ -561,6 +561,7 @@ function normalizeModules(value) {
   return value.map((module, index) => ({
     ...module,
     id: module.id ?? `draft-${module.type || 'module'}-${index}`,
+    page_key: module.page_key || 'store',
     settings: module.settings && typeof module.settings === 'object' ? module.settings : {},
     active: module.active !== false,
   }));
@@ -580,7 +581,7 @@ function defaultSettingsForType(type) {
   return out;
 }
 
-function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista previa real de la tienda' }) {
+function LiveStorePreview({ modules, navSettings, globalStyles, pageKey = 'store', title = 'Vista previa real de la tienda' }) {
   const frameRef = useRef(null);
   const viewportRef = useRef(null);
   const [previewMode, setPreviewMode] = useState('desktop');
@@ -592,12 +593,13 @@ function LiveStorePreview({ modules, navSettings, globalStyles, title = 'Vista p
     modules: modules || [],
     site_config_subset: { ...(navSettings || {}), ...(globalStyles || {}) },
   }), [modules, navSettings, globalStyles]);
-  const payloadKey = useMemo(() => JSON.stringify(payload), [payload]);
+  const payloadKey = useMemo(() => JSON.stringify({ payload, pageKey }), [payload, pageKey]);
   const previewSrc = useMemo(() => {
     const url = new URL(getStorePreviewUrl());
     url.searchParams.set('builder_preview_version', 'text-scale-v2');
+    url.searchParams.set('builder_preview_page_key', pageKey);
     return url.toString();
-  }, []);
+  }, [pageKey]);
 
   const sendDraft = () => {
     frameRef.current?.contentWindow?.postMessage({ type: 'techstore-builder-preview', draft: payload }, '*');
@@ -1139,6 +1141,8 @@ export default function PageBuilder() {
   const [saving, setSaving] = useState(false);
   const [reorderDirty, setReorderDirty] = useState(false);
   const [products, setProducts] = useState([]);
+  const [serviceCategories, setServiceCategories] = useState([]);
+  const [selectedPageKey, setSelectedPageKey] = useState('store');
   const [navSettings, setNavSettings] = useState(NAV_DEFAULTS);
   const [navSaving, setNavSaving] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
@@ -1187,7 +1191,14 @@ export default function PageBuilder() {
 
   useEffect(() => {
     api.get('/api/admin/products?active=true').then((data) => setProducts(data.products || [])).catch(() => setProducts([]));
+    api.get('/api/admin/categories').then((data) => setServiceCategories((data.categories || []).filter((category) => category.is_service))).catch(() => setServiceCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (selectedPageKey !== 'store' && !serviceCategories.some((category) => `service:${category.slug}` === selectedPageKey)) {
+      setSelectedPageKey('store');
+    }
+  }, [selectedPageKey, serviceCategories]);
 
   const loadMedia = async () => {
     if (mediaLoading) return;
@@ -1226,11 +1237,16 @@ export default function PageBuilder() {
     } finally { setDraftSaving(false); }
   };
 
+  const visibleModules = modules.filter((module) => module.page_key === selectedPageKey);
+
   const move = (idx, dir) => {
     const next = [...modules];
-    const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
+    const target = idx + dir;
+    if (target < 0 || target >= visibleModules.length) return;
+    const currentIndex = next.findIndex((module) => module.id === visibleModules[idx].id);
+    const targetIndex = next.findIndex((module) => module.id === visibleModules[target].id);
+    if (currentIndex < 0 || targetIndex < 0) return;
+    [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
     setModules(next);
     setReorderDirty(true);
   };
@@ -1242,12 +1258,13 @@ export default function PageBuilder() {
     }
   };
 
-  const openNew = () => { setModalTab('edit'); setEditing({ mode: 'new', ...EMPTY_NEW, settings: defaultSettingsForType('hero') }); };
+  const openNew = () => { setModalTab('edit'); setEditing({ mode: 'new', ...EMPTY_NEW, page_key: selectedPageKey, settings: defaultSettingsForType('hero') }); };
   const openEdit = (m) => {
     setModalTab('edit');
     setEditing({
       mode: 'edit',
       id: m.id,
+      page_key: m.page_key || 'store',
       type: m.type,
       settings: m.type === 'hero' ? { ...m.settings, content_position: normalizeHeroPosition(m.settings?.content_position) } : { ...m.settings },
       active: m.active,
@@ -1347,7 +1364,7 @@ export default function PageBuilder() {
         }
       }
       if (editing.type === 'hero') settingsOut.content_position = normalizeHeroPosition(editing.settings.content_position);
-      const nextModule = { id: editing.id || `draft-${Date.now()}`, type: editing.type, settings: settingsOut, active: editing.active };
+      const nextModule = { id: editing.id || `draft-${Date.now()}`, page_key: editing.page_key || selectedPageKey, type: editing.type, settings: settingsOut, active: editing.active };
       const nextModules = editing.mode === 'new'
         ? [...modules, nextModule]
         : modules.map((module) => module.id === editing.id ? { ...module, ...nextModule } : module);
@@ -1531,6 +1548,20 @@ export default function PageBuilder() {
         </div>
       </div>
 
+      <div className="builder-page-switcher">
+        <div>
+          <strong>Diseño de página</strong>
+          <span>{selectedPageKey === 'store' ? 'Tienda principal y catálogo de productos' : 'Landing independiente para un servicio'}</span>
+        </div>
+        <select className="select" value={selectedPageKey} onChange={(event) => setSelectedPageKey(event.target.value)} aria-label="Seleccionar diseño de página">
+          <option value="store">Tienda principal · productos</option>
+          {serviceCategories.map((category) => <option key={category.id} value={`service:${category.slug}`}>Servicio · {category.name}</option>)}
+        </select>
+      </div>
+      {selectedPageKey !== 'store' && serviceCategories.length === 0 && (
+        <p className="builder-page-switcher-empty">Primero crea una categoría y márcala como servicio para diseñar su landing.</p>
+      )}
+
       <div className="builder-module-list">
         <BuilderModuleRow
           icon="🧭"
@@ -1546,7 +1577,7 @@ export default function PageBuilder() {
           disableDown
           disableDelete
         />
-        {modules.map((m, idx) => {
+        {visibleModules.map((m, idx) => {
           const sch = MODULE_SCHEMAS[m.type];
           const label = sch?.label || m.type;
           const icon = sch?.icon || '📦';
@@ -1562,14 +1593,14 @@ export default function PageBuilder() {
             onConfigure={() => openEdit(m)}
             onDelete={() => setDeleting(m)}
             disableUp={idx === 0}
-            disableDown={idx === modules.length - 1}
+            disableDown={idx === visibleModules.length - 1}
           />;
         })}
-        {modules.length === 0 && <Empty title="Sin módulos" description="La home no muestra nada. Crea el primero." action={<button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>} />}
+        {visibleModules.length === 0 && <Empty title="Sin módulos" description={selectedPageKey === 'store' ? 'La tienda no muestra nada. Crea el primer módulo.' : 'Esta landing todavía no tiene módulos. Agrega un bloque HTML personalizado o el diseño que necesites.'} action={<button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>} />}
       </div>
 
       <p style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 16 }}>
-        Tip: el store público lee los módulos activos en orden desde <code>/api/public/page-modules</code>.
+        Tip: el store público lee los módulos activos de cada diseño desde <code>/api/public/page-modules</code>.
         Cambios se ven al refrescar el browser (cache de 60s).
       </p>
 
@@ -1690,7 +1721,7 @@ export default function PageBuilder() {
             ) : schema.settings.map(renderSettingField)}
           </form> : modalTab === 'visual' ? (
             <HeroVisualEditor settings={editing.settings} onChange={(value) => setSetting('content_position', value)} />
-          ) : <LiveStorePreview modules={[editing]} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
+          ) : <LiveStorePreview modules={[editing]} pageKey={editing.page_key || selectedPageKey} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
           </>
         )}
       </Modal>
@@ -1703,7 +1734,7 @@ export default function PageBuilder() {
         title="Vista previa del borrador"
         footer={<button className="btn" onClick={() => setPreviewOpen(false)}>Cerrar</button>}
       >
-        <LiveStorePreview modules={modules} navSettings={navSettings} globalStyles={globalStyles} />
+        <LiveStorePreview modules={modules} pageKey={selectedPageKey} navSettings={navSettings} globalStyles={globalStyles} />
       </Modal>
 
       <MediaPickerModal

@@ -3,7 +3,7 @@
 // Endpoints:
 //   GET    /api/admin/page-modules            → lista (todos)
 //   POST   /api/admin/page-modules            → crear
-//                                              body: { type, position?, settings?, active? }
+//                                              body: { type, page_key?, position?, settings?, active? }
 //   PATCH  /api/admin/page-modules/:id        → editar (cualquier subset)
 //   PATCH  /api/admin/page-modules/reorder    → reordenar masivamente
 //                                              body: { ids: [id1, id2, ...] }
@@ -38,9 +38,11 @@ const MODULE_TYPES = new Set([
   'footer',
 ]);
 
+const PAGE_KEY_RE = /^(store|service:[a-z0-9-]+)$/;
+
 export async function listModules(req, res) {
   const { rows } = await query(
-    `SELECT id, type, position, settings, active, created_at, updated_at
+    `SELECT id, type, page_key, position, settings, active, created_at, updated_at
        FROM page_modules
       ORDER BY position, id`,
   );
@@ -52,6 +54,7 @@ export async function createModule(req, res) {
   if (!validate(res, p, [
     validators.requiredString(p.type, 'type'),
     p.type && !MODULE_TYPES.has(p.type) ? `type no soportado: ${p.type}` : null,
+    p.page_key !== undefined && (typeof p.page_key !== 'string' || !PAGE_KEY_RE.test(p.page_key)) ? 'page_key no es válido' : null,
     p.position !== undefined && validators.int(p.position, 'position', { min: 0 }),
     p.settings !== undefined && (typeof p.settings !== 'object' || Array.isArray(p.settings) || p.settings === null)
       ? 'settings debe ser un objeto' : null,
@@ -68,10 +71,10 @@ export async function createModule(req, res) {
   const settings = p.settings || {};
 
   const { rows } = await query(
-    `INSERT INTO page_modules (type, position, settings, active)
-     VALUES ($1, $2, $3::jsonb, COALESCE($4, TRUE))
-     RETURNING id, type, position, settings, active, created_at, updated_at`,
-    [p.type, position, JSON.stringify(settings), p.active],
+    `INSERT INTO page_modules (type, page_key, position, settings, active)
+     VALUES ($1, $2, $3, $4::jsonb, COALESCE($5, TRUE))
+     RETURNING id, type, page_key, position, settings, active, created_at, updated_at`,
+    [p.type, p.page_key || 'store', position, JSON.stringify(settings), p.active],
   );
   await recordAudit(req.user?.id, 'page_module.create', req.ip, { id: rows[0].id, type: p.type });
   log.info('page_module created', { id: rows[0].id, type: p.type, by: req.user?.email });
@@ -86,6 +89,7 @@ export async function updateModule(req, res, id) {
   if (!validate(res, p, [
     p.type !== undefined && validators.requiredString(p.type, 'type'),
     p.type !== undefined && !MODULE_TYPES.has(p.type) ? `type no soportado: ${p.type}` : null,
+    p.page_key !== undefined && (typeof p.page_key !== 'string' || !PAGE_KEY_RE.test(p.page_key)) ? 'page_key no es válido' : null,
     p.position !== undefined && validators.int(p.position, 'position', { min: 0 }),
     p.settings !== undefined && (typeof p.settings !== 'object' || Array.isArray(p.settings) || p.settings === null)
       ? 'settings debe ser un objeto' : null,
@@ -96,6 +100,7 @@ export async function updateModule(req, res, id) {
   const values = [];
   let i = 1;
   if (p.type !== undefined)     { fields.push(`type = $${i++}`);     values.push(p.type); }
+  if (p.page_key !== undefined) { fields.push(`page_key = $${i++}`); values.push(p.page_key); }
   if (p.position !== undefined) { fields.push(`position = $${i++}`); values.push(p.position); }
   if (p.settings !== undefined) { fields.push(`settings = $${i++}::jsonb`); values.push(JSON.stringify(p.settings)); }
   if (p.active !== undefined)   { fields.push(`active = $${i++}`);   values.push(p.active); }
@@ -104,7 +109,7 @@ export async function updateModule(req, res, id) {
 
   const { rows } = await query(
     `UPDATE page_modules SET ${fields.join(', ')} WHERE id = $${i}
-      RETURNING id, type, position, settings, active, created_at, updated_at`,
+      RETURNING id, type, page_key, position, settings, active, created_at, updated_at`,
     values,
   );
   await recordAudit(req.user?.id, 'page_module.update', req.ip, { id, fields: Object.keys(p) });

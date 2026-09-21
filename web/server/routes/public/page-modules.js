@@ -9,11 +9,16 @@ import { query } from '../../lib/db.js';
 import { json } from '../../lib/json.js';
 
 export async function listPublicModules(req, res) {
+  const pageKey = new URL(req.url || '/', 'http://localhost').searchParams.get('page_key') || 'store';
+  if (!/^(store|service:[a-z0-9-]+)$/.test(pageKey)) {
+    return json(res, 400, { ok: false, error: 'invalid_page_key' });
+  }
   const { rows } = await query(
-    `SELECT id, type, position, settings
+    `SELECT id, type, page_key, position, settings
        FROM page_modules
-      WHERE active = TRUE
+      WHERE active = TRUE AND page_key = $1
       ORDER BY position, id`,
+    [pageKey],
   );
   res.setHeader('Cache-Control', 'public, max-age=60');
   return json(res, 200, { ok: true, modules: rows });

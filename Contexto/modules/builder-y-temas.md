@@ -1,10 +1,16 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-09-11**
+> **Última actualización: 2026-09-20**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
 [`api.md`](../api.md) (secciones *Temas* y *Web Builder y borradores*).
+
+El Builder permite cambiar entre la tienda principal y las categorías
+marcadas como servicios. Cada módulo conserva `page_key`: `store` para el
+catálogo y `service:<slug>` para una landing de servicio. La tienda pública
+mantiene el Navbar y Footer globales, pero carga los módulos del servicio y
+permite usar el módulo HTML personalizado para construir su contenido.
 
 ## Archivos clave
 

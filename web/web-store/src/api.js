@@ -53,8 +53,8 @@ export const api = {
     const r = await request(`/api/public/products/${slug}`);
     return r.product || null;
   },
-  pageModules: async () => {
-    const r = await request('/api/public/page-modules');
+  pageModules: async (pageKey = 'store') => {
+    const r = await request(`/api/public/page-modules?page_key=${encodeURIComponent(pageKey)}`);
     return { modules: r.modules || [] };
   },
   validateCart: async (items) => {

@@ -37,6 +37,10 @@ posición vertical y zoom.
 La migración `010_product_catalog_image.sql` permite seleccionar como imagen
 principal cualquier media de producto o de sus variantes.
 
+La migración `011_service_categories_and_page_scopes.sql` agrega la marca
+`categories.is_service` para páginas de servicios y `page_modules.page_key`
+para mantener layouts independientes (`store` o `service:<slug>`).
+
 ## Regla para cambios futuros
 
 El baseline ya representa la historia condensada y no debe editarse en una

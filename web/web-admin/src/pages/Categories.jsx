@@ -13,7 +13,7 @@ import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
 
-const EMPTY = { name: '', slug: '', description: '', hero_image: '', accent_color: '', background_color: '', active: true };
+const EMPTY = { name: '', slug: '', description: '', hero_image: '', accent_color: '', background_color: '', is_service: false, active: true };
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 function pickerColor(value, fallback) {
@@ -82,6 +82,7 @@ export default function Categories() {
     hero_image: c.hero_image || '',
     accent_color: c.accent_color || '',
     background_color: c.background_color || '',
+    is_service: Boolean(c.is_service),
     active: c.active,
   });
 
@@ -118,6 +119,7 @@ export default function Categories() {
         hero_image: editing.hero_image || null,
         accent_color: editing.accent_color || null,
         background_color: editing.background_color || null,
+        is_service: !!editing.is_service,
         display_order: editing.id ? undefined : items.length,
         active: !!editing.active,
       };
@@ -183,6 +185,7 @@ export default function Categories() {
             <tr>
               <th>Nombre</th>
               <th>Slug</th>
+              <th>Tipo</th>
               <th>Estado</th>
               <th style={{ textAlign: 'right' }}>Acciones</th>
             </tr>
@@ -192,6 +195,7 @@ export default function Categories() {
               <tr key={c.id} className={selectedId === c.id ? 'row-selected' : ''} onClick={() => setSelectedId(c.id)}>
                 <td>{c.name}</td>
                 <td><code>{c.slug}</code></td>
+                <td>{c.is_service ? <span className="badge service">Servicio</span> : <span className="badge">Productos</span>}</td>
                 <td>
                   {c.active
                     ? <span className="badge active">Activa</span>
@@ -239,6 +243,17 @@ export default function Categories() {
                         value={editing.description}
                         onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
             </div>
+            <label className="category-purpose-card">
+              <input
+                type="checkbox"
+                checked={Boolean(editing.is_service)}
+                onChange={(e) => setEditing({ ...editing, is_service: e.target.checked })}
+              />
+              <span>
+                <strong>Es una categoría de servicios</strong>
+                <small>Úsala para páginas como Eventos o reservas. No se mostrará como categoría de productos.</small>
+              </span>
+            </label>
             <div className="form-row">
               <CategoryColorField
                 id="category-accent-color"

@@ -16,6 +16,7 @@ import { useSite } from '../site/SiteContext.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import Empty from '../components/Empty.jsx';
 import { formatCOP } from '../components/Price.jsx';
+import ServiceLanding from './ServiceLanding.jsx';
 
 function parseAttributeParams(searchParams) {
   // Devuelve { [attr_slug]: [value1, value2, ...] }
@@ -69,19 +70,25 @@ export default function Catalog() {
   }), [searchParams, categorySlug]);
 
   const activeAttributes = useMemo(() => parseAttributeParams(searchParams), [searchParams]);
+  const categoryObj = categories.find((c) => c.slug === filters.category);
+  const productCategories = categories.filter((category) => !category.is_service);
 
   // Productos
   const [data, setData] = useState({ products: [], pagination: { total: 0, page: 1, limit: 12, pages: 1 } });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (categoryObj?.is_service) {
+      setLoading(false);
+      return undefined;
+    }
     setLoading(true);
     const qs = buildQueryString(filters, activeAttributes);
     api.products(qs)
       .then((d) => setData(d))
       .catch(() => setData({ products: [], pagination: { total: 0, page: 1, limit: 12, pages: 1 } }))
       .finally(() => setLoading(false));
-  }, [filters, activeAttributes]);
+  }, [filters, activeAttributes, categoryObj]);
 
   // Helpers para mutar URL
   const setParam = (key, value) => {
@@ -105,7 +112,7 @@ export default function Catalog() {
 
   const clearFilters = () => setSearchParams(new URLSearchParams());
 
-  const categoryObj = categories.find((c) => c.slug === filters.category);
+  if (categoryObj?.is_service) return <ServiceLanding />;
 
   return (
     <div>
@@ -131,11 +138,11 @@ export default function Catalog() {
         </div>
 
         {/* Chips de categorías */}
-        {categories.length > 0 && (
+        {productCategories.length > 0 && (
           <div className="row" style={{ marginBottom: 8 }}>
             <span style={{ fontSize: 13, color: 'var(--color-muted)' }}>Categoría:</span>
             <Link to="/categoria" className={`chip ${!filters.category ? 'active' : ''}`}>Todas</Link>
-            {categories.map((c) => (
+            {productCategories.map((c) => (
               <Link key={c.id} to={`/categoria/${c.slug}`}
                     className={`chip ${filters.category === c.slug ? 'active' : ''}`}>
                 {c.name}

@@ -87,7 +87,7 @@ modelos de dominio conviviendo.
 | Ubicaciones Colombia | catálogo depto/ciudad + geocoding de direcciones | [`web/server/lib/colombia-locations.js`](../web/server/lib/colombia-locations.js), [`geocoding.js`](../web/server/lib/geocoding.js) | — |
 | Re-exports a `core/` | `web/server/lib/*` y `middleware/*` son 1-liners hacia `core/` | [`web/server/lib/`](../web/server/lib/), [`middleware/`](../web/server/middleware/) | [conventions.md](./conventions.md) |
 | Scripts | `setup-db.js`, `migrate.js`, `create-admin.js` | [`web/server/scripts/`](../web/server/scripts/) | [dev-setup.md](./dev-setup.md) |
-| Migraciones SQL | baseline `001` + 4 forward-only | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
+| Migraciones SQL | baseline `001` + migraciones forward-only; `011` agrega servicios y scopes del Builder | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 
 ### `web/web-store/` — tienda pública (SPA)
 
@@ -99,7 +99,7 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | ------ | -------- | ---- |
 | Páginas | Home, Catalog, ProductPage, Cart, Checkout, PaymentResponse, CustomerAccount | [`web/web-store/src/pages/`](../web/web-store/src/pages/) |
 | Carrito | contexto + persistencia en localStorage | [`web/web-store/src/cart/`](../web/web-store/src/cart/) |
-| Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js) |
+| Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente; `page_key` separa tienda y landings de servicios | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js) |
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
 | Cliente API | wrapper de `fetch` a `/api/public/*` | [`web/web-store/src/api.js`](../web/web-store/src/api.js) |
@@ -174,7 +174,7 @@ deploy → [webhook.md](./webhook.md).
 
 ## Estado del proyecto (a agosto 2026)
 
-- ✅ Base Postgres independiente (`rebecaandrade_v2`) + 5 migraciones
+- ✅ Base Postgres independiente (`rebecaandrade_v2`) + migraciones
   forward-only.
 - ✅ Backend admin: 14 sub-routers con RBAC por sección + CSRF.
 - ✅ Auth admin con 2FA TOTP y backup codes.

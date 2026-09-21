@@ -23,9 +23,9 @@ export const BUILDER_CONFIG_KEYS = [
 export async function snapshotPublished(client = null) {
   const runner = client || { query };
   const modules = await runner.query(
-    `SELECT id, type, position, settings, active
+    `SELECT id, type, page_key, position, settings, active
        FROM page_modules
-      ORDER BY position, id`,
+      ORDER BY page_key, position, id`,
   );
   const config = await runner.query(
     `SELECT key, value FROM site_config WHERE key = ANY($1)`,
@@ -43,6 +43,10 @@ function validateDraft(data) {
   if (data.modules.some((module) => !module || typeof module.type !== 'string' || !module.type.trim())) {
     return 'cada módulo necesita un type';
   }
+  if (data.modules.some((module) => module.page_key !== undefined
+    && (typeof module.page_key !== 'string' || !/^(store|service:[a-z0-9-]+)$/.test(module.page_key)))) {
+    return 'cada módulo necesita un page_key válido';
+  }
   if (data.site_config_subset !== undefined && (typeof data.site_config_subset !== 'object' || Array.isArray(data.site_config_subset))) {
     return 'site_config_subset debe ser un objeto';
   }
@@ -54,6 +58,7 @@ export async function upsertDraft(data, sourceThemeId = null, user = null, req =
   if (error) throw Object.assign(new Error(error), { status: 400 });
   const published = await snapshotPublished();
   const config = { ...published.site_config_subset, ...(data.site_config_subset || {}) };
+  const modules = data.modules.map((module) => ({ ...module, page_key: module.page_key || 'store' }));
   const { rows } = await query(
     `INSERT INTO builder_drafts (id, modules, site_config_subset, source_theme_id)
      VALUES (1, $1::jsonb, $2::jsonb, $3)
@@ -63,7 +68,7 @@ export async function upsertDraft(data, sourceThemeId = null, user = null, req =
        source_theme_id = EXCLUDED.source_theme_id,
        updated_at = NOW()
      RETURNING id, modules, site_config_subset, source_theme_id, created_at, updated_at`,
-    [JSON.stringify(data.modules), JSON.stringify(config), sourceThemeId],
+    [JSON.stringify(modules), JSON.stringify(config), sourceThemeId],
   );
   if (req && user) await recordAudit(user.id, 'builder.draft.save', req.ip, { sourceThemeId });
   return rows[0];
@@ -110,12 +115,15 @@ export async function publishDraft(req, res) {
 
   await tx(async (client) => {
     await client.query('DELETE FROM page_modules');
-    for (let index = 0; index < draft.modules.length; index++) {
-      const module = draft.modules[index];
+    const positions = new Map();
+    for (const module of draft.modules) {
+      const pageKey = module.page_key || 'store';
+      const position = (positions.get(pageKey) || 0) + 1;
+      positions.set(pageKey, position);
       await client.query(
-        `INSERT INTO page_modules (type, position, settings, active)
-         VALUES ($1, $2, $3::jsonb, COALESCE($4, TRUE))`,
-        [module.type, index + 1, JSON.stringify(module.settings || {}), module.active],
+        `INSERT INTO page_modules (type, page_key, position, settings, active)
+         VALUES ($1, $2, $3, $4::jsonb, COALESCE($5, TRUE))`,
+        [module.type, pageKey, position, JSON.stringify(module.settings || {}), module.active],
       );
     }
     for (const [key, value] of Object.entries(draft.site_config_subset || {})) {

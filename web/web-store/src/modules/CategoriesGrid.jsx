@@ -11,12 +11,13 @@ export default function CategoriesGrid({ settings = {} }) {
   }
   const { title = 'Categorías' } = settings;
   const { categories } = useSite();
-  if (!Array.isArray(categories) || categories.length === 0) return null;
+  const productCategories = Array.isArray(categories) ? categories.filter((category) => !category.is_service) : [];
+  if (productCategories.length === 0) return null;
   return (
     <section className="store-section">
       <div className="section-heading"><div><span className="section-kicker">Compra por categoría</span><h2>{title}</h2></div></div>
       <div className="category-grid">
-        {categories.map((c) => (
+        {productCategories.map((c) => (
           <Link key={c.id} to={`/categoria/${c.slug}`} className="category-card">
             {c.hero_image && (
               <img src={c.hero_image} alt={c.name} />

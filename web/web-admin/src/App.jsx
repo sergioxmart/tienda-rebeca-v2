@@ -4,20 +4,29 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
-import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Products from './pages/Products.jsx';
-import ProductForm from './pages/ProductForm.jsx';
-import Categories from './pages/Categories.jsx';
-import Attributes from './pages/Attributes.jsx';
-import Media from './pages/Media.jsx';
-import SiteConfig from './pages/SiteConfig.jsx';
-import Users from './pages/Users.jsx';
-import PageBuilder from './pages/PageBuilder.jsx';
-import Themes from './pages/Themes.jsx';
-import Inventory from './pages/Inventory.jsx';
-import Orders from './pages/Orders.jsx';
-import Sales from './pages/Sales.jsx';
+
+const Login = React.lazy(() => import('./pages/Login.jsx'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard.jsx'));
+const Products = React.lazy(() => import('./pages/Products.jsx'));
+const ProductForm = React.lazy(() => import('./pages/ProductForm.jsx'));
+const Categories = React.lazy(() => import('./pages/Categories.jsx'));
+const Attributes = React.lazy(() => import('./pages/Attributes.jsx'));
+const Media = React.lazy(() => import('./pages/Media.jsx'));
+const SiteConfig = React.lazy(() => import('./pages/SiteConfig.jsx'));
+const Users = React.lazy(() => import('./pages/Users.jsx'));
+const PageBuilder = React.lazy(() => import('./pages/PageBuilder.jsx'));
+const Themes = React.lazy(() => import('./pages/Themes.jsx'));
+const Inventory = React.lazy(() => import('./pages/Inventory.jsx'));
+const Orders = React.lazy(() => import('./pages/Orders.jsx'));
+const Sales = React.lazy(() => import('./pages/Sales.jsx'));
+
+function PageLoading() {
+  return (
+    <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span className="spinner" />
+    </div>
+  );
+}
 
 function RequireAuth({ children }) {
   const { status } = useAuth();
@@ -44,26 +53,28 @@ function RedirectIfAuth({ children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
-      <Route element={<RequireAuth><Layout /></RequireAuth>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/products/new" element={<ProductForm />} />
-        <Route path="/products/:id" element={<ProductForm />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/orders/:id" element={<Orders />} />
-        <Route path="/sales" element={<Sales />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/attributes" element={<Attributes />} />
-        <Route path="/media" element={<Media />} />
-        <Route path="/site-config" element={<SiteConfig />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/builder" element={<PageBuilder />} />
-        <Route path="/themes" element={<Themes />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <React.Suspense fallback={<PageLoading />}>
+      <Routes>
+        <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
+        <Route element={<RequireAuth><Layout /></RequireAuth>}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/products/new" element={<ProductForm />} />
+          <Route path="/products/:id" element={<ProductForm />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/:id" element={<Orders />} />
+          <Route path="/sales" element={<Sales />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/attributes" element={<Attributes />} />
+          <Route path="/media" element={<Media />} />
+          <Route path="/site-config" element={<SiteConfig />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/builder" element={<PageBuilder />} />
+          <Route path="/themes" element={<Themes />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </React.Suspense>
   );
 }

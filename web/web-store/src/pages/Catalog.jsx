@@ -48,6 +48,15 @@ function buildQueryString(params, attributes) {
   return q.toString();
 }
 
+function paginationItems(page, totalPages) {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  if (page <= 4) return [1, 2, 3, 4, 5, 'end-ellipsis', totalPages];
+  if (page >= totalPages - 3) {
+    return [1, 'start-ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, 'start-ellipsis', page - 1, page, page + 1, 'end-ellipsis', totalPages];
+}
+
 export default function Catalog() {
   const { category: categorySlug } = useParams();
   const { site, categories } = useSite();
@@ -74,7 +83,7 @@ export default function Catalog() {
   const productCategories = categories.filter((category) => !category.is_service);
 
   // Productos
-  const [data, setData] = useState({ products: [], pagination: { total: 0, page: 1, limit: 12, pages: 1 } });
+  const [data, setData] = useState({ products: [], pagination: { total: 0, page: 1, limit: 12, total_pages: 0 } });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,7 +95,7 @@ export default function Catalog() {
     const qs = buildQueryString(filters, activeAttributes);
     api.products(qs)
       .then((d) => setData(d))
-      .catch(() => setData({ products: [], pagination: { total: 0, page: 1, limit: 12, pages: 1 } }))
+      .catch(() => setData({ products: [], pagination: { total: 0, page: 1, limit: 12, total_pages: 0 } }))
       .finally(() => setLoading(false));
   }, [filters, activeAttributes, categoryObj]);
 
@@ -111,6 +120,17 @@ export default function Catalog() {
   };
 
   const clearFilters = () => setSearchParams(new URLSearchParams());
+  const goToPage = (page) => {
+    setParam('page', String(page));
+    window.setTimeout(() => document.getElementById('catalog-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  };
+
+  const totalProducts = Number(data.pagination.total) || 0;
+  const pageSize = Number(data.pagination.limit) || 12;
+  const totalPages = Math.max(0, Number(data.pagination.total_pages ?? data.pagination.pages) || 0);
+  const currentPage = Math.min(totalPages || 1, Math.max(1, Number(data.pagination.page) || 1));
+  const firstProduct = totalProducts ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastProduct = Math.min(totalProducts, currentPage * pageSize);
 
   if (categoryObj?.is_service) return <ServiceLanding />;
 
@@ -198,20 +218,42 @@ export default function Catalog() {
       ) : (
         <>
           <p style={{ color: 'var(--color-muted)', fontSize: 13 }}>
-            {data.pagination.total} producto{data.pagination.total !== 1 ? 's' : ''}
+            {totalProducts > 0
+              ? `Mostrando ${firstProduct}–${lastProduct} de ${totalProducts} producto${totalProducts !== 1 ? 's' : ''}`
+              : '0 productos'}
           </p>
-          <div className="product-grid">
+          <div className="product-grid" id="catalog-products">
             {data.products.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
-          {data.pagination.pages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
-              {Array.from({ length: data.pagination.pages }, (_, i) => i + 1).map((n) => (
-                <button key={n} className={`btn ${n === data.pagination.page ? 'btn-primary' : ''}`}
-                        onClick={() => setParam('page', String(n))}>
-                  {n}
+          {totalPages > 1 && (
+            <nav className="catalog-pagination-wrap" aria-label="Paginación del catálogo">
+              <p className="catalog-pagination-summary">Página {currentPage} de {totalPages}</p>
+              <div className="catalog-pagination">
+                <button className="btn" type="button" onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="Página anterior">
+                  Anterior
                 </button>
-              ))}
-            </div>
+                {paginationItems(currentPage, totalPages).map((item, index) => (
+                  typeof item === 'number' ? (
+                    <button
+                      key={item}
+                      className={`btn${item === currentPage ? ' btn-primary' : ''}`}
+                      type="button"
+                      onClick={() => goToPage(item)}
+                      aria-label={`Página ${item}`}
+                      aria-current={item === currentPage ? 'page' : undefined}
+                      disabled={item === currentPage}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={`${item}-${index}`} className="catalog-pagination-ellipsis" aria-hidden="true">…</span>
+                  )
+                ))}
+                <button className="btn" type="button" onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= totalPages} aria-label="Página siguiente">
+                  Siguiente
+                </button>
+              </div>
+            </nav>
           )}
         </>
       )}

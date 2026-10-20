@@ -62,7 +62,7 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/categories` | — | Lista categorías activas. Incluye `is_service` para distinguir landings de servicios. |
 | GET | `/api/public/categories/:slug` | — | Detalle de una categoría. |
 | GET | `/api/public/attributes` | — | Lista de atributos globales con sus valores. Para los filtros del catálogo. |
-| GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
+| GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo paginado (12 por página por defecto, máximo 50); incluye `pagination: { page, limit, total, total_pages }`. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
 | GET | `/api/public/page-modules` | `?page_key=store` o `?page_key=service:<slug>` | Lista módulos publicados activos de esa página. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |

@@ -15,6 +15,7 @@ export function SiteProvider({ children }) {
   const preview = useBuilderPreview();
   const location = useLocation();
   const [site, setSite] = useState(null);
+  const [siteLoading, setSiteLoading] = useState(true);
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -25,6 +26,8 @@ export function SiteProvider({ children }) {
         setCategories(c || []);
       } catch {
         // si falla, la app sigue con defaults vacíos
+      } finally {
+        setSiteLoading(false);
       }
     })();
   }, []);
@@ -51,7 +54,7 @@ export function SiteProvider({ children }) {
   }, [activeCategory, visibleSite]);
 
   return (
-    <SiteContext.Provider value={{ site: visibleSite, categories }}>
+    <SiteContext.Provider value={{ site: visibleSite, categories, siteLoading }}>
       {children}
     </SiteContext.Provider>
   );

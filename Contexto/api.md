@@ -1,6 +1,6 @@
 # TechStore — API reference
 
-> **Última actualización: 2026-08-06**
+> **Última actualización: 2026-10-19**
 
 Documento de referencia de los endpoints HTTP. La fuente de verdad es el
 código en `web/server/routes/`. Este doc se mantiene al día con cada
@@ -21,7 +21,7 @@ cambio (regla del proyecto).
 - **IDs**: `SERIAL` (entero positivo). En el API van como `id: number`.
 - **Fechas**: ISO 8601 (`2026-08-06T15:30:00Z`).
 - **Slugs**: `a-z`, `0-9`, `-` (validado en el server, no asumido).
-- **Auth**: JWT 15 min en memoria del cliente + refresh 7d en cookie
+- **Auth**: JWT 24 h en memoria del cliente + refresh 7d en cookie
   httpOnly. CSRF double-submit en mutaciones.
 
 ## Roles
@@ -175,7 +175,7 @@ de una transacción y crean un movimiento auditable.
 | Método | Path | Body | Section |
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/media` | `?product_id=&variant_id=&category_id=&kind=&page=&limit=` | `media` |
-| POST | `/api/admin/media` | `multipart/form-data` con `file`, `product_id?`, `variant_id?`, `category_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id, category_id? }` | `media` |
+| POST | `/api/admin/media` | `multipart/form-data` con `file` (JPEG, PNG, WebP, AVIF o GIF), `product_id?`, `variant_id?`, `category_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id, category_id? }` | `media` |
 | POST | `/api/admin/media/:id/attach` | `{ product_id, variant_id }` | `media` (reutiliza un archivo existente en una variante) |
 | PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order?, category_id? }` | `media` |
 | DELETE | `/api/admin/media/:id` | — | `media` (borrado definitivo solo si está huérfana; si está en uso devuelve `media_in_use`) |
@@ -189,6 +189,7 @@ de una transacción y crean un movimiento auditable.
 | GET | `/api/admin/site-config` | — | `site_config` |
 | PATCH | `/api/admin/site-config` | `{ key: value, ... }` (incluye colores admin y posiciones/zoom `admin_*_bg_position_x`, `admin_*_bg_position_y`, `admin_*_bg_zoom`) | `site_config` |
 | POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
+| POST | `/api/admin/site-config/splash-image` | `multipart/form-data` con `file` (JPEG, PNG, WebP, AVIF o GIF) | Sube un recurso; devuelve la URL `/media/site/...` sin publicarla hasta guardar y publicar el borrador del Builder. |
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |
 | POST | `/api/admin/site-config/login-background` | `multipart/form-data` con `file` | Sube o reemplaza la imagen de fondo del login. |
 | DELETE | `/api/admin/site-config/login-background` | — | Elimina la imagen de fondo del login. |

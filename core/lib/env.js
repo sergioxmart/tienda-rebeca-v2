@@ -36,7 +36,7 @@ export const env = {
   JWT_SECRET:        req('JWT_SECRET'),
   REFRESH_SECRET:    req('REFRESH_SECRET'),
   COOKIE_SECRET:     req('COOKIE_SECRET'),
-  ACCESS_TTL_MIN:    Number(opt('ACCESS_TTL_MIN', '15')),
+  ACCESS_TTL_MIN:    Number(opt('ACCESS_TTL_MIN', '1440')),
   REFRESH_TTL_DAYS:  Number(opt('REFRESH_TTL_DAYS', '7')),
 
   // Checkout: un pedido sin pago confirmado no queda abierto para siempre.

@@ -1,6 +1,6 @@
 # Rebeca Andrade v2 — Mapa del repositorio
 
-> **Última actualización: 2026-08-11**
+> **Última actualización: 2026-10-19**
 
 > Este es el mapa maestro. Sirve para llegar al archivo de cualquier
 > funcionalidad **sin explorar todo el repo**. Si algo no está aquí
@@ -52,7 +52,7 @@ modelos de dominio conviviendo.
 | Módulo | Qué hace | Ruta |
 | ------ | -------- | ---- |
 | Helpers HTTP | `clientIp`, `readJsonBody`, `json`, `isValidEmail` | [`core/lib/`](../core/lib/) (`client-ip`, `body`, `json`, `email`) |
-| Auth | bcrypt + JWT 15 min + refresh 7 d + roles | [`core/lib/auth.js`](../core/lib/auth.js) |
+| Auth | bcrypt + JWT 24 h + refresh 7 d + roles | [`core/lib/auth.js`](../core/lib/auth.js) |
 | TOTP | URI `otpauth`, validación RFC 6238, AES-GCM del secret 2FA, backup codes | [`core/lib/totp.js`](../core/lib/totp.js) |
 | Cookies / CSRF | refresh httpOnly + CSRF double-submit (`timingSafeEqual`) | [`core/lib/cookies.js`](../core/lib/cookies.js), [`csrf.js`](../core/lib/csrf.js) |
 | DB | `pg.Pool` + `query` + `tx` + `getClient` | [`core/lib/db.js`](../core/lib/db.js) |
@@ -102,6 +102,7 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente; `page_key` separa tienda y landings de servicios | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js) |
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
+| Splash de bienvenida | Capa inicial de la página principal; ajustes de activación, duración e imagen/GIF en el modal de estilos globales del Builder (`site_config`) | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
 | Cliente API | wrapper de `fetch` a `/api/public/*` | [`web/web-store/src/api.js`](../web/web-store/src/api.js) |
 
 ### `web/web-admin/` — panel admin (SPA)

@@ -1,6 +1,6 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-09-20**
+> **Última actualización: 2026-10-19**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
@@ -38,7 +38,9 @@ permite usar el módulo HTML personalizado para construir su contenido.
   visibilidad, enlaces, código personalizado y una alternativa de logo
   textual con familia tipográfica predefinida; las claves
   `navbar_logo_mode`, `navbar_logo_text`, `navbar_logo_font` y
-  `navbar_show_store` viajan en el mismo subset de `site_config`.
+  `navbar_show_store` viajan en el mismo subset de `site_config`. También
+  permite combinar el logo cargado o personalizado con texto y ajustar el
+  espacio vertical del Nav Bar desde 1 px.
 - El módulo Hero permite alinear su contenido, activar o quitar el overlay
   de color de la imagen de fondo y mover el bloque de contenido con posiciones
   independientes para escritorio y móvil desde el Editor visual del modal.
@@ -48,6 +50,12 @@ permite usar el módulo HTML personalizado para construir su contenido.
   define el panel y se conservan los ajustes de texto y sombreado. Las demás
   propuestas visuales viven en `web/web-admin/public/hero-design-options.html`;
   solo se incorporan al selector después de que se aprueben.
+- El modal de estilos globales configura la pantalla de bienvenida de la
+  tienda (activar, duración, imagen/GIF, redondez de imagen y color de
+  fondo). La configuración
+  usa `site_config`, viaja en borradores y temas, y se muestra únicamente
+  al abrir la página principal. La redondez al 100% recorta la imagen dentro
+  de un marco cuadrado para conservar una forma circular.
 
 ## Agregar un tipo de módulo nuevo (toca 3 archivos)
 

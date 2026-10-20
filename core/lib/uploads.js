@@ -7,12 +7,13 @@ import { join, extname } from 'node:path';
 import { env } from './env.js';
 import { log } from './logger.js';
 
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']);
 const MIME_TO_EXT = {
   'image/jpeg': '.jpg',
   'image/png':  '.png',
   'image/webp': '.webp',
   'image/avif': '.avif',
+  'image/gif':  '.gif',
 };
 
 // Multer en memoria (límite y validación acá; la escritura a disco la hacemos

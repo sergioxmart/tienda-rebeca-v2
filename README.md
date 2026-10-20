@@ -12,7 +12,7 @@ editorial de la marca.
   admin en `:5174`. Ambos servidos por el backend en `:3000` en
   producción.
 - **DB**: Postgres 16, migrations SQL forward-only en `web/migrations/`.
-- **Auth admin**: JWT 15 min + refresh 7d en cookie httpOnly + CSRF
+- **Auth admin**: JWT 24 h + refresh 7d en cookie httpOnly + CSRF
   double-submit. 2FA TOTP opcional con backup codes.
 - **Deploy** (cuando se levante a prod): PM2 + cloudflared + webhook
   de deploy. Por ahora corre local en Mac.

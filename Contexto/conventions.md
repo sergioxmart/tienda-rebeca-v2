@@ -1,6 +1,6 @@
 # Rebeca Andrade v2 — Convenciones y reglas
 
-> **Última actualización: 2026-08-11**
+> **Última actualización: 2026-10-19**
 
 > Reglas del proyecto para IAs y humanos que trabajen en este repo.
 > **Léelo antes de programar.** Si entras por primera vez, lee
@@ -139,7 +139,7 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
 
 - `pg.Pool` por proceso (sin global preservado — el hot-reload de
   `node --watch` mata y arranca procesos, no hace HMR in-memory).
-- Auth: bcryptjs para passwords, JWT 15 min, refresh 7 d en cookie
+- Auth: bcryptjs para passwords, JWT 24 h, refresh 7 d en cookie
   httpOnly, CSRF double-submit.
 - Rate limit: `createFailureLimiter` aplica 5 fallos por IP o cuenta en
   15 minutos al login y recuperación; el estado actual es en memoria y
@@ -150,7 +150,8 @@ Esto es lo que ya hicimos en Fioratta y replicamos acá:
   `Referrer-Policy`, `Permissions-Policy`, políticas de origen y HSTS en
   producción. `CSP_FRAME_ANCESTORS` limita los orígenes que pueden cargar la
   vista previa del Builder.
-- Uploads: `multer` con `memoryStorage`, validar MIME y tamaño,
+- Uploads: `multer` con `memoryStorage`, validar MIME y tamaño (JPEG,
+  PNG, WebP, AVIF y GIF),
   escribir a `uploads/<subdir>/<yyyy>/<mm>/<uuid>.<ext>` y servir siempre
   las URLs públicas mediante `/media` (por ejemplo, el logo en
   `uploads/site/...` se expone como `/media/site/...`).

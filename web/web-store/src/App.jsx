@@ -13,6 +13,57 @@ import Checkout from './pages/Checkout.jsx';
 import PaymentResponse from './pages/PaymentResponse.jsx';
 import CustomerAccount from './pages/CustomerAccount.jsx';
 import { useSite } from './site/SiteContext.jsx';
+import { useBuilderPreview } from './preview/BuilderPreviewContext.jsx';
+
+function StoreSplash() {
+  const { site, siteLoading } = useSite();
+  const preview = useBuilderPreview();
+  const { pathname } = useLocation();
+  const [visible, setVisible] = React.useState(pathname === '/' && !preview.active);
+
+  React.useEffect(() => {
+    if (pathname !== '/' || preview.active) {
+      setVisible(false);
+      return undefined;
+    }
+    if (siteLoading) {
+      setVisible(true);
+      return undefined;
+    }
+    if (site?.store_splash_enabled === false) {
+      setVisible(false);
+      return undefined;
+    }
+
+    const configuredDuration = Number(site?.store_splash_duration);
+    const duration = Number.isFinite(configuredDuration)
+      ? Math.min(10, Math.max(1, configuredDuration))
+      : 2.5;
+    setVisible(true);
+    const timeout = window.setTimeout(() => setVisible(false), duration * 1000);
+    return () => window.clearTimeout(timeout);
+  }, [pathname, preview.active, siteLoading, site?.store_splash_enabled, site?.store_splash_duration]);
+
+  if (!visible) return null;
+  const imageUrl = typeof site?.store_splash_image_url === 'string' ? site.store_splash_image_url : '';
+  const configuredImageBorderRadius = site?.store_splash_image_border_radius;
+  const imageBorderRadius = configuredImageBorderRadius == null || configuredImageBorderRadius === ''
+    ? 100
+    : Number(configuredImageBorderRadius);
+  const safeImageBorderRadius = Number.isFinite(imageBorderRadius) ? Math.min(100, Math.max(0, imageBorderRadius)) : 0;
+  const backgroundColor = /^#[0-9A-Fa-f]{6}$/.test(String(site?.store_splash_background_color || ''))
+    ? site.store_splash_background_color
+    : '#FAF7F2';
+  const isCircularImage = safeImageBorderRadius === 100;
+  const siteName = site?.site_name || 'Rebeca Andrade';
+  return (
+    <div className="store-splash" style={{ backgroundColor }} role="status" aria-live="polite" aria-label="Cargando tienda">
+      {imageUrl
+        ? <img className={`store-splash-image${isCircularImage ? ' is-circular' : ''}`} src={imageUrl} alt={siteName} style={isCircularImage ? undefined : { borderRadius: `${safeImageBorderRadius / 2}%` }} />
+        : <div className="store-splash-brand"><span>{siteName}</span><i aria-hidden="true" /></div>}
+    </div>
+  );
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -35,6 +86,7 @@ export default function App() {
   return (
     <div className="app">
       <ScrollToTop />
+      <StoreSplash />
       <Header />
       <main className="main">
         <Routes>

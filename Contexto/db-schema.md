@@ -185,7 +185,7 @@ compartido con otros proyectos del estilo. Salvo el usuario bootstrap
 `id=1`, una cuenta sin 2FA no puede recibir sesión: debe enrolarse en su
 primer ingreso. El usuario `id=1` lo activa desde Usuarios.
 - bcrypt para passwords.
-- JWT 15 min en memoria del cliente.
+- JWT 24 h en memoria del cliente (`ACCESS_TTL_MIN=1440` por defecto).
 - Refresh token 7 días en cookie httpOnly (server guarda solo el hash).
 - CSRF double-submit.
 - 2FA TOTP opcional (AES-GCM del secret en `auth_users.totp_secret_enc`,

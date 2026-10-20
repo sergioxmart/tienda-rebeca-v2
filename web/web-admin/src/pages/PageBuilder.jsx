@@ -38,6 +38,27 @@ const HERO_FONT_FAMILIES = {
 };
 
 const HERO_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
+const GLOBAL_STYLE_DEFAULTS = Object.freeze({
+  ...STORE_THEME_DEFAULTS,
+  store_splash_enabled: true,
+  store_splash_duration: 2.5,
+  store_splash_image_url: '',
+  store_splash_image_border_radius: 100,
+  store_splash_background_color: '#FAF7F2',
+});
+
+function normalizeGlobalStyles(config = {}) {
+  const duration = Number(config.store_splash_duration);
+  const imageBorderRadius = Number(config.store_splash_image_border_radius);
+  return {
+    ...normalizeStoreTheme(config),
+    store_splash_enabled: config.store_splash_enabled !== false,
+    store_splash_duration: Number.isFinite(duration) ? Math.min(10, Math.max(1, duration)) : GLOBAL_STYLE_DEFAULTS.store_splash_duration,
+    store_splash_image_url: typeof config.store_splash_image_url === 'string' ? config.store_splash_image_url : '',
+    store_splash_image_border_radius: Number.isFinite(imageBorderRadius) ? Math.min(100, Math.max(0, Math.round(imageBorderRadius))) : GLOBAL_STYLE_DEFAULTS.store_splash_image_border_radius,
+    store_splash_background_color: HERO_COLOR_RE.test(String(config.store_splash_background_color || '')) ? String(config.store_splash_background_color).toUpperCase() : GLOBAL_STYLE_DEFAULTS.store_splash_background_color,
+  };
+}
 
 function pickerColor(value, fallback = '#FFFFFF') {
   return HERO_COLOR_RE.test(String(value || '')) ? value : fallback;
@@ -440,6 +461,7 @@ const NAV_DEFAULTS = {
   navbar_logo_mode: 'image',
   navbar_custom_logo_url: '',
   navbar_logo_border_radius: 0,
+  navbar_logo_vertical_padding: 15,
   navbar_logo_text: 'Rebeca Andrade',
   navbar_logo_font: 'display',
   navbar_mobile_logo_alignment: 'left',
@@ -515,9 +537,10 @@ function GlobalSpacingField({ field, value, onChange }) {
   );
 }
 
-function GlobalStoreStyles({ values, onChange }) {
+function GlobalStoreStyles({ values, onChange, onUploadSplashImage, uploadingSplashImage }) {
   const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
   const typographyFields = STORE_THEME_FIELDS.slice(4);
+  const splashImageBorderRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
   return (
     <div className="builder-global-styles">
       <div className="builder-global-styles-intro">
@@ -540,6 +563,38 @@ function GlobalStoreStyles({ values, onChange }) {
         <div className="builder-global-style-heading"><h3>Espaciado lateral</h3><span>Independiente para escritorio y móvil; no modifica el Hero full-width.</span></div>
         <div className="builder-global-spacing-grid">
           {STORE_SPACING_FIELDS.map((field) => <GlobalSpacingField key={field.key} field={field} value={values[field.key]} onChange={(key, value) => onChange(key, value)} />)}
+        </div>
+      </section>
+      <section className="builder-global-style-section builder-splash-settings">
+        <div className="builder-global-style-heading"><h3>Pantalla de bienvenida</h3><span>Se muestra al abrir la página principal de la tienda.</span></div>
+        <label className="builder-splash-toggle"><input type="checkbox" checked={values.store_splash_enabled} onChange={(event) => onChange('store_splash_enabled', event.target.checked)} /> Activar pantalla de bienvenida</label>
+        <div className="builder-splash-controls">
+          <label className="form-group"><span>Duración</span><span className="builder-splash-duration"><input className="input" type="number" min="1" max="10" step="0.5" value={values.store_splash_duration} onChange={(event) => onChange('store_splash_duration', event.target.value)} disabled={!values.store_splash_enabled} /><span>segundos</span></span></label>
+          <div className="form-group">
+            <label htmlFor="builder-splash-image-url">Imagen o GIF</label>
+            <input id="builder-splash-image-url" className="input" type="url" value={values.store_splash_image_url} onChange={(event) => onChange('store_splash_image_url', event.target.value)} placeholder="Pega una URL o sube un archivo" disabled={!values.store_splash_enabled} />
+            <div className="builder-splash-upload-row">
+              <input id="builder-splash-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" hidden disabled={!values.store_splash_enabled || uploadingSplashImage} onChange={onUploadSplashImage} />
+              <label className={`btn${!values.store_splash_enabled || uploadingSplashImage ? ' is-disabled' : ''}`} htmlFor="builder-splash-image-file" aria-disabled={!values.store_splash_enabled || uploadingSplashImage}>
+                {uploadingSplashImage ? <><span className="spinner" /> Subiendo…</> : 'Subir imagen o GIF'}
+              </label>
+              {values.store_splash_image_url && <button className="btn" type="button" onClick={() => onChange('store_splash_image_url', '')} disabled={!values.store_splash_enabled || uploadingSplashImage}>Quitar</button>}
+            </div>
+            <span className="help">Formatos: JPG, PNG, WebP, AVIF o GIF. Si no eliges una imagen, se muestra el nombre de la tienda.</span>
+          </div>
+        </div>
+        {values.store_splash_image_url && <div className="builder-splash-preview"><img className={splashImageBorderRadius === 100 ? 'is-circular' : ''} src={values.store_splash_image_url} alt="Vista previa de la pantalla de bienvenida" style={splashImageBorderRadius === 100 ? undefined : { borderRadius: `${splashImageBorderRadius / 2}%` }} /><span>Vista previa</span></div>}
+        <div className="builder-splash-appearance">
+          <div className="form-group builder-splash-radius-field">
+            <label htmlFor="builder-splash-image-border-radius">Redondez de la imagen: <strong>{splashImageBorderRadius}%</strong></label>
+            <input id="builder-splash-image-border-radius" type="range" min="0" max="100" step="1" value={splashImageBorderRadius} onChange={(event) => onChange('store_splash_image_border_radius', Number(event.target.value))} aria-label="Redondez de la imagen del splash" disabled={!values.store_splash_enabled || !values.store_splash_image_url} />
+            <span className="help">0% conserva las esquinas rectas; 100% redondea completamente la imagen.</span>
+          </div>
+          <GlobalColorField
+            field={{ key: 'store_splash_background_color', label: 'Fondo del splash', description: 'Color que cubre la pantalla mientras aparece la imagen.' }}
+            value={values.store_splash_background_color}
+            onChange={(value) => onChange('store_splash_background_color', value)}
+          />
         </div>
       </section>
       <div className="builder-global-styles-preview" aria-hidden="true">
@@ -1013,6 +1068,13 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
 function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   const logoBorderRadius = Math.min(100, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
+  const logoVerticalPadding = Math.min(32, Math.max(1, Number(navSettings.navbar_logo_vertical_padding) || 15));
+  const imageLogoModes = ['image', 'custom', 'image_text', 'custom_text'];
+  const textLogoModes = ['text', 'image_text', 'custom_text'];
+  const customImageLogoModes = ['custom', 'custom_text'];
+  const hasImageLogo = imageLogoModes.includes(navSettings.navbar_logo_mode);
+  const hasTextLogo = textLogoModes.includes(navSettings.navbar_logo_mode);
+  const hasCustomImageLogo = customImageLogoModes.includes(navSettings.navbar_logo_mode);
   const logoShapeStyle = logoBorderRadius >= 100
     ? { width: '44px', height: '44px', flexBasis: '44px', borderRadius: '50%', objectFit: 'cover' }
     : { borderRadius: `${logoBorderRadius / 2}%` };
@@ -1026,18 +1088,20 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           <label>Tipo de logo</label>
           <select className="select" value={navSettings.navbar_logo_mode} onChange={(e) => setNavValue('navbar_logo_mode', e.target.value)}>
             <option value="image">Usar logo cargado</option>
+            <option value="image_text">Usar logo cargado + texto</option>
             <option value="custom">Usar logo personalizado</option>
+            <option value="custom_text">Usar logo personalizado + texto</option>
             <option value="text">Usar texto de marca</option>
           </select>
         </div>
-        {navSettings.navbar_logo_mode === 'text' && (
+        {hasTextLogo && (
           <div className="form-group">
             <label>Texto del logo</label>
             <input className="input" value={navSettings.navbar_logo_text} onChange={(e) => setNavValue('navbar_logo_text', e.target.value)} placeholder="Rebeca Andrade" />
           </div>
         )}
       </div>
-      {['image', 'custom'].includes(navSettings.navbar_logo_mode) && (
+      {hasImageLogo && (
         <div className="form-group builder-navbar-radius-field">
           <label htmlFor="builder-navbar-logo-border-radius">Redondez de los bordes del logo: <strong>{logoBorderRadius}%</strong></label>
           <input
@@ -1053,7 +1117,23 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           <div className="help">0% deja las esquinas rectas; de 1% a 99% redondea hasta formar un óvalo; 100% fuerza un círculo.</div>
         </div>
       )}
-      {navSettings.navbar_logo_mode === 'custom' && (
+      {hasImageLogo && (
+        <div className="form-group builder-navbar-radius-field">
+          <label htmlFor="builder-navbar-logo-vertical-padding">Espacio arriba y abajo en el Nav Bar: <strong>{logoVerticalPadding}px</strong></label>
+          <input
+            id="builder-navbar-logo-vertical-padding"
+            type="range"
+            min="1"
+            max="32"
+            step="1"
+            value={logoVerticalPadding}
+            onChange={(event) => setNavValue('navbar_logo_vertical_padding', Number(event.target.value))}
+            aria-label="Espacio superior e inferior del Nav Bar"
+          />
+          <div className="help">1 px acerca el logo a los bordes superior e inferior; aumenta el valor para dejar más espacio.</div>
+        </div>
+      )}
+      {hasCustomImageLogo && (
         <div className="form-group">
           <label>Imagen del logo personalizado</label>
           {navSettings.navbar_custom_logo_url ? (
@@ -1078,7 +1158,7 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
           <div className="help">Selecciona una imagen existente en la biblioteca de Media para usarla en la barra de navegación.</div>
         </div>
       )}
-      {navSettings.navbar_logo_mode === 'text' && (
+      {hasTextLogo && (
         <div className="form-group">
           <label>Fuente del texto</label>
           <select className="select" value={navSettings.navbar_logo_font} onChange={(e) => setNavValue('navbar_logo_font', e.target.value)}>
@@ -1152,9 +1232,10 @@ export default function PageBuilder() {
   const [navbarOpen, setNavbarOpen] = useState(false);
   const [savedNavSettings, setSavedNavSettings] = useState(NAV_DEFAULTS);
   const [globalStylesOpen, setGlobalStylesOpen] = useState(false);
-  const [globalStyles, setGlobalStyles] = useState(STORE_THEME_DEFAULTS);
-  const [savedGlobalStyles, setSavedGlobalStyles] = useState(STORE_THEME_DEFAULTS);
+  const [globalStyles, setGlobalStyles] = useState(GLOBAL_STYLE_DEFAULTS);
+  const [savedGlobalStyles, setSavedGlobalStyles] = useState(GLOBAL_STYLE_DEFAULTS);
   const [globalStylesSaving, setGlobalStylesSaving] = useState(false);
+  const [uploadingSplashImage, setUploadingSplashImage] = useState(false);
   const [mediaItems, setMediaItems] = useState([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
@@ -1174,7 +1255,7 @@ export default function PageBuilder() {
       setModules(normalizeModules(draft.modules));
       setHasDraft(Boolean(data.has_draft));
       const config = draft.site_config_subset || {};
-      const normalizedStyles = normalizeStoreTheme(config);
+      const normalizedStyles = normalizeGlobalStyles(config);
       setNavSettings((current) => ({ ...current, ...config, navbar_links: normalizeNavLinks(config.navbar_links ?? current.navbar_links) }));
       setSavedNavSettings((current) => ({ ...current, ...config, navbar_links: normalizeNavLinks(config.navbar_links ?? current.navbar_links) }));
       setGlobalStyles(normalizedStyles);
@@ -1332,7 +1413,7 @@ export default function PageBuilder() {
   };
 
   const saveGlobalStyles = async () => {
-    const nextStyles = normalizeStoreTheme(globalStyles);
+    const nextStyles = normalizeGlobalStyles(globalStyles);
     setGlobalStyles(nextStyles);
     setGlobalStylesSaving(true);
     try {
@@ -1345,6 +1426,24 @@ export default function PageBuilder() {
       toast.error('No se pudieron guardar los estilos', err.message);
     } finally {
       setGlobalStylesSaving(false);
+    }
+  };
+
+  const uploadSplashImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    setUploadingSplashImage(true);
+    try {
+      const data = await api.upload('/api/admin/site-config/splash-image', form);
+      setGlobalStyles((current) => ({ ...current, store_splash_image_url: data.image_url || '' }));
+      toast.success('Imagen subida', 'La URL quedó en la configuración del splash. Guarda los estilos para conservarla en el borrador.');
+    } catch (err) {
+      toast.error('No se pudo subir la imagen', err.message);
+    } finally {
+      setUploadingSplashImage(false);
     }
   };
 
@@ -1611,13 +1710,13 @@ export default function PageBuilder() {
         title="Estilos globales de la tienda"
         footer={
           <>
-            <button className="btn" type="button" onClick={() => setGlobalStyles(STORE_THEME_DEFAULTS)} disabled={globalStylesSaving}>Restaurar valores</button>
+            <button className="btn" type="button" onClick={() => setGlobalStyles(GLOBAL_STYLE_DEFAULTS)} disabled={globalStylesSaving}>Restaurar valores</button>
             <button className="btn" type="button" onClick={closeGlobalStyles} disabled={globalStylesSaving}>Cancelar</button>
             <button className="btn btn-primary" type="button" onClick={saveGlobalStyles} disabled={globalStylesSaving}>{globalStylesSaving ? <span className="spinner" /> : 'Guardar en borrador'}</button>
           </>
         }
       >
-        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} />
+        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} />
       </Modal>
 
       <Modal

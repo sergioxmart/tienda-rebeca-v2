@@ -1198,3 +1198,19 @@ p { margin: 0 0 12px; }
   .inventory-actions { width: 100%; justify-content: flex-end; }
   .admin-background-preview-wrap { grid-template-columns: 1fr; }
 }
+/* Pantalla de bienvenida del storefront, configurada desde el Builder. */
+.builder-splash-settings { display: grid; gap: 16px; }
+.builder-splash-toggle { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; }
+.builder-splash-controls { display: grid; grid-template-columns: minmax(150px, .55fr) minmax(260px, 1.45fr); gap: 18px; align-items: start; }
+.builder-splash-duration { display: flex; align-items: center; gap: 8px; }
+.builder-splash-duration .input { max-width: 110px; }
+.builder-splash-duration > span { color: var(--color-muted); font-size: 13px; }
+.builder-splash-upload-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.builder-splash-upload-row label.is-disabled { opacity: .55; cursor: not-allowed; }
+.builder-splash-preview { display: flex; align-items: center; gap: 12px; color: var(--color-muted); font-size: 12px; }
+.builder-splash-preview img { width: 88px; height: 64px; border: 1px solid var(--color-border); border-radius: 8px; object-fit: contain; background: #fff; }
+.builder-splash-preview img.is-circular { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; }
+.builder-splash-appearance { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr); gap: 16px; align-items: start; }
+.builder-splash-radius-field input[type="range"] { width: 100%; accent-color: var(--color-primary); }
+@media (max-width: 680px) { .builder-splash-controls { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .builder-splash-appearance { grid-template-columns: 1fr; } }

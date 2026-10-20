@@ -42,6 +42,8 @@ export default function Header() {
   const name = site?.site_name || 'Rebeca Andrade';
   const logoUrl = site?.navbar_logo_mode === 'custom'
     ? (site?.navbar_custom_logo_url || site?.logo_url)
+    : site?.navbar_logo_mode === 'custom_text'
+    ? (site?.navbar_custom_logo_url || site?.logo_url)
     : site?.logo_url;
   const rawLogoBorderRadius = Number(site?.navbar_logo_border_radius);
   const logoBorderRadius = Number.isFinite(rawLogoBorderRadius)
@@ -51,7 +53,13 @@ export default function Header() {
     ? { width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }
     : { borderRadius: `${logoBorderRadius / 2}%` };
   const textLogo = site?.navbar_logo_text || name;
-  const useTextLogo = site?.navbar_logo_mode === 'text';
+  const logoMode = site?.navbar_logo_mode || 'image';
+  const useTextLogo = ['text', 'image_text', 'custom_text'].includes(logoMode);
+  const useImageLogo = logoMode !== 'text';
+  const logoVerticalPadding = Number(site?.navbar_logo_vertical_padding);
+  const headerVerticalPadding = Number.isFinite(logoVerticalPadding)
+    ? Math.min(32, Math.max(1, logoVerticalPadding))
+    : 15;
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;
   const mobileLogoAlignment = site?.navbar_mobile_logo_alignment === 'center' ? 'center' : 'left';
   const visibleCategories = Array.isArray(categories) ? categories.slice(0, 5) : [];
@@ -175,7 +183,7 @@ export default function Header() {
   return (
     <header className="header site-header">
       {showAnnouncement && <div className="announcement-bar"><div className="header-width">{announcement.split('·').map((part, index) => <React.Fragment key={`${part}-${index}`}>{index > 0 && <span>·</span>}{part.trim()}</React.Fragment>)}</div></div>}
-      <div className="header-inner site-header__inner">
+      <div className="header-inner site-header__inner" style={{ paddingTop: `${headerVerticalPadding}px`, paddingBottom: `${headerVerticalPadding}px` }}>
         <button
           className={`menu-toggle ${menuOpen ? 'is-open' : ''}`}
           type="button"
@@ -186,11 +194,9 @@ export default function Header() {
           <span /><span /><span />
         </button>
         <Link to="/" className={`logo site-header__logo site-header__logo--mobile-${mobileLogoAlignment}`} aria-label={`Ir al inicio de ${name}`}>
-          {useTextLogo
-            ? <span className="logo-text" style={{ fontFamily: logoFontFamily }}>{textLogo}</span>
-            : logoUrl
-            ? <img src={logoUrl} alt={name} style={logoShapeStyle} />
-            : <><span className="logo-mark">T</span><span>{name}<span className="accent">.</span></span></>}
+          {useImageLogo && logoUrl && <img src={logoUrl} alt={name} style={logoShapeStyle} />}
+          {useTextLogo && <span className="logo-text" style={{ fontFamily: logoFontFamily }}>{textLogo}</span>}
+          {useImageLogo && !logoUrl && <><span className="logo-mark">T</span>{!useTextLogo && <span>{name}<span className="accent">.</span></span>}</>}
         </Link>
         <nav className="nav site-nav" aria-label="Navegación principal">
           {navLinks.map((link) => (

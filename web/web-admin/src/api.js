@@ -18,6 +18,7 @@ const TOKEN_KEY = 'techstore.admin.token';
 const CSRF_COOKIE = 'csrf_token';
 let unauthorizedHandler = null;
 let unauthorizedHandled = false;
+let refreshPromise = null;
 
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
@@ -48,7 +49,28 @@ class ApiError extends Error {
   }
 }
 
-async function request(method, path, { body, isForm, headers } = {}) {
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+        if (!res.ok) return false;
+        const data = await res.json();
+        const token = data?.data?.access_token;
+        if (!token || data?.ok === false) return false;
+        setToken(token);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
+async function request(method, path, { body, isForm, headers } = {}, canRefresh = true) {
   const token = getToken();
   const finalHeaders = { ...headers };
   if (token) finalHeaders['Authorization'] = `Bearer ${token}`;
@@ -68,6 +90,15 @@ async function request(method, path, { body, isForm, headers } = {}) {
   }
 
   const res = await fetch(path, { method, headers: finalHeaders, body: payload, credentials: 'include' });
+
+  // Un access token vencido no debe cerrar una sesión que aún tiene
+  // refresh válido. Renueva y repite la petición una sola vez.
+  const isAuthenticatedRequest = path.startsWith('/api/admin/') || path === '/api/auth/me';
+  if (res.status === 401 && isAuthenticatedRequest && canRefresh && getToken()) {
+    if (await refreshAccessToken()) {
+      return request(method, path, { body, isForm, headers }, false);
+    }
+  }
 
   // 204 No Content
   if (res.status === 204) return { ok: true };

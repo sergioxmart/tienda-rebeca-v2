@@ -175,6 +175,23 @@ export async function uploadLogo(req, res) {
   });
 }
 
+// Sube un recurso del splash sin cambiar el estado publicado. El Builder
+// conserva la URL en el borrador hasta que se publique.
+export async function uploadSplashImage(req, res) {
+  upload.single('file')(req, res, async (err) => {
+    if (err) {
+      log.warn('splash image upload error', { msg: err.message });
+      return json(res, 400, { ok: false, error: 'upload_failed', message: err.message });
+    }
+    if (!req.file) return json(res, 400, { ok: false, error: 'file_required' });
+
+    const { url, size_bytes } = await writeUploadFile(req.file, { subdir: 'site' });
+    await recordAudit(req.user?.id, 'site_config.splash_image_upload', req.ip, { url, size: size_bytes });
+    log.info('splash image uploaded', { url, size: size_bytes, by: req.user?.email });
+    return json(res, 201, { ok: true, image_url: url });
+  });
+}
+
 export async function deleteLogo(req, res) {
   const { rows } = await query(`SELECT value FROM site_config WHERE key = 'logo_url'`);
   const current = rows[0]?.value;
@@ -310,6 +327,7 @@ const routes = [
   { method: 'GET',    pattern: /^\/api\/admin\/site-config\/?$/,       handler: getSiteConfig,    section: 'site_config' },
   { method: 'PATCH',  pattern: /^\/api\/admin\/site-config\/?$/,       handler: updateSiteConfig, section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: uploadLogo,       section: 'site_config' },
+  { method: 'POST',   pattern: /^\/api\/admin\/site-config\/splash-image\/?$/, handler: uploadSplashImage, section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: deleteLogo,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: uploadLoginBackground, section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: deleteLoginBackground, section: 'site_config' },

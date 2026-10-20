@@ -23,6 +23,11 @@ function mediaUrl(url) {
   return url;
 }
 
+function mediaFileName(item) {
+  const path = String(item?.url || '').split(/[?#]/, 1)[0];
+  return path.split('/').filter(Boolean).at(-1) || `imagen-${item?.id || 'media'}`;
+}
+
 export default function Media() {
   const toast = useToast();
   const fileRef = useRef(null);
@@ -193,6 +198,7 @@ export default function Media() {
                   {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
                 <div className="table-actions" style={{ marginTop: 6 }}>
+                  {m.url && <a className="btn btn-sm" href={mediaUrl(m.url)} download={mediaFileName(m)} aria-label={`Descargar ${m.alt_text || 'imagen'}`} title="Descargar imagen">Descargar</a>}
                   <button className="btn btn-sm" onClick={() => openAlt(m)}>Alt</button>
                   {m.can_delete && <button className="btn btn-sm btn-danger" aria-label={`Eliminar definitivamente ${m.alt_text || 'imagen'}`} title="Eliminar definitivamente" onClick={() => setDeleting(m)}>×</button>}
                 </div>

@@ -537,7 +537,7 @@ function GlobalSpacingField({ field, value, onChange }) {
   );
 }
 
-function GlobalStoreStyles({ values, onChange, onUploadSplashImage, uploadingSplashImage }) {
+function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onUploadSplashImage, uploadingSplashImage }) {
   const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
   const typographyFields = STORE_THEME_FIELDS.slice(4);
   const splashImageBorderRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
@@ -572,8 +572,9 @@ function GlobalStoreStyles({ values, onChange, onUploadSplashImage, uploadingSpl
           <label className="form-group"><span>Duración</span><span className="builder-splash-duration"><input className="input" type="number" min="1" max="10" step="0.5" value={values.store_splash_duration} onChange={(event) => onChange('store_splash_duration', event.target.value)} disabled={!values.store_splash_enabled} /><span>segundos</span></span></label>
           <div className="form-group">
             <label htmlFor="builder-splash-image-url">Imagen o GIF</label>
-            <input id="builder-splash-image-url" className="input" type="url" value={values.store_splash_image_url} onChange={(event) => onChange('store_splash_image_url', event.target.value)} placeholder="Pega una URL o sube un archivo" disabled={!values.store_splash_enabled} />
+            <input id="builder-splash-image-url" className="input" type="url" value={values.store_splash_image_url} onChange={(event) => onChange('store_splash_image_url', event.target.value)} placeholder="Pega una URL o elige desde Media" disabled={!values.store_splash_enabled} />
             <div className="builder-splash-upload-row">
+              <button className="btn" type="button" onClick={onOpenSplashPicker} disabled={!values.store_splash_enabled || uploadingSplashImage}>Elegir de Media</button>
               <input id="builder-splash-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" hidden disabled={!values.store_splash_enabled || uploadingSplashImage} onChange={onUploadSplashImage} />
               <label className={`btn${!values.store_splash_enabled || uploadingSplashImage ? ' is-disabled' : ''}`} htmlFor="builder-splash-image-file" aria-disabled={!values.store_splash_enabled || uploadingSplashImage}>
                 {uploadingSplashImage ? <><span className="spinner" /> Subiendo…</> : 'Subir imagen o GIF'}
@@ -1241,6 +1242,7 @@ export default function PageBuilder() {
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [mediaPickerField, setMediaPickerField] = useState(null);
   const [navLogoPickerOpen, setNavLogoPickerOpen] = useState(false);
+  const [splashPickerOpen, setSplashPickerOpen] = useState(false);
   const [openHeroSection, setOpenHeroSection] = useState('content');
 
   const setHeroSectionOpen = (key, isOpen) => {
@@ -1302,6 +1304,11 @@ export default function PageBuilder() {
 
   const openNavLogoPicker = async () => {
     setNavLogoPickerOpen(true);
+    if (!mediaLoaded) await loadMedia();
+  };
+
+  const openSplashPicker = async () => {
+    setSplashPickerOpen(true);
     if (!mediaLoaded) await loadMedia();
   };
 
@@ -1716,7 +1723,7 @@ export default function PageBuilder() {
           </>
         }
       >
-        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} />
+        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onOpenSplashPicker={openSplashPicker} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} />
       </Modal>
 
       <Modal
@@ -1858,6 +1865,19 @@ export default function PageBuilder() {
         onSelect={(url) => {
           setNavValue('navbar_custom_logo_url', url);
           setNavLogoPickerOpen(false);
+        }}
+      />
+
+      <MediaPickerModal
+        open={splashPickerOpen}
+        onClose={() => setSplashPickerOpen(false)}
+        items={mediaItems}
+        loading={mediaLoading}
+        value={globalStyles.store_splash_image_url || ''}
+        title="Elegir imagen o GIF para el splash"
+        onSelect={(url) => {
+          setGlobalStyles((current) => ({ ...current, store_splash_image_url: url }));
+          setSplashPickerOpen(false);
         }}
       />
 

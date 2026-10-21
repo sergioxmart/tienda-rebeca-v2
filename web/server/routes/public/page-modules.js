@@ -10,7 +10,7 @@ import { json } from '../../lib/json.js';
 
 export async function listPublicModules(req, res) {
   const pageKey = new URL(req.url || '/', 'http://localhost').searchParams.get('page_key') || 'store';
-  if (!/^(store|service:[a-z0-9-]+)$/.test(pageKey)) {
+  if (!/^(store|service:[a-z0-9-]+|category:[a-z0-9-]+)$/.test(pageKey)) {
     return json(res, 400, { ok: false, error: 'invalid_page_key' });
   }
   const { rows } = await query(

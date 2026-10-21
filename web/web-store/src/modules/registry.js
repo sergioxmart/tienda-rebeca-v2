@@ -13,6 +13,7 @@ import Banner from './Banner.jsx';
 import Categories from './Categories.jsx';
 import CategoriesGrid from './CategoriesGrid.jsx';
 import Carousel from './Carousel.jsx';
+import ImageGallery from './ImageGallery.jsx';
 import Collections from './Collections.jsx';
 import Text from './Text.jsx';
 import Contact from './Contact.jsx';
@@ -26,6 +27,7 @@ export const MODULE_RENDERERS = {
   categories:        Categories,
   categories_grid:   CategoriesGrid,
   carousel:          Carousel,
+  image_gallery:     ImageGallery,
   collections:       Collections,
   text:              Text,
   contact:           Contact,

@@ -16,9 +16,11 @@ export function PageModulesProvider({ children }) {
     if (builderPreview.active) return builderPreview.pageKey || 'store';
     const slug = location.pathname.startsWith('/categoria/') ? location.pathname.split('/')[2] : '';
     const category = categories.find((item) => item.slug === slug);
-    return category?.is_service ? `service:${category.slug}` : 'store';
+    if (category?.is_service) return `service:${category.slug}`;
+    return category?.is_custom_page ? `category:${category.slug}` : 'store';
   }, [builderPreview.active, builderPreview.pageKey, categories, location.pathname]);
   const [modules, setModules] = useState(null);
+  const [storeModules, setStoreModules] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -40,7 +42,29 @@ export function PageModulesProvider({ children }) {
     return () => { cancelled = true; };
   }, [builderPreview.active, builderPreview.draft, pageKey]);
 
-  return <PageModulesContext.Provider value={{ modules, error, preview: builderPreview.active, pageKey }}>
+  useEffect(() => {
+    if (pageKey === 'store') {
+      setStoreModules(null);
+      return undefined;
+    }
+    if (builderPreview.active) {
+      setStoreModules(Array.isArray(builderPreview.draft?.modules)
+        ? builderPreview.draft.modules.filter((module) => (module.page_key || 'store') === 'store')
+        : null);
+      return undefined;
+    }
+    let cancelled = false;
+    api.pageModules('store')
+      .then((data) => {
+        if (!cancelled) setStoreModules(data.modules || []);
+      })
+      .catch(() => {
+        if (!cancelled) setStoreModules([]);
+      });
+    return () => { cancelled = true; };
+  }, [builderPreview.active, builderPreview.draft, pageKey]);
+
+  return <PageModulesContext.Provider value={{ modules, storeModules: pageKey === 'store' ? modules : storeModules, error, preview: builderPreview.active, pageKey }}>
     {children}
   </PageModulesContext.Provider>;
 }

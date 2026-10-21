@@ -1,16 +1,16 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-10-19**
+> **Última actualización: 2026-10-20**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
 [`api.md`](../api.md) (secciones *Temas* y *Web Builder y borradores*).
 
-El Builder permite cambiar entre la tienda principal y las categorías
-marcadas como servicios. Cada módulo conserva `page_key`: `store` para el
-catálogo y `service:<slug>` para una landing de servicio. La tienda pública
-mantiene el Navbar y Footer globales, pero carga los módulos del servicio y
-permite usar el módulo HTML personalizado para construir su contenido.
+El Builder permite cambiar entre la tienda principal, landings de servicios
+y categorías de productos marcadas como páginas personalizadas. Cada módulo
+conserva `page_key`: `store` para la tienda, `service:<slug>` para una landing
+de servicio y `category:<slug>` para contenido adicional encima del catálogo
+habitual de esa categoría. Las páginas conservan el Navbar y Footer globales.
 
 ## Archivos clave
 
@@ -76,8 +76,10 @@ Si falta cualquiera de los tres, el módulo se guarda pero no se ve, o
 se rechaza en el backend.
 
 Tipos actuales: `hero`, `banner`, `categories`, `categories_grid`,
-`carousel`, `collections`, `text`, `contact`, `featured_products`,
-`recent_products`, `footer`.
+`carousel`, `image_gallery`, `collections`, `text`, `contact`,
+`featured_products`, `recent_products`, `footer`. La galería puede mostrar
+un collage o un carrusel de una imagen por vez; el banner permite ajustar
+la altura de la imagen para escritorio y móvil.
 
 ## Gotchas
 

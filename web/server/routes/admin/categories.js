@@ -36,7 +36,7 @@ function normalizeHexColor(value) {
 
 export async function listCategories(req, res) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, accent_color, background_color, is_service, display_order, active,
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, is_service, is_custom_page, display_order, active,
             created_at, updated_at
        FROM categories
        ORDER BY display_order, name`,
@@ -46,7 +46,7 @@ export async function listCategories(req, res) {
 
 export async function getCategory(req, res, id) {
   const { rows } = await query(
-    `SELECT id, slug, name, description, hero_image, accent_color, background_color, is_service, display_order, active,
+    `SELECT id, slug, name, description, hero_image, accent_color, background_color, is_service, is_custom_page, display_order, active,
             created_at, updated_at
        FROM categories WHERE id = $1`,
     [id],
@@ -72,16 +72,18 @@ export async function createCategory(req, res) {
     optionalHexColor(p.accent_color, 'accent_color'),
     optionalHexColor(p.background_color, 'background_color'),
     p.is_service !== undefined && validators.bool(p.is_service, 'is_service'),
+    p.is_custom_page !== undefined && validators.bool(p.is_custom_page, 'is_custom_page'),
+    p.is_service === true && p.is_custom_page === true ? 'una categoría no puede ser a la vez un servicio y una página de productos personalizada' : null,
   ])) return;
 
   try {
     const { rows } = await query(
-      `INSERT INTO categories (slug, name, description, hero_image, accent_color, background_color, is_service, display_order, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id, slug, name, description, hero_image, accent_color, background_color, is_service, display_order, active, created_at, updated_at`,
+      `INSERT INTO categories (slug, name, description, hero_image, accent_color, background_color, is_service, is_custom_page, display_order, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, slug, name, description, hero_image, accent_color, background_color, is_service, is_custom_page, display_order, active, created_at, updated_at`,
       [slug, p.name.trim(), p.description ?? '', p.hero_image ?? null,
         normalizeHexColor(p.accent_color), normalizeHexColor(p.background_color),
-        p.is_service ?? false, p.display_order ?? 0, p.active ?? true],
+        p.is_service ?? false, p.is_custom_page ?? false, p.display_order ?? 0, p.active ?? true],
     );
     await recordAudit(req.user?.id, 'category.create', req.ip, { id: rows[0].id, slug });
     log.info('category created', { id: rows[0].id, slug, by: req.user?.email });
@@ -93,7 +95,7 @@ export async function createCategory(req, res) {
 }
 
 export async function updateCategory(req, res, id) {
-  const { rows: existing } = await query('SELECT id FROM categories WHERE id = $1', [id]);
+  const { rows: existing } = await query('SELECT id, is_service, is_custom_page FROM categories WHERE id = $1', [id]);
   if (existing.length === 0) return notFound(res);
 
   const p = req.body || {};
@@ -107,6 +109,9 @@ export async function updateCategory(req, res, id) {
     p.display_order !== undefined && validators.int(p.display_order, 'display_order'),
     p.active !== undefined && validators.bool(p.active, 'active'),
     p.is_service !== undefined && validators.bool(p.is_service, 'is_service'),
+    p.is_custom_page !== undefined && validators.bool(p.is_custom_page, 'is_custom_page'),
+    (p.is_service ?? existing[0].is_service) && (p.is_custom_page ?? existing[0].is_custom_page)
+      ? 'una categoría no puede ser a la vez un servicio y una página de productos personalizada' : null,
   ])) return;
 
   const fields = [];
@@ -119,6 +124,7 @@ export async function updateCategory(req, res, id) {
   if (p.accent_color !== undefined)  { fields.push(`accent_color = $${i++}`);  values.push(normalizeHexColor(p.accent_color)); }
   if (p.background_color !== undefined) { fields.push(`background_color = $${i++}`); values.push(normalizeHexColor(p.background_color)); }
   if (p.is_service !== undefined)       { fields.push(`is_service = $${i++}`);       values.push(p.is_service); }
+  if (p.is_custom_page !== undefined)   { fields.push(`is_custom_page = $${i++}`);   values.push(p.is_custom_page); }
   if (p.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(p.display_order); }
   if (p.active !== undefined)        { fields.push(`active = $${i++}`);        values.push(p.active); }
   if (fields.length === 0) return json(res, 400, { ok: false, error: 'nothing_to_update' });
@@ -127,7 +133,7 @@ export async function updateCategory(req, res, id) {
   try {
     const { rows } = await query(
       `UPDATE categories SET ${fields.join(', ')} WHERE id = $${i}
-        RETURNING id, slug, name, description, hero_image, accent_color, background_color, is_service, display_order, active, created_at, updated_at`,
+        RETURNING id, slug, name, description, hero_image, accent_color, background_color, is_service, is_custom_page, display_order, active, created_at, updated_at`,
       values,
     );
     await recordAudit(req.user?.id, 'category.update', req.ip, { id, fields: Object.keys(p) });

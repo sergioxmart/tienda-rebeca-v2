@@ -15,15 +15,16 @@ function InstagramIcon() {
 
 export default function Footer() {
   const { site, categories } = useSite();
-  const { modules } = usePageModules();
+  const { modules, storeModules } = usePageModules();
   if (!site) return null;
 
-  const footerModule = modules?.find((module) => module.type === 'footer' && module.active !== false);
+  const globalModules = storeModules ?? modules;
+  const footerModule = globalModules?.find((module) => module.type === 'footer' && module.active !== false);
   // Cuando la respuesta de módulos ya llegó, la presencia del Footer queda
   // determinada por el Builder. Solo usamos el diseño por defecto mientras
   // la carga inicial todavía está pendiente o si una instalación antigua aún
   // no ha ejecutado la migración del módulo.
-  if (modules && !footerModule) return null;
+  if (globalModules && !footerModule) return null;
   const settings = footerModule?.settings || {};
   if (settings.custom_code_enabled && settings.custom_code) {
     return <CustomCode code={settings.custom_code} className="footer-custom-code" />;

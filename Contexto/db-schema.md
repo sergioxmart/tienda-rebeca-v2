@@ -1,6 +1,6 @@
 # TechStore — Modelo de datos
 
-> **Última actualización: 2026-08-09**
+> **Última actualización: 2026-10-20**
 
 Documento de referencia del schema de TechStore v1. Para los archivos
 SQL exactos ver `web/migrations/`. Para el orden de aplicación y el
@@ -79,7 +79,7 @@ runner, ver `Contexto/dev-setup.md`.
 
 ## Tablas
 
-### `categories` (`001_initial_schema.sql` + `011_service_categories_and_page_scopes.sql`)
+### `categories` (`001_initial_schema.sql` + `011_service_categories_and_page_scopes.sql` + `012_custom_category_pages.sql`)
 
 Taxonomía del catálogo. v1 tiene 1 fila seed (`accesorios-telefono`).
 El admin puede sumar más desde el panel (sin migration).
@@ -87,13 +87,16 @@ El admin puede sumar más desde el panel (sin migration).
 - `is_service` marca categorías como servicios (por ejemplo, Eventos). Estas
   categorías abren una landing del Builder y no aparecen como filtros de
   productos.
+- `is_custom_page` permite agregar módulos del Builder antes del listado de
+  productos de una categoría. Es mutuamente excluyente con `is_service`.
 
 ### `page_modules` (`001_initial_schema.sql` + `011_service_categories_and_page_scopes.sql`)
 
 Bloques publicados del Web Builder. `page_key = 'store'` corresponde a la
 tienda principal; `page_key = 'service:<slug>'` corresponde a la landing de
-una categoría marcada como servicio. `position` se ordena dentro de cada
-página.
+una categoría marcada como servicio; `page_key = 'category:<slug>'` guarda
+secciones adicionales de una categoría de productos personalizada.
+`position` se ordena dentro de cada página.
 
 ### `attributes` + `attribute_values` (`001_initial_schema.sql`)
 

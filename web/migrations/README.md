@@ -1,6 +1,6 @@
 # Migrations — TechStore
 
-> **Última actualización: 2026-08-09**
+> **Última actualización: 2026-10-20**
 
 ## Baseline actual
 
@@ -40,6 +40,9 @@ principal cualquier media de producto o de sus variantes.
 La migración `011_service_categories_and_page_scopes.sql` agrega la marca
 `categories.is_service` para páginas de servicios y `page_modules.page_key`
 para mantener layouts independientes (`store` o `service:<slug>`).
+
+La migración `012_custom_category_pages.sql` agrega `categories.is_custom_page`
+para mostrar módulos del Builder encima del catálogo habitual de una categoría.
 
 ## Regla para cambios futuros
 

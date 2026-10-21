@@ -13,7 +13,7 @@ import Modal from '../components/Modal.jsx';
 import Confirm from '../components/Confirm.jsx';
 import Empty from '../components/Empty.jsx';
 
-const EMPTY = { name: '', slug: '', description: '', hero_image: '', accent_color: '', background_color: '', is_service: false, active: true };
+const EMPTY = { name: '', slug: '', description: '', hero_image: '', accent_color: '', background_color: '', is_service: false, is_custom_page: false, active: true };
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 function pickerColor(value, fallback) {
@@ -83,6 +83,7 @@ export default function Categories() {
     accent_color: c.accent_color || '',
     background_color: c.background_color || '',
     is_service: Boolean(c.is_service),
+    is_custom_page: Boolean(c.is_custom_page),
     active: c.active,
   });
 
@@ -120,6 +121,7 @@ export default function Categories() {
         accent_color: editing.accent_color || null,
         background_color: editing.background_color || null,
         is_service: !!editing.is_service,
+        is_custom_page: !!editing.is_custom_page,
         display_order: editing.id ? undefined : items.length,
         active: !!editing.active,
       };
@@ -195,7 +197,11 @@ export default function Categories() {
               <tr key={c.id} className={selectedId === c.id ? 'row-selected' : ''} onClick={() => setSelectedId(c.id)}>
                 <td>{c.name}</td>
                 <td><code>{c.slug}</code></td>
-                <td>{c.is_service ? <span className="badge service">Servicio</span> : <span className="badge">Productos</span>}</td>
+                <td>{c.is_service
+                  ? <span className="badge service">Servicio</span>
+                  : c.is_custom_page
+                    ? <span className="badge service">Página personalizada</span>
+                    : <span className="badge">Productos</span>}</td>
                 <td>
                   {c.active
                     ? <span className="badge active">Activa</span>
@@ -247,13 +253,24 @@ export default function Categories() {
               <input
                 type="checkbox"
                 checked={Boolean(editing.is_service)}
-                onChange={(e) => setEditing({ ...editing, is_service: e.target.checked })}
+                onChange={(e) => setEditing({ ...editing, is_service: e.target.checked, is_custom_page: e.target.checked ? false : editing.is_custom_page })}
               />
               <span>
                 <strong>Es una categoría de servicios</strong>
                 <small>Úsala para páginas como Eventos o reservas. No se mostrará como categoría de productos.</small>
               </span>
             </label>
+            {!editing.is_service && <label className="category-purpose-card">
+              <input
+                type="checkbox"
+                checked={Boolean(editing.is_custom_page)}
+                onChange={(e) => setEditing({ ...editing, is_custom_page: e.target.checked })}
+              />
+              <span>
+                <strong>Agregar contenido del Builder a esta categoría</strong>
+                <small>Podrás añadir secciones antes de sus productos. Se mantienen el catálogo, los filtros y la paginación.</small>
+              </span>
+            </label>}
             <div className="form-row">
               <CategoryColorField
                 id="category-accent-color"

@@ -46,7 +46,7 @@ function validateDraft(data) {
     return 'cada módulo necesita un type';
   }
   if (data.modules.some((module) => module.page_key !== undefined
-    && (typeof module.page_key !== 'string' || !/^(store|service:[a-z0-9-]+)$/.test(module.page_key)))) {
+    && (typeof module.page_key !== 'string' || !/^(store|service:[a-z0-9-]+|category:[a-z0-9-]+)$/.test(module.page_key)))) {
     return 'cada módulo necesita un page_key válido';
   }
   if (data.site_config_subset !== undefined && (typeof data.site_config_subset !== 'object' || Array.isArray(data.site_config_subset))) {

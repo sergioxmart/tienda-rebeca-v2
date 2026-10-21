@@ -1,6 +1,6 @@
 # Rebeca Andrade v2 — Mapa del repositorio
 
-> **Última actualización: 2026-10-19**
+> **Última actualización: 2026-10-20**
 
 > Este es el mapa maestro. Sirve para llegar al archivo de cualquier
 > funcionalidad **sin explorar todo el repo**. Si algo no está aquí
@@ -99,7 +99,8 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | ------ | -------- | ---- |
 | Páginas | Home, Catalog, ProductPage, Cart, Checkout, PaymentResponse, CustomerAccount | [`web/web-store/src/pages/`](../web/web-store/src/pages/) |
 | Carrito | contexto + persistencia en localStorage | [`web/web-store/src/cart/`](../web/web-store/src/cart/) |
-| Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente; `page_key` separa tienda y landings de servicios | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js) |
+| Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente; `page_key` separa tienda, servicios y contenido adicional de categorías | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js), [`web/web-store/src/modules/PageModulesContext.jsx`](../web/web-store/src/modules/PageModulesContext.jsx) |
+| Galería del builder | collage o carrusel de imágenes elegidas desde Media; el banner admite altura configurable por dispositivo | [`web/web-store/src/modules/ImageGallery.jsx`](../web/web-store/src/modules/ImageGallery.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
 | Splash de bienvenida | Capa inicial de la página principal; ajustes de activación, duración e imagen/GIF en el modal de estilos globales del Builder (`site_config`) | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |

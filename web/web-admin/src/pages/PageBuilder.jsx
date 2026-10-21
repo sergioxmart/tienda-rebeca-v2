@@ -164,10 +164,12 @@ const MODULE_SCHEMAS = {
   },
   banner: {
     label: 'Banner',
-    description: 'Imagen clickeable horizontal.',
+    description: 'Imagen clickeable con altura ajustable para escritorio y móvil.',
     icon: '🖼️',
     settings: [
       { key: 'image_url', label: 'Imagen', type: 'media', mediaPlacementKey: 'image_placement', placeholder: 'Pega una URL o elige una imagen de Media' },
+      { key: 'image_height_desktop', label: 'Altura de imagen · Escritorio', type: 'range', defaultValue: 360, min: 180, max: 720, step: 10, unit: 'px' },
+      { key: 'image_height_mobile', label: 'Altura de imagen · Móvil', type: 'range', defaultValue: 240, min: 140, max: 520, step: 10, unit: 'px' },
       { key: 'link',      label: 'Link al hacer click', type: 'text', placeholder: '/categoria/...' },
       { key: 'alt',       label: 'Texto alternativo',   type: 'text' },
     ],
@@ -198,6 +200,23 @@ const MODULE_SCHEMAS = {
       { key: 'limit', label: 'Cantidad máxima', type: 'number', defaultValue: 6 },
       { key: 'autoplay_ms', label: 'Autoplay (milisegundos)', type: 'number', defaultValue: 5500 },
       { key: 'variant', label: 'Variante', type: 'select', defaultValue: 'classic', options: [{ value: 'classic', label: 'Clásica' }, { value: 'editorial', label: 'Editorial' }] },
+    ],
+  },
+  image_gallery: {
+    label: 'Galería de imágenes',
+    description: 'Arma un collage de fotos o un carrusel que muestra una imagen a la vez.',
+    icon: '▧',
+    settings: [
+      { key: 'title', label: 'Título de la sección', type: 'text', defaultValue: 'Galería de imágenes' },
+      { key: 'variant', label: 'Presentación', type: 'select', defaultValue: 'collage', options: [
+        { value: 'collage', label: 'Collage' },
+        { value: 'carousel', label: 'Carrusel · una imagen a la vez' },
+      ] },
+      { key: 'images', label: 'Imágenes', type: 'media_list', defaultValue: [] },
+      { key: 'image_height_desktop', label: 'Altura · Escritorio', type: 'range', defaultValue: 560, min: 240, max: 760, step: 20, unit: 'px' },
+      { key: 'image_height_mobile', label: 'Altura · Móvil', type: 'range', defaultValue: 380, min: 200, max: 600, step: 20, unit: 'px' },
+      { key: 'autoplay', label: 'Cambiar imagen automáticamente', type: 'checkbox', defaultValue: true },
+      { key: 'autoplay_ms', label: 'Tiempo entre imágenes', type: 'range', defaultValue: 5000, min: 2000, max: 10000, step: 500, unit: 'ms' },
     ],
   },
   collections: {
@@ -1066,6 +1085,48 @@ function MediaField({ field, value, placement, onChange, onPlacementChange, onOp
   );
 }
 
+function ImageGalleryField({ value, onChange, onOpenPicker }) {
+  const images = Array.isArray(value) ? value : [];
+  const updateImage = (index, patch) => onChange(images.map((image, imageIndex) => imageIndex === index ? { ...image, ...patch } : image));
+  const moveImage = (index, offset) => {
+    const target = index + offset;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  };
+
+  return (
+    <div className="builder-image-gallery-field">
+      <div className="builder-image-gallery-field-heading">
+        <span>Agrega y ordena las fotos que quieres mostrar.</span>
+        <button className="btn" type="button" onClick={() => onOpenPicker('add')}>+ Agregar imagen</button>
+      </div>
+      {images.length === 0 ? (
+        <div className="builder-image-gallery-empty">Todavía no agregas imágenes.</div>
+      ) : (
+        <div className="builder-image-gallery-items">
+          {images.map((image, index) => (
+            <div className="builder-image-gallery-item" key={`${image.url}-${index}`}>
+              <img src={image.url} alt={image.alt || ''} />
+              <label>
+                <span>Texto alternativo</span>
+                <input className="input" value={image.alt || ''} onChange={(event) => updateImage(index, { alt: event.target.value })} placeholder="Describe la imagen" />
+              </label>
+              <div className="builder-image-gallery-item-actions">
+                <button className="btn btn-sm" type="button" onClick={() => onOpenPicker(String(index))}>Cambiar</button>
+                <button className="btn btn-sm" type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} aria-label={`Mover imagen ${index + 1} antes`}>↑</button>
+                <button className="btn btn-sm" type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} aria-label={`Mover imagen ${index + 1} después`}>↓</button>
+                <button className="btn btn-sm btn-danger" type="button" onClick={() => onChange(images.filter((_, imageIndex) => imageIndex !== index))}>Quitar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   const logoBorderRadius = Math.min(100, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
@@ -1222,7 +1283,7 @@ export default function PageBuilder() {
   const [saving, setSaving] = useState(false);
   const [reorderDirty, setReorderDirty] = useState(false);
   const [products, setProducts] = useState([]);
-  const [serviceCategories, setServiceCategories] = useState([]);
+  const [builderCategories, setBuilderCategories] = useState([]);
   const [selectedPageKey, setSelectedPageKey] = useState('store');
   const [navSettings, setNavSettings] = useState(NAV_DEFAULTS);
   const [navSaving, setNavSaving] = useState(false);
@@ -1274,14 +1335,14 @@ export default function PageBuilder() {
 
   useEffect(() => {
     api.get('/api/admin/products?active=true').then((data) => setProducts(data.products || [])).catch(() => setProducts([]));
-    api.get('/api/admin/categories').then((data) => setServiceCategories((data.categories || []).filter((category) => category.is_service))).catch(() => setServiceCategories([]));
+    api.get('/api/admin/categories').then((data) => setBuilderCategories((data.categories || []).filter((category) => category.is_service || category.is_custom_page))).catch(() => setBuilderCategories([]));
   }, []);
 
   useEffect(() => {
-    if (selectedPageKey !== 'store' && !serviceCategories.some((category) => `service:${category.slug}` === selectedPageKey)) {
+    if (selectedPageKey !== 'store' && !builderCategories.some((category) => (category.is_service ? `service:${category.slug}` : `category:${category.slug}`) === selectedPageKey)) {
       setSelectedPageKey('store');
     }
-  }, [selectedPageKey, serviceCategories]);
+  }, [selectedPageKey, builderCategories]);
 
   const loadMedia = async () => {
     if (mediaLoading) return;
@@ -1548,10 +1609,21 @@ export default function PageBuilder() {
     if (field.key === 'product_slug' && heroVisualMode !== 'product') return false;
     if (field.key === 'visual_image_url' && heroVisualMode !== 'image') return false;
     if (field.key.endsWith('_text_scale') && field.key !== `${heroTextScaleTarget}_text_scale`) return false;
+    if (editing.type === 'image_gallery' && field.key.startsWith('image_height_') && editing.settings.variant !== 'carousel') return false;
+    if (editing.type === 'image_gallery' && field.key === 'autoplay' && editing.settings.variant !== 'carousel') return false;
+    if (editing.type === 'image_gallery' && field.key === 'autoplay_ms' && (editing.settings.variant !== 'carousel' || !editing.settings.autoplay)) return false;
     return true;
   };
   const renderSettingField = (f) => {
     if (!isSettingVisible(f)) return null;
+    if (f.type === 'media_list') return <div className="form-group" key={f.key}>
+      <label>{f.label}</label>
+      <ImageGalleryField
+        value={editing.settings[f.key] ?? []}
+        onChange={(value) => setSetting(f.key, value)}
+        onOpenPicker={(target) => openMediaPicker(`image_gallery:${target}`)}
+      />
+    </div>;
     if (f.type === 'checkbox') {
       return <label className="builder-checkbox-field" key={f.key}>
         <input type="checkbox" checked={Boolean(editing.settings[f.key] ?? f.defaultValue)} onChange={(e) => setSetting(f.key, e.target.checked)} />
@@ -1657,15 +1729,15 @@ export default function PageBuilder() {
       <div className="builder-page-switcher">
         <div>
           <strong>Diseño de página</strong>
-          <span>{selectedPageKey === 'store' ? 'Tienda principal y catálogo de productos' : 'Landing independiente para un servicio'}</span>
+          <span>{selectedPageKey === 'store' ? 'Tienda principal y catálogo de productos' : selectedPageKey.startsWith('category:') ? 'Módulos adicionales sobre el catálogo de esta categoría' : 'Landing independiente para un servicio'}</span>
         </div>
         <select className="select" value={selectedPageKey} onChange={(event) => setSelectedPageKey(event.target.value)} aria-label="Seleccionar diseño de página">
           <option value="store">Tienda principal · productos</option>
-          {serviceCategories.map((category) => <option key={category.id} value={`service:${category.slug}`}>Servicio · {category.name}</option>)}
+          {builderCategories.map((category) => <option key={category.id} value={`${category.is_service ? 'service' : 'category'}:${category.slug}`}>{category.is_service ? 'Servicio' : 'Categoría'} · {category.name}</option>)}
         </select>
       </div>
-      {selectedPageKey !== 'store' && serviceCategories.length === 0 && (
-        <p className="builder-page-switcher-empty">Primero crea una categoría y márcala como servicio para diseñar su landing.</p>
+      {selectedPageKey !== 'store' && builderCategories.length === 0 && (
+        <p className="builder-page-switcher-empty">Primero crea una categoría y activa la opción para agregarle contenido del Builder, o márcala como servicio.</p>
       )}
 
       <div className="builder-module-list">
@@ -1702,7 +1774,7 @@ export default function PageBuilder() {
             disableDown={idx === visibleModules.length - 1}
           />;
         })}
-        {visibleModules.length === 0 && <Empty title="Sin módulos" description={selectedPageKey === 'store' ? 'La tienda no muestra nada. Crea el primer módulo.' : 'Esta landing todavía no tiene módulos. Agrega un bloque HTML personalizado o el diseño que necesites.'} action={<button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>} />}
+        {visibleModules.length === 0 && <Empty title="Sin módulos" description={selectedPageKey === 'store' ? 'La tienda no muestra nada. Crea el primer módulo.' : selectedPageKey.startsWith('category:') ? 'Esta categoría todavía no tiene secciones adicionales. Agrégalas aquí; sus productos seguirán apareciendo debajo.' : 'Esta landing todavía no tiene módulos. Agrega un bloque HTML personalizado o el diseño que necesites.'} action={<button className="btn btn-primary" onClick={openNew}>+ Nuevo módulo</button>} />}
       </div>
 
       <p style={{ fontSize: 12, color: 'var(--color-muted)', marginTop: 16 }}>
@@ -1848,9 +1920,24 @@ export default function PageBuilder() {
         onClose={() => setMediaPickerField(null)}
         items={mediaItems}
         loading={mediaLoading}
-        value={mediaPickerField ? editing?.settings?.[mediaPickerField] : ''}
+        value={mediaPickerField?.startsWith('image_gallery:')
+          ? mediaPickerField.endsWith(':add') ? '' : editing?.settings?.images?.[Number(mediaPickerField.slice('image_gallery:'.length))]?.url || ''
+          : mediaPickerField ? editing?.settings?.[mediaPickerField] : ''}
+        title={mediaPickerField?.startsWith('image_gallery:') ? 'Agregar imagen a la galería' : 'Elegir imagen de Media'}
         onSelect={(url) => {
-          if (mediaPickerField) setSetting(mediaPickerField, url);
+          if (mediaPickerField?.startsWith('image_gallery:')) {
+            const target = mediaPickerField.slice('image_gallery:'.length);
+            const selectedMedia = mediaItems.find((item) => item.url === url);
+            setEditing((current) => {
+              const images = Array.isArray(current?.settings?.images) ? [...current.settings.images] : [];
+              const image = { url, alt: selectedMedia?.alt_text || '' };
+              if (target === 'add') images.push(image);
+              else if (Number.isInteger(Number(target)) && images[Number(target)]) {
+                images[Number(target)] = { ...images[Number(target)], url, alt: images[Number(target)].alt || selectedMedia?.alt_text || '' };
+              }
+              return { ...current, settings: { ...current.settings, images } };
+            });
+          } else if (mediaPickerField) setSetting(mediaPickerField, url);
           setMediaPickerField(null);
         }}
       />

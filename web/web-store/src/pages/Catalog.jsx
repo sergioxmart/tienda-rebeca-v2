@@ -17,6 +17,8 @@ import ProductCard from '../components/ProductCard.jsx';
 import Empty from '../components/Empty.jsx';
 import { formatCOP } from '../components/Price.jsx';
 import ServiceLanding from './ServiceLanding.jsx';
+import { MODULE_RENDERERS } from '../modules/registry.js';
+import { usePageModules } from '../modules/PageModulesContext.jsx';
 
 function parseAttributeParams(searchParams) {
   // Devuelve { [attr_slug]: [value1, value2, ...] }
@@ -60,6 +62,7 @@ function paginationItems(page, totalPages) {
 export default function Catalog() {
   const { category: categorySlug } = useParams();
   const { site, categories } = useSite();
+  const { modules: pageModules } = usePageModules();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Cargar atributos (para el filter bar)
@@ -136,6 +139,12 @@ export default function Catalog() {
 
   return (
     <div>
+      {categoryObj?.is_custom_page && (pageModules || []).map((module) => {
+        if (module.type === 'footer' || module.active === false) return null;
+        const Renderer = MODULE_RENDERERS[module.type];
+        if (!Renderer) return null;
+        return <Renderer key={module.id} settings={module.settings || {}} />;
+      })}
       <div className="catalog-heading">
         <div><span className="section-kicker">Catálogo {site?.site_name || 'Rebeca Andrade'}</span><h1>{categoryObj ? categoryObj.name : 'Todos los productos'}</h1></div>
         <span className="catalog-heading-note">Encuentra piezas pensadas para acompañarte</span>

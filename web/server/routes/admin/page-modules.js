@@ -30,6 +30,7 @@ const MODULE_TYPES = new Set([
   'categories',
   'categories_grid',
   'carousel',
+  'image_gallery',
   'collections',
   'text',
   'contact',
@@ -38,7 +39,7 @@ const MODULE_TYPES = new Set([
   'footer',
 ]);
 
-const PAGE_KEY_RE = /^(store|service:[a-z0-9-]+)$/;
+const PAGE_KEY_RE = /^(store|service:[a-z0-9-]+|category:[a-z0-9-]+)$/;
 
 export async function listModules(req, res) {
   const { rows } = await query(

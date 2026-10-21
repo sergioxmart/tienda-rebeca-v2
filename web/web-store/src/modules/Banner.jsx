@@ -18,6 +18,8 @@ export default function Banner({ settings = {} }) {
     '--banner-image-desktop-zoom': placement.desktop.zoom / 100,
     '--banner-image-mobile-position': `${placement.mobile.x}% ${placement.mobile.y}%`,
     '--banner-image-mobile-zoom': placement.mobile.zoom / 100,
+    '--banner-height-desktop': `${Math.min(720, Math.max(180, Number(settings.image_height_desktop) || 360))}px`,
+    '--banner-height-mobile': `${Math.min(520, Math.max(140, Number(settings.image_height_mobile) || 240))}px`,
   };
   const content = (
     <div className="promo-banner" style={style} role={alt ? 'img' : undefined} aria-label={alt} />

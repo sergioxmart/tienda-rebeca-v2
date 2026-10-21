@@ -1,6 +1,6 @@
 # Rebeca Andrade v2 — Contexto del proyecto
 
-> **Última actualización: 2026-08-11**
+> **Última actualización: 2026-10-20**
 
 > **Lee esto primero** al entrar al proyecto o al volver después de un tiempo.
 
@@ -41,6 +41,9 @@ Pagos: checkout con **pasarela** (Mercado Pago + ePayco). Stock por
   combinaciones vendibles son filas en `product_variants` con sus
   valores de atributos. La combinación debe ser única dentro del
   mismo producto (enforced por app, 409 si choca).
+- ✅ **Páginas de categoría**: una categoría de productos puede tener
+  módulos adicionales del Builder antes de su catálogo, filtros y
+  paginación. Las categorías de servicios conservan sus landings separadas.
 - ✅ **Stock por variante**, no por producto.
 - ✅ **Moneda**: COP, configurable vía `site_config.currency`.
 - ✅ **Cierre**: checkout con pasarela (Mercado Pago + ePayco). Tabla

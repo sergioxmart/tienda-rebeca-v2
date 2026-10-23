@@ -61,26 +61,46 @@ export default function Media() {
   }, []);
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Solo se permiten imágenes');
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const validFiles = [];
+    const failures = [];
+    files.forEach((file) => {
+      if (!file.type.startsWith('image/')) {
+        failures.push(`${file.name}: solo se permiten imágenes`);
+      } else if (file.size > 5 * 1024 * 1024) {
+        failures.push(`${file.name}: supera el límite de 5 MB`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (!validFiles.length) {
+      toast.error('No se subieron imágenes', failures.join('. '));
+      if (fileRef.current) fileRef.current.value = '';
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('La imagen no puede pesar más de 5 MB');
-      return;
-    }
+
     setUploading(true);
+    let uploaded = 0;
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      if (uploadCategory) fd.append('category_id', uploadCategory);
-      await api.upload('/api/admin/media', fd);
-      toast.success('Imagen subida');
+      for (const file of validFiles) {
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          const defaultAlt = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+          fd.append('alt_text', defaultAlt || file.name);
+          if (uploadCategory) fd.append('category_id', uploadCategory);
+          await api.upload('/api/admin/media', fd);
+          uploaded += 1;
+        } catch (err) {
+          failures.push(`${file.name}: ${err.message || 'no se pudo subir'}`);
+        }
+      }
       await load();
-    } catch (err) {
-      toast.error('No se pudo subir la imagen', err.message);
+      if (uploaded) toast.success(`${uploaded} ${uploaded === 1 ? 'imagen subida' : 'imágenes subidas'}`);
+      if (failures.length) toast.error('Algunos archivos no se subieron', failures.join('. '));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
@@ -132,7 +152,7 @@ export default function Media() {
       <div className="page-header">
         <h1>Imágenes</h1>
         <div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+          <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleUpload} />
           <select className="select media-upload-category" value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} aria-label="Categoría para la imagen nueva">
             <option value="">Categoría automática</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
@@ -200,7 +220,13 @@ export default function Media() {
                 <div className="table-actions" style={{ marginTop: 6 }}>
                   {m.url && <a className="btn btn-sm" href={mediaUrl(m.url)} download={mediaFileName(m)} aria-label={`Descargar ${m.alt_text || 'imagen'}`} title="Descargar imagen">Descargar</a>}
                   <button className="btn btn-sm" onClick={() => openAlt(m)}>Alt</button>
-                  {m.can_delete && <button className="btn btn-sm btn-danger" aria-label={`Eliminar definitivamente ${m.alt_text || 'imagen'}`} title="Eliminar definitivamente" onClick={() => setDeleting(m)}>×</button>}
+                  {m.can_delete && (
+                    <button className="btn btn-sm btn-danger media-delete-button" aria-label={`Eliminar definitivamente ${m.alt_text || 'imagen'}`} title="Eliminar definitivamente" onClick={() => setDeleting(m)}>
+                      <svg aria-hidden="true" viewBox="0 0 20 20" width="21" height="21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3.5 5.5h13M8 5.5V3.75h4V5.5m-6.5 0 .7 10.1c.06.86.77 1.52 1.63 1.52h4.34c.86 0 1.57-.66 1.63-1.52l.7-10.1M8 8.5v5.5m4-5.5v5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -31,11 +31,27 @@ const HERO_POSITION_DEFAULTS = {
 };
 
 const HERO_FONT_FAMILIES = {
+  default: 'inherit',
   display: 'var(--font-display)',
   serif: 'Georgia, "Times New Roman", serif',
   sans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   script: '"Brush Script MT", "Segoe Script", cursive',
 };
+
+function resolveFontFamily(value, customFonts = [], fallbackMap = HERO_FONT_FAMILIES) {
+  if (typeof value === 'string' && value.startsWith('custom:')) {
+    const font = customFonts.find((item) => item.id === value.slice('custom:'.length));
+    if (font?.family) return `"${font.family}", sans-serif`;
+  }
+  return fallbackMap[value] || fallbackMap.display;
+}
+
+function customFontFaceCss(fonts) {
+  const formats = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+  return (Array.isArray(fonts) ? fonts : []).filter((font) => /^RebecaFont_[a-f0-9]+$/i.test(font?.family || '')
+    && /^\/media\/site\/fonts\/\d{4}\/\d{2}\/[0-9a-f-]{36}\.(woff2|woff|ttf|otf)$/i.test(font?.url || '')
+    && formats[font?.format]).map((font) => `@font-face{font-family:"${font.family}";src:url("${font.url}") format("${formats[font.format]}");font-display:swap;}`).join('\n');
+}
 
 const HERO_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
 const GLOBAL_STYLE_DEFAULTS = Object.freeze({
@@ -59,6 +75,7 @@ function normalizeGlobalStyles(config = {}) {
     store_splash_duration: Number.isFinite(duration) ? Math.min(10, Math.max(1, duration)) : GLOBAL_STYLE_DEFAULTS.store_splash_duration,
     store_splash_style: ['image', 'image_title', 'spinner', 'spinner_title'].includes(config.store_splash_style) ? config.store_splash_style : GLOBAL_STYLE_DEFAULTS.store_splash_style,
     store_splash_title: typeof config.store_splash_title === 'string' ? config.store_splash_title : '',
+    store_splash_title_font: typeof config.store_splash_title_font === 'string' ? config.store_splash_title_font : GLOBAL_STYLE_DEFAULTS.store_splash_title_font,
     store_splash_size: Number.isFinite(Number(config.store_splash_size)) ? Math.min(520, Math.max(80, Number(config.store_splash_size))) : GLOBAL_STYLE_DEFAULTS.store_splash_size,
     store_splash_image_url: typeof config.store_splash_image_url === 'string' ? config.store_splash_image_url : '',
     store_splash_image_border_radius: Number.isFinite(imageBorderRadius) ? Math.min(100, Math.max(0, Math.round(imageBorderRadius))) : GLOBAL_STYLE_DEFAULTS.store_splash_image_border_radius,
@@ -494,6 +511,7 @@ const NAV_DEFAULTS = {
   navbar_height: 66,
   navbar_logo_text: 'Rebeca Andrade',
   navbar_logo_font: 'display',
+  store_splash_title_font: 'display',
   navbar_mobile_logo_alignment: 'left',
   navbar_custom_code_enabled: false,
   navbar_custom_code: '',
@@ -567,7 +585,7 @@ function GlobalSpacingField({ field, value, onChange }) {
   );
 }
 
-function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashPreview, onUploadSplashImage, uploadingSplashImage, siteName }) {
+function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashPreview, onUploadSplashImage, uploadingSplashImage, siteName, customFonts = [] }) {
   const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
   const typographyFields = STORE_THEME_FIELDS.slice(4);
   const splashImageBorderRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
@@ -575,6 +593,7 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashP
   const splashUsesTitle = ['image_title', 'spinner_title'].includes(values.store_splash_style);
   const splashSize = Math.min(520, Math.max(80, Number(values.store_splash_size) || 520));
   const splashTitle = values.store_splash_title?.trim() || siteName || 'Rebeca Andrade';
+  const splashTitleFont = resolveFontFamily(values.store_splash_title_font || 'display', customFonts);
   return (
     <div className="builder-global-styles">
       <div className="builder-global-styles-intro">
@@ -615,6 +634,11 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashP
           {splashUsesTitle && <div className="form-group">
             <label htmlFor="builder-splash-title">Título</label>
             <input id="builder-splash-title" className="input" value={values.store_splash_title} onChange={(event) => onChange('store_splash_title', event.target.value)} placeholder="Nombre de la tienda" disabled={!values.store_splash_enabled} />
+            <label htmlFor="builder-splash-title-font">Tipografía del título</label>
+            <select id="builder-splash-title-font" className="select" value={values.store_splash_title_font || 'display'} onChange={(event) => onChange('store_splash_title_font', event.target.value)} disabled={!values.store_splash_enabled}>
+              <option value="display">Editorial · fuente de la tienda</option><option value="serif">Clásica · serif</option><option value="sans">Limpia · sans serif</option><option value="script">Manuscrita · cursiva</option>
+              {customFonts.map((font) => <option key={font.id} value={`custom:${font.id}`}>{font.name}</option>)}
+            </select>
           </div>}
         </div>
         <div className="builder-splash-controls">
@@ -639,9 +663,9 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashP
             ? <span className="spinner builder-splash-spinner" aria-hidden="true" style={{ width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` }} />
             : values.store_splash_image_url
               ? <img className={splashImageBorderRadius === 100 ? 'is-circular' : ''} src={values.store_splash_image_url} alt="" style={splashImageBorderRadius === 100 ? undefined : { borderRadius: `${splashImageBorderRadius / 2}%` }} />
-              : <span className="builder-splash-preview-brand">{splashTitle}</span>}
-          {splashUsesTitle && values.store_splash_image_url && <strong>{splashTitle}</strong>}
-          {values.store_splash_style === 'spinner_title' && <strong>{splashTitle}</strong>}
+              : <span className="builder-splash-preview-brand" style={{ fontFamily: splashTitleFont }}>{splashTitle}</span>}
+          {splashUsesTitle && values.store_splash_image_url && <strong style={{ fontFamily: splashTitleFont }}>{splashTitle}</strong>}
+          {values.store_splash_style === 'spinner_title' && <strong style={{ fontFamily: splashTitleFont }}>{splashTitle}</strong>}
           <span>Ver vista previa</span>
         </button>
         <div className="builder-splash-appearance">
@@ -671,11 +695,12 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashP
   );
 }
 
-function SplashPreviewModal({ open, onClose, values, siteName }) {
+function SplashPreviewModal({ open, onClose, values, siteName, customFonts = [] }) {
   const style = ['image', 'image_title', 'spinner', 'spinner_title'].includes(values.store_splash_style) ? values.store_splash_style : 'image';
   const imageUrl = values.store_splash_image_url || '';
   const imageRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
   const title = values.store_splash_title?.trim() || siteName || 'Rebeca Andrade';
+  const titleFont = resolveFontFamily(values.store_splash_title_font || 'display', customFonts);
   const splashSize = Math.min(520, Math.max(80, Number(values.store_splash_size) || 520));
   const backgroundColor = HERO_COLOR_RE.test(String(values.store_splash_background_color || ''))
     ? values.store_splash_background_color
@@ -691,12 +716,12 @@ function SplashPreviewModal({ open, onClose, values, siteName }) {
     >
       <div className={`builder-splash-preview-stage is-${style}`} style={{ backgroundColor }}>
         {style.startsWith('spinner')
-          ? <div className="builder-splash-spinner-preview"> <span className="spinner builder-splash-preview-stage-spinner" aria-hidden="true" style={{ width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` }} />{style === 'spinner_title' && <strong>{title}</strong>}</div>
+          ? <div className="builder-splash-spinner-preview"> <span className="spinner builder-splash-preview-stage-spinner" aria-hidden="true" style={{ width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` }} />{style === 'spinner_title' && <strong style={{ fontFamily: titleFont }}>{title}</strong>}</div>
           : <div className={`builder-splash-preview-stage-content${style === 'image_title' ? ' has-title' : ''}`}>
             {imageUrl
               ? <img className={imageRadius === 100 ? 'is-circular' : ''} src={imageUrl} alt={style === 'image_title' ? title : siteName} style={{ maxWidth: `min(72vw, ${splashSize}px)`, maxHeight: `min(56vh, ${splashSize}px)`, ...(imageRadius === 100 ? undefined : { borderRadius: `${imageRadius / 2}%` }) }} />
-              : <span className="builder-splash-preview-stage-brand">{title}</span>}
-            {style === 'image_title' && imageUrl && <strong>{title}</strong>}
+              : <span className="builder-splash-preview-stage-brand" style={{ fontFamily: titleFont }}>{title}</span>}
+            {style === 'image_title' && imageUrl && <strong style={{ fontFamily: titleFont }}>{title}</strong>}
             {!imageUrl && <i aria-hidden="true" />}
           </div>}
       </div>
@@ -836,7 +861,7 @@ function LiveStorePreview({ modules, navSettings, globalStyles, pageKey = 'store
   );
 }
 
-function HeroVisualEditor({ settings, onChange }) {
+function HeroVisualEditor({ settings, onChange, customFonts = [] }) {
   const [viewport, setViewport] = useState('desktop');
   const [dragState, setDragState] = useState(null);
   const position = normalizeHeroPosition(settings.content_position);
@@ -845,8 +870,8 @@ function HeroVisualEditor({ settings, onChange }) {
   const heroStyle = settings.hero_style === 'side-panel' ? 'side-panel' : 'classic-overlay';
   const imageUrl = settings.image_url;
   const shadow = normalizeHeroShadow(settings);
-  const textFont = HERO_FONT_FAMILIES[settings.text_font];
-  const buttonFont = HERO_FONT_FAMILIES[settings.button_font];
+  const textFont = resolveFontFamily(settings.text_font, customFonts);
+  const buttonFont = resolveFontFamily(settings.button_font, customFonts);
   const scaleFor = (key) => {
     const value = Number(settings[key]);
     return Number.isFinite(value) ? Math.min(1.2, Math.max(0.1, value / 100)) : 1;
@@ -1211,7 +1236,7 @@ function ImageGalleryField({ value, onChange, onOpenPicker }) {
   );
 }
 
-function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
+function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker, customFonts = [] }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   const logoBorderRadius = Math.min(100, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
   const navbarHeight = Math.min(140, Math.max(66, Number(navSettings.navbar_height) || 66));
@@ -1332,6 +1357,7 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
             <option value="serif">Clásica · serif</option>
             <option value="sans">Limpia · sans serif</option>
             <option value="script">Manuscrita · cursiva</option>
+            {customFonts.map((font) => <option key={font.id} value={`custom:${font.id}`}>{font.name}</option>)}
           </select>
         </div>
       )}
@@ -1388,6 +1414,7 @@ export default function PageBuilder() {
   const [reorderDirty, setReorderDirty] = useState(false);
   const [products, setProducts] = useState([]);
   const [builderCategories, setBuilderCategories] = useState([]);
+  const [customFonts, setCustomFonts] = useState([]);
   const [selectedPageKey, setSelectedPageKey] = useState('store');
   const [navSettings, setNavSettings] = useState(NAV_DEFAULTS);
   const [navSaving, setNavSaving] = useState(false);
@@ -1442,7 +1469,19 @@ export default function PageBuilder() {
   useEffect(() => {
     api.get('/api/admin/products?active=true').then((data) => setProducts(data.products || [])).catch(() => setProducts([]));
     api.get('/api/admin/categories').then((data) => setBuilderCategories((data.categories || []).filter((category) => category.is_service || category.is_custom_page))).catch(() => setBuilderCategories([]));
+    api.get('/api/admin/site-config').then((data) => setCustomFonts(Array.isArray(data.config?.custom_fonts) ? data.config.custom_fonts : [])).catch(() => setCustomFonts([]));
   }, []);
+
+  useEffect(() => {
+    const styleId = 'builder-custom-font-faces';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = customFontFaceCss(customFonts);
+  }, [customFonts]);
 
   useEffect(() => {
     if (selectedPageKey !== 'store' && !builderCategories.some((category) => (category.is_service ? `service:${category.slug}` : `category:${category.slug}`) === selectedPageKey)) {
@@ -1838,6 +1877,7 @@ export default function PageBuilder() {
       ) : f.type === 'select' ? (
         <select className="select" value={editing.settings[f.key] ?? f.defaultValue ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
           {(f.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          {['text_font', 'button_font'].includes(f.key) && customFonts.map((font) => <option key={font.id} value={`custom:${font.id}`}>{font.name}</option>)}
         </select>
       ) : f.type === 'product' ? (
         <select className="select" value={editing.settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}>
@@ -1947,10 +1987,10 @@ export default function PageBuilder() {
           </>
         }
       >
-        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onOpenSplashPicker={openSplashPicker} onOpenSplashPreview={() => setSplashPreviewOpen(true)} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} siteName={navSettings.site_name} />
+        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onOpenSplashPicker={openSplashPicker} onOpenSplashPreview={() => setSplashPreviewOpen(true)} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} siteName={navSettings.site_name} customFonts={customFonts} />
       </Modal>
 
-      <SplashPreviewModal open={splashPreviewOpen} onClose={() => setSplashPreviewOpen(false)} values={globalStyles} siteName={navSettings.site_name} />
+      <SplashPreviewModal open={splashPreviewOpen} onClose={() => setSplashPreviewOpen(false)} values={globalStyles} siteName={navSettings.site_name} customFonts={customFonts} />
 
       <Modal
         open={navbarOpen}
@@ -1973,6 +2013,7 @@ export default function PageBuilder() {
           addNavLink={addNavLink}
           removeNavLink={removeNavLink}
           onOpenLogoPicker={openNavLogoPicker}
+          customFonts={customFonts}
         />
       </Modal>
 
@@ -2052,7 +2093,7 @@ export default function PageBuilder() {
               </div>
             ) : schema.settings.map(renderSettingField)}
           </form> : modalTab === 'visual' ? (
-            <HeroVisualEditor settings={editing.settings} onChange={(value) => setSetting('content_position', value)} />
+            <HeroVisualEditor settings={editing.settings} onChange={(value) => setSetting('content_position', value)} customFonts={customFonts} />
           ) : <LiveStorePreview modules={[editing]} pageKey={editing.page_key || selectedPageKey} navSettings={navSettings} globalStyles={globalStyles} title="Vista previa real del módulo" />}
           </>
         )}

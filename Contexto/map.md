@@ -1,6 +1,6 @@
 # Rebeca Andrade v2 — Mapa del repositorio
 
-> **Última actualización: 2026-10-20**
+> **Última actualización: 2026-10-23**
 
 > Este es el mapa maestro. Sirve para llegar al archivo de cualquier
 > funcionalidad **sin explorar todo el repo**. Si algo no está aquí
@@ -105,6 +105,7 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
 | Splash de bienvenida | Capa inicial; configura tamaño, duración, imagen, imagen + título, spinner o spinner + título desde el Builder | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
+| Fuentes personalizadas | Admin carga y administra archivos de fuente; Nav Bar, Hero y splash pueden seleccionarlos | [`web/web-admin/src/pages/SiteConfig.jsx`](../web/web-admin/src/pages/SiteConfig.jsx), [`web/server/routes/admin/site-config.js`](../web/server/routes/admin/site-config.js), [`web/web-store/src/site/SiteContext.jsx`](../web/web-store/src/site/SiteContext.jsx) |
 | Favicon dinámico | usa el logo del navbar en la pestaña de la tienda y del panel | [`web/web-store/src/site/SiteContext.jsx`](../web/web-store/src/site/SiteContext.jsx), [`web/web-admin/src/components/Layout.jsx`](../web/web-admin/src/components/Layout.jsx) |
 | Cliente API | wrapper de `fetch` a `/api/public/*` | [`web/web-store/src/api.js`](../web/web-store/src/api.js) |
 

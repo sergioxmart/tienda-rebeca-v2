@@ -20,7 +20,22 @@ import { query, tx } from '../../lib/db.js';
 import { log } from '../../lib/logger.js';
 import { json } from '../../lib/json.js';
 import { upload, writeUploadFile, deleteUploadFile } from '../../lib/uploads.js';
+import multer from 'multer';
+import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
+import { env } from '../../lib/env.js';
 import { protect, recordAudit } from './_helpers.js';
+
+const FONT_EXTENSIONS = new Set(['.woff2', '.woff', '.ttf', '.otf']);
+const fontUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    const extension = extname(file.originalname || '').toLowerCase();
+    cb(null, FONT_EXTENSIONS.has(extension));
+  },
+});
 
 function normalizeMediaUrl(value) {
   return typeof value === 'string' && value.startsWith('/site/')
@@ -69,6 +84,68 @@ export async function getSiteConfig(req, res) {
       : r.value;
   }
   return json(res, 200, { ok: true, config: out });
+}
+
+export async function uploadCustomFont(req, res) {
+  fontUpload.single('file')(req, res, async (err) => {
+    if (err) {
+      log.warn('font upload error', { msg: err.message });
+      return json(res, 400, { ok: false, error: 'upload_failed', message: err.message });
+    }
+    if (!req.file) return json(res, 400, { ok: false, error: 'font_file_required_or_unsupported' });
+
+    const extension = extname(req.file.originalname || '').toLowerCase();
+    if (!FONT_EXTENSIONS.has(extension)) return json(res, 400, { ok: false, error: 'unsupported_font_format' });
+    const id = randomUUID();
+    const family = `RebecaFont_${id.replaceAll('-', '')}`;
+    const now = new Date();
+    const year = String(now.getFullYear());
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const filename = `${id}${extension}`;
+    const directory = join(env.UPLOADS_DIR, 'site', 'fonts', year, month);
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(directory, filename), req.file.buffer, { flag: 'wx' });
+
+    const fallbackName = (req.file.originalname || 'Fuente').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+    const name = String(req.body?.name || fallbackName || 'Fuente').trim().slice(0, 80) || 'Fuente';
+    const font = { id, name, family, url: `/media/site/fonts/${year}/${month}/${filename}`, format: extension.slice(1) };
+    try {
+      await tx(async (client) => {
+        const { rows } = await client.query(`SELECT value FROM site_config WHERE key = 'custom_fonts'`);
+        const fonts = Array.isArray(rows[0]?.value) ? rows[0].value : [];
+        await client.query(
+          `INSERT INTO site_config (key, value, updated_at)
+           VALUES ('custom_fonts', $1::jsonb, NOW())
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+          [JSON.stringify([...fonts, font])],
+        );
+      });
+    } catch (saveError) {
+      try { await deleteUploadFile(font.url); } catch { /* best effort */ }
+      throw saveError;
+    }
+    await recordAudit(req.user?.id, 'site_config.font_upload', req.ip, { id, name, url: font.url });
+    return json(res, 201, { ok: true, font });
+  });
+}
+
+export async function deleteCustomFont(req, res, id) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return json(res, 400, { ok: false, error: 'invalid_font_id' });
+  let removed = null;
+  await tx(async (client) => {
+    const { rows } = await client.query(`SELECT value FROM site_config WHERE key = 'custom_fonts' FOR UPDATE`);
+    const fonts = Array.isArray(rows[0]?.value) ? rows[0].value : [];
+    removed = fonts.find((font) => font?.id === id) || null;
+    if (!removed) return;
+    await client.query(
+      `UPDATE site_config SET value = $1::jsonb, updated_at = NOW() WHERE key = 'custom_fonts'`,
+      [JSON.stringify(fonts.filter((font) => font?.id !== id))],
+    );
+  });
+  if (!removed) return json(res, 404, { ok: false, error: 'font_not_found' });
+  try { await deleteUploadFile(removed.url); } catch (err) { log.warn('font file delete error', { id, msg: err.message }); }
+  await recordAudit(req.user?.id, 'site_config.font_delete', req.ip, { id, name: removed.name });
+  return json(res, 200, { ok: true });
 }
 
 export async function updateSiteConfig(req, res) {
@@ -328,6 +405,8 @@ const routes = [
   { method: 'PATCH',  pattern: /^\/api\/admin\/site-config\/?$/,       handler: updateSiteConfig, section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: uploadLogo,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/splash-image\/?$/, handler: uploadSplashImage, section: 'site_config' },
+  { method: 'POST',   pattern: /^\/api\/admin\/site-config\/fonts\/?$/, handler: uploadCustomFont, section: 'site_config' },
+  { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/fonts\/([0-9a-f-]{36})\/?$/i, handler: deleteCustomFont, section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/logo\/?$/, handler: deleteLogo,       section: 'site_config' },
   { method: 'POST',   pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: uploadLoginBackground, section: 'site_config' },
   { method: 'DELETE', pattern: /^\/api\/admin\/site-config\/login-background\/?$/, handler: deleteLoginBackground, section: 'site_config' },

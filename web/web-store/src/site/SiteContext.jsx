@@ -67,6 +67,21 @@ export function SiteProvider({ children }) {
     icon.href = iconUrl;
   }, [visibleSite]);
 
+  useEffect(() => {
+    const styleId = 'store-custom-font-faces';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    const formats = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+    const fonts = Array.isArray(visibleSite?.custom_fonts) ? visibleSite.custom_fonts : [];
+    style.textContent = fonts.filter((font) => /^RebecaFont_[a-f0-9]+$/i.test(font?.family || '')
+      && /^\/media\/site\/fonts\/\d{4}\/\d{2}\/[0-9a-f-]{36}\.(woff2|woff|ttf|otf)$/i.test(font?.url || '')
+      && formats[font?.format]).map((font) => `@font-face{font-family:"${font.family}";src:url("${font.url}") format("${formats[font.format]}");font-display:swap;}`).join('\n');
+  }, [visibleSite?.custom_fonts]);
+
   return (
     <SiteContext.Provider value={{ site: visibleSite, categories, siteLoading }}>
       {children}

@@ -13,6 +13,10 @@ const CONTENT_TYPES = {
   '.png':  'image/png',
   '.webp': 'image/webp',
   '.avif': 'image/avif',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
   '.mp4':  'video/mp4',
   '.webm': 'video/webm',
 };

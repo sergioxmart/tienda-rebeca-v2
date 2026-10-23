@@ -1267,3 +1267,7 @@ p { margin: 0 0 12px; }
 @media (max-width: 680px) { .builder-splash-controls { grid-template-columns: 1fr; } }
 @media (max-width: 680px) { .builder-splash-appearance { grid-template-columns: 1fr; } }
 @media (max-width: 680px) { .builder-splash-style-row { grid-template-columns: 1fr; } }
+.custom-font-list { display: grid; gap: 8px; }
+.custom-font-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-surface); }
+.custom-font-row > div { min-width: 0; display: grid; gap: 4px; }
+.custom-font-row .help { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

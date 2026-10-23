@@ -119,6 +119,7 @@ export default function SiteConfig() {
   const toast = useToast();
   const fileRef = useRef(null);
   const bgFileRef = useRef(null);
+  const fontFileRef = useRef(null);
   const [config, setConfig] = useState({ ...ADMIN_THEME_DEFAULTS });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,6 +129,10 @@ export default function SiteConfig() {
   const [logoVersion, setLogoVersion] = useState(() => Date.now());
   const [purchaseModePending, setPurchaseModePending] = useState(null);
   const [purchaseModeSaving, setPurchaseModeSaving] = useState(false);
+  const [fontManagerOpen, setFontManagerOpen] = useState(false);
+  const [fontName, setFontName] = useState('');
+  const [fontFile, setFontFile] = useState(null);
+  const [fontBusy, setFontBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -146,6 +151,21 @@ export default function SiteConfig() {
       }
     })();
   }, [toast]);
+
+  useEffect(() => {
+    const styleId = 'admin-custom-font-faces';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    const formats = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+    const fonts = Array.isArray(config.custom_fonts) ? config.custom_fonts : [];
+    style.textContent = fonts.filter((font) => /^RebecaFont_[a-f0-9]+$/i.test(font?.family || '')
+      && /^\/media\/site\/fonts\/\d{4}\/\d{2}\/[0-9a-f-]{36}\.(woff2|woff|ttf|otf)$/i.test(font?.url || '')
+      && formats[font?.format]).map((font) => `@font-face{font-family:"${font.family}";src:url("${font.url}") format("${formats[font.format]}");font-display:swap;}`).join('\n');
+  }, [config.custom_fonts]);
 
   const setKey = (k, v) => setConfig((cur) => {
     const next = { ...cur, [k]: v };
@@ -316,6 +336,52 @@ export default function SiteConfig() {
     }
   };
 
+  const handleFontUpload = async () => {
+    if (!fontFile) {
+      toast.error('Selecciona un archivo de fuente');
+      return;
+    }
+    const extension = fontFile.name.split('.').pop()?.toLowerCase();
+    if (!['woff2', 'woff', 'ttf', 'otf'].includes(extension)) {
+      toast.error('Usa una fuente WOFF2, WOFF, TTF u OTF');
+      return;
+    }
+    if (fontFile.size > 12 * 1024 * 1024) {
+      toast.error('La fuente no puede pesar más de 12 MB');
+      return;
+    }
+    setFontBusy(true);
+    try {
+      const form = new FormData();
+      form.append('name', fontName.trim());
+      form.append('file', fontFile);
+      const data = await api.upload('/api/admin/site-config/fonts', form);
+      setConfig((current) => ({ ...current, custom_fonts: [...(Array.isArray(current.custom_fonts) ? current.custom_fonts : []), data.font] }));
+      setFontName('');
+      setFontFile(null);
+      if (fontFileRef.current) fontFileRef.current.value = '';
+      toast.success('Fuente cargada');
+    } catch (err) {
+      toast.error('No se pudo cargar la fuente', err.message);
+    } finally {
+      setFontBusy(false);
+    }
+  };
+
+  const handleFontDelete = async (font) => {
+    if (!confirm(`¿Eliminar la fuente “${font.name}”? Dejará de estar disponible en los diseños que la usan.`)) return;
+    setFontBusy(true);
+    try {
+      await api.delete(`/api/admin/site-config/fonts/${font.id}`);
+      setConfig((current) => ({ ...current, custom_fonts: (Array.isArray(current.custom_fonts) ? current.custom_fonts : []).filter((item) => item.id !== font.id) }));
+      toast.success('Fuente eliminada');
+    } catch (err) {
+      toast.error('No se pudo eliminar la fuente', err.message);
+    } finally {
+      setFontBusy(false);
+    }
+  };
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><span className="spinner" /></div>;
 
   const logoSrc = config.logo_url
@@ -334,6 +400,47 @@ export default function SiteConfig() {
       <p style={{ color: 'var(--color-muted)' }}>
         Datos de contacto, redes sociales, branding y claves públicas de pago. Las claves secretas van en variables de entorno, no acá.
       </p>
+
+      <div className="config-card">
+        <div className="config-card-heading">
+          <div><h3>Fuentes de la tienda</h3><p>Sube fuentes para usarlas en el Nav Bar, el Hero y la pantalla de bienvenida.</p></div>
+          <span className="config-card-icon">Aa</span>
+        </div>
+        <div className="background-upload-row">
+          <button className="btn" type="button" onClick={() => setFontManagerOpen(true)}>Administrar fuentes</button>
+          <span className="help">{Array.isArray(config.custom_fonts) ? config.custom_fonts.length : 0} fuentes cargadas</span>
+        </div>
+      </div>
+
+      <Modal
+        open={fontManagerOpen}
+        onClose={() => !fontBusy && setFontManagerOpen(false)}
+        title="Fuentes de la tienda"
+        size="lg"
+        footer={<button className="btn" type="button" onClick={() => setFontManagerOpen(false)} disabled={fontBusy}>Cerrar</button>}
+      >
+        <div className="form-group">
+          <label htmlFor="custom-font-name">Nombre para mostrar</label>
+          <input id="custom-font-name" className="input" value={fontName} onChange={(event) => setFontName(event.target.value)} placeholder={fontFile?.name?.replace(/\.[^.]+$/, '') || 'Ej. Cormorant Garamond'} maxLength={80} />
+        </div>
+        <div className="background-upload-row">
+          <input ref={fontFileRef} type="file" accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" hidden onChange={(event) => setFontFile(event.target.files?.[0] || null)} />
+          <button className="btn" type="button" onClick={() => fontFileRef.current?.click()} disabled={fontBusy}>{fontFile ? 'Cambiar archivo' : 'Elegir archivo de fuente'}</button>
+          {fontFile && <span className="help">{fontFile.name} · {(fontFile.size / 1024 / 1024).toFixed(2)} MB</span>}
+          <button className="btn btn-primary" type="button" onClick={handleFontUpload} disabled={fontBusy || !fontFile}>{fontBusy ? <span className="spinner" /> : 'Cargar fuente'}</button>
+        </div>
+        <p className="help">Formatos WOFF2, WOFF, TTF y OTF. Tamaño máximo: 12 MB.</p>
+        <hr />
+        <h3>Fuentes cargadas</h3>
+        {Array.isArray(config.custom_fonts) && config.custom_fonts.length ? (
+          <div className="custom-font-list">
+            {config.custom_fonts.map((font) => <div className="custom-font-row" key={font.id}>
+              <div><strong style={{ fontFamily: `"${font.family}", sans-serif`, fontSize: 22 }}>{font.name}</strong><span className="help">{font.format?.toUpperCase()} · {font.url}</span></div>
+              <button className="btn btn-danger btn-sm" type="button" onClick={() => handleFontDelete(font)} disabled={fontBusy}>Eliminar</button>
+            </div>)}
+          </div>
+        ) : <p className="help">Todavía no has cargado fuentes personalizadas.</p>}
+      </Modal>
 
       <div className="config-card">
         <div className="config-card-heading">

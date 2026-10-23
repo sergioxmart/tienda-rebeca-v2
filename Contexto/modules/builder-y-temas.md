@@ -36,7 +36,8 @@ habitual de esa categoría. Las páginas conservan el Navbar y Footer globales.
   navbar, colores de tienda, ajustes de splash y fondo del login admin).
 - La configuración del Nav Bar se edita en un modal del Builder. Incluye
   visibilidad, enlaces, código personalizado y una alternativa de logo
-  textual con familia tipográfica predefinida; las claves
+  textual con familia tipográfica predefinida o fuentes cargadas desde
+  Configuración del sitio; las claves
   `navbar_logo_mode`, `navbar_logo_text`, `navbar_logo_font` y
   `navbar_show_store` viajan en el mismo subset de `site_config`. También
   permite combinar el logo cargado o personalizado con texto, ajustar la
@@ -44,7 +45,9 @@ habitual de esa categoría. Las páginas conservan el Navbar y Footer globales.
   cuánto puede crecer el logo dentro de esa altura.
 - La pantalla de bienvenida se configura en Estilos globales: imagen con
   fondo, imagen junto al título, spinner circular o spinner con título. El
-  borrador incluye estilo, tamaño, duración, imagen, redondez y color de fondo.
+  borrador incluye estilo, tamaño, duración, imagen, redondez, color de fondo
+  y tipografía del título. Las fuentes personalizadas también se pueden
+  seleccionar para los textos del Hero.
 - El spinner del splash usa el indicador circular compartido por la aplicación;
   el logo configurado en el navbar también se aplica como favicon en la tienda
   y el panel admin.

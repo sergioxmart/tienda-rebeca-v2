@@ -65,6 +65,10 @@ export default function Header() {
     ? { width: `${logoMaxHeight}px`, height: `${logoMaxHeight}px`, maxWidth: `${logoMaxHeight}px`, maxHeight: `${logoMaxHeight}px`, borderRadius: '50%', objectFit: 'cover' }
     : { maxHeight: `${logoMaxHeight}px`, borderRadius: `${logoBorderRadius / 2}%` };
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;
+  const selectedLogoFont = typeof site?.navbar_logo_font === 'string' && site.navbar_logo_font.startsWith('custom:')
+    ? site?.custom_fonts?.find((font) => font.id === site.navbar_logo_font.slice('custom:'.length))
+    : null;
+  const resolvedLogoFontFamily = selectedLogoFont?.family ? `"${selectedLogoFont.family}", sans-serif` : logoFontFamily;
   const mobileLogoAlignment = site?.navbar_mobile_logo_alignment === 'center' ? 'center' : 'left';
   const visibleCategories = Array.isArray(categories) ? categories.slice(0, 5) : [];
   const customLinks = Array.isArray(site?.navbar_links)
@@ -206,7 +210,7 @@ export default function Header() {
         </button>
         <Link to="/" className={`logo site-header__logo site-header__logo--mobile-${mobileLogoAlignment}`} aria-label={`Ir al inicio de ${name}`}>
           {useImageLogo && logoUrl && <img src={logoUrl} alt={name} style={logoShapeStyle} />}
-          {useTextLogo && <span className="logo-text" style={{ fontFamily: logoFontFamily }}>{textLogo}</span>}
+          {useTextLogo && <span className="logo-text" style={{ fontFamily: resolvedLogoFontFamily }}>{textLogo}</span>}
           {useImageLogo && !logoUrl && <><span className="logo-mark">T</span>{!useTextLogo && <span>{name}<span className="accent">.</span></span>}</>}
         </Link>
         <nav className="nav site-nav" aria-label="Navegación principal">

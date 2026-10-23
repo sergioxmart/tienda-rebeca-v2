@@ -1,6 +1,6 @@
 # TechStore — API reference
 
-> **Última actualización: 2026-10-20**
+> **Última actualización: 2026-10-23**
 
 Documento de referencia de los endpoints HTTP. La fuente de verdad es el
 código en `web/server/routes/`. Este doc se mantiene al día con cada
@@ -58,7 +58,7 @@ no tiene `section`, devuelve 403.
 
 | Método | Path | Query / Body | Notas |
 | ------ | ---- | ------------ | ----- |
-| GET | `/api/public/site-config` | — | `site_name`, contacto, moneda, branding. Cacheable. |
+| GET | `/api/public/site-config` | — | `site_name`, contacto, branding y lista de fuentes personalizadas (`custom_fonts`). Cacheable. |
 | GET | `/api/public/categories` | — | Lista categorías activas. Incluye `is_service` y `is_custom_page` para identificar páginas especiales del Builder. |
 | GET | `/api/public/categories/:slug` | — | Detalle de una categoría. |
 | GET | `/api/public/attributes` | — | Lista de atributos globales con sus valores. Para los filtros del catálogo. |
@@ -188,6 +188,8 @@ de una transacción y crean un movimiento auditable.
 | ------ | ---- | ---- | ------- |
 | GET | `/api/admin/site-config` | — | `site_config` |
 | PATCH | `/api/admin/site-config` | `{ key: value, ... }` (incluye colores admin y posiciones/zoom `admin_*_bg_position_x`, `admin_*_bg_position_y`, `admin_*_bg_zoom`) | `site_config` |
+| POST | `/api/admin/site-config/fonts` | `multipart/form-data` con `name?` y `file` (WOFF2, WOFF, TTF u OTF; máximo 12 MB) | Carga una fuente y la agrega a `custom_fonts`, disponible en el sitio público. |
+| DELETE | `/api/admin/site-config/fonts/:id` | — | Elimina una fuente de la biblioteca y su archivo. |
 | POST | `/api/admin/site-config/logo` | `multipart/form-data` con `file` | Sube o reemplaza el logo. Devuelve una URL pública `/media/site/...`. |
 | POST | `/api/admin/site-config/splash-image` | `multipart/form-data` con `file` (JPEG, PNG, WebP, AVIF o GIF) | Sube un recurso; devuelve la URL `/media/site/...` sin publicarla hasta guardar y publicar el borrador del Builder. |
 | DELETE | `/api/admin/site-config/logo` | — | Elimina el logo actual y deja `logo_url` en `null`. |

@@ -63,15 +63,19 @@ function StoreSplash() {
   const splashTitle = typeof site?.store_splash_title === 'string' && site.store_splash_title.trim()
     ? site.store_splash_title.trim()
     : siteName;
+  const selectedSplashFont = typeof site?.store_splash_title_font === 'string' && site.store_splash_title_font.startsWith('custom:')
+    ? site?.custom_fonts?.find((font) => font.id === site.store_splash_title_font.slice('custom:'.length))
+    : null;
+  const splashTitleFont = selectedSplashFont?.family ? `"${selectedSplashFont.family}", sans-serif` : undefined;
   const spinnerStyle = { width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` };
   return (
     <div className={`store-splash store-splash--${splashStyle}`} style={{ backgroundColor }} role="status" aria-live="polite" aria-label="Cargando tienda">
       {splashStyle.startsWith('spinner')
-        ? <div className="store-splash-spinner-content"><span className="spinner store-splash-spinner" style={spinnerStyle} aria-hidden="true" />{splashStyle === 'spinner_title' && <span className="store-splash-title">{splashTitle}</span>}</div>
+        ? <div className="store-splash-spinner-content"><span className="spinner store-splash-spinner" style={spinnerStyle} aria-hidden="true" />{splashStyle === 'spinner_title' && <span className="store-splash-title" style={{ fontFamily: splashTitleFont }}>{splashTitle}</span>}</div>
         : imageUrl
           ? <div className={`store-splash-content${splashStyle === 'image_title' ? ' has-title' : ''}`}>
             <img className={`store-splash-image${isCircularImage ? ' is-circular' : ''}`} src={imageUrl} alt={splashStyle === 'image_title' ? splashTitle : siteName} style={{ maxWidth: `min(78vw, ${splashSize}px)`, maxHeight: `min(72vh, ${splashSize}px)`, ...(isCircularImage ? undefined : { borderRadius: `${safeImageBorderRadius / 2}%` }) }} />
-            {splashStyle === 'image_title' && <span className="store-splash-title">{splashTitle}</span>}
+            {splashStyle === 'image_title' && <span className="store-splash-title" style={{ fontFamily: splashTitleFont }}>{splashTitle}</span>}
           </div>
           : <div className="store-splash-brand"><span>{splashStyle === 'image_title' ? splashTitle : siteName}</span><i aria-hidden="true" /></div>}
     </div>

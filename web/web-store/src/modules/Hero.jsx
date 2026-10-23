@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import Price from '../components/Price.jsx';
 import CustomCode from './CustomCode.jsx';
 import { normalizeMediaPlacement } from './mediaPlacement.js';
+import { useSite } from '../site/SiteContext.jsx';
 
 const HERO_FONT_FAMILIES = {
   display: 'var(--font-display)',
@@ -30,6 +31,7 @@ function normalizeTextScale(value, fallback = 100) {
 }
 
 export default function Hero({ settings = {} }) {
+  const { site } = useSite();
   const {
     title,
     subtitle,
@@ -99,8 +101,11 @@ export default function Hero({ settings = {} }) {
   const shadowColor = colorToRgba(shadow_color, shadowAlpha);
   const textShadow = shadow_enabled ? `0 2px ${shadowBlur}px ${shadowColor}` : 'none';
   const buttonShadow = shadow_enabled ? `0 8px ${shadowBlur + 7}px ${shadowColor}` : 'none';
-  const textFontFamily = HERO_FONT_FAMILIES[text_font];
-  const buttonFontFamily = HERO_FONT_FAMILIES[button_font];
+  const customFontFamily = (value) => value?.startsWith('custom:')
+    ? site?.custom_fonts?.find((font) => font.id === value.slice('custom:'.length))?.family
+    : null;
+  const textFontFamily = customFontFamily(text_font) ? `"${customFontFamily(text_font)}", sans-serif` : HERO_FONT_FAMILIES[text_font];
+  const buttonFontFamily = customFontFamily(button_font) ? `"${customFontFamily(button_font)}", sans-serif` : HERO_FONT_FAMILIES[button_font];
   const [product, setProduct] = useState(null);
 
   useEffect(() => {

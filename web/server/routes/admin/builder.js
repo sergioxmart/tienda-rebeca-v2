@@ -18,7 +18,7 @@ export const BUILDER_CONFIG_KEYS = [
   'navbar_custom_code_enabled', 'navbar_custom_code',
   'store_accent_color', 'store_primary_color', 'store_surface_color', 'store_background_color',
   'store_heading_color', 'store_product_name_color', 'store_price_color', 'store_body_text_color',
-  'store_splash_enabled', 'store_splash_duration', 'store_splash_style', 'store_splash_title', 'store_splash_size', 'store_splash_image_url',
+  'store_splash_enabled', 'store_splash_duration', 'store_splash_style', 'store_splash_title', 'store_splash_title_font', 'store_splash_size', 'store_splash_image_url',
   'store_splash_image_border_radius', 'store_splash_background_color',
 ];
 

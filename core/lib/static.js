@@ -18,7 +18,7 @@
 // `publicDir` relativo al archivo de core (compat con versiones viejas).
 
 import { statSync, existsSync } from 'node:fs';
-import { join, normalize } from 'node:path';
+import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { serveFile as serveFileBase } from './file.js';
@@ -39,6 +39,15 @@ function safeJoin(base, rel) {
 }
 // Exportado para tests; el llamador nunca lo necesita.
 export { safeJoin };
+
+function serveStaticFile(path, req, res) {
+  // El HTML contiene referencias con hash a los bundles compilados. Revalidarlo
+  // siempre evita que el navegador conserve un index viejo después de un build.
+  const cacheControl = extname(path).toLowerCase() === '.html'
+    ? 'no-cache, no-store, must-revalidate'
+    : 'public, max-age=3600';
+  return serveFileBase(path, req, res, { cacheControl });
+}
 
 export function createStaticHandler({
   publicDir,
@@ -75,9 +84,9 @@ export function createStaticHandler({
       const direct = safeJoin(ADMIN_DIR_N, pathname === '/' ? '/index.html' : pathname);
       if (direct === null) return notFound(res);
       if (existsSync(direct) && statSync(direct).isFile()) {
-        return serveFileBase(direct, req, res);
+        return serveStaticFile(direct, req, res);
       }
-      return serveFileBase(ADMIN_FALLBACK, req, res);
+      return serveStaticFile(ADMIN_FALLBACK, req, res);
     }
 
     // Admin (prefijo)
@@ -86,9 +95,9 @@ export function createStaticHandler({
       const direct = safeJoin(ADMIN_DIR_N, rel === '/' ? '/index.html' : rel);
       if (direct === null) return notFound(res); // path traversal
       if (existsSync(direct) && statSync(direct).isFile()) {
-        return serveFileBase(direct, req, res);
+        return serveStaticFile(direct, req, res);
       }
-      return serveFileBase(ADMIN_FALLBACK, req, res);
+      return serveStaticFile(ADMIN_FALLBACK, req, res);
     }
 
     // /admin (sin trailing slash) → redirigir al index
@@ -105,9 +114,9 @@ export function createStaticHandler({
     const direct = safeJoin(STORE_DIR_N, pathname === '/' ? '/index.html' : pathname);
     if (direct === null) return notFound(res); // path traversal
     if (existsSync(direct) && statSync(direct).isFile()) {
-      return serveFileBase(direct, req, res);
+      return serveStaticFile(direct, req, res);
     }
-    return serveFileBase(STORE_FALLBACK, req, res);
+    return serveStaticFile(STORE_FALLBACK, req, res);
   };
 }
 

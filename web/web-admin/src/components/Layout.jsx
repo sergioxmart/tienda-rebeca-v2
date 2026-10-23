@@ -100,7 +100,15 @@ export default function Layout() {
           setSite({
             site_name: data.config.site_name || 'Rebeca Andrade',
             logo_url: data.config.logo_url || null,
+            navbar_custom_logo_url: data.config.navbar_custom_logo_url || null,
           });
+          document.title = `${data.config.site_name || 'Rebeca Andrade'} · Admin`;
+          const iconUrl = data.config.navbar_custom_logo_url || data.config.logo_url;
+          if (iconUrl) {
+            let icon = document.querySelector('link[rel~="icon"]');
+            if (!icon) { icon = document.createElement('link'); icon.rel = 'icon'; document.head.appendChild(icon); }
+            icon.href = iconUrl;
+          }
         }
       })
       .catch(() => {});

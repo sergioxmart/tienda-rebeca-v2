@@ -87,7 +87,7 @@ modelos de dominio conviviendo.
 | Ubicaciones Colombia | catálogo depto/ciudad + geocoding de direcciones | [`web/server/lib/colombia-locations.js`](../web/server/lib/colombia-locations.js), [`geocoding.js`](../web/server/lib/geocoding.js) | — |
 | Re-exports a `core/` | `web/server/lib/*` y `middleware/*` son 1-liners hacia `core/` | [`web/server/lib/`](../web/server/lib/), [`middleware/`](../web/server/middleware/) | [conventions.md](./conventions.md) |
 | Scripts | `setup-db.js`, `migrate.js`, `create-admin.js` | [`web/server/scripts/`](../web/server/scripts/) | [dev-setup.md](./dev-setup.md) |
-| Migraciones SQL | baseline `001` + migraciones forward-only; `011` agrega servicios y scopes del Builder | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
+| Migraciones SQL | baseline `001` + migraciones forward-only; `013` agrega encuadre por imagen de la galería de producto | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 
 ### `web/web-store/` — tienda pública (SPA)
 
@@ -98,12 +98,14 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | Módulo | Qué hace | Ruta |
 | ------ | -------- | ---- |
 | Páginas | Home, Catalog, ProductPage, Cart, Checkout, PaymentResponse, CustomerAccount | [`web/web-store/src/pages/`](../web/web-store/src/pages/) |
+| Encuadre de galería de producto | posición focal y zoom por foto de variante se guardan en multimedia y se aplican en el detalle | [`web/web-admin/src/components/VariantEditor.jsx`](../web/web-admin/src/components/VariantEditor.jsx), [`web/server/routes/admin/product-media.js`](../web/server/routes/admin/product-media.js), [`web/web-store/src/pages/ProductPage.jsx`](../web/web-store/src/pages/ProductPage.jsx) |
 | Carrito | contexto + persistencia en localStorage | [`web/web-store/src/cart/`](../web/web-store/src/cart/) |
 | Módulos del builder | renderers de `page_modules`; el registry mapea `type` → componente; `page_key` separa tienda, servicios y contenido adicional de categorías | [`web/web-store/src/modules/registry.js`](../web/web-store/src/modules/registry.js), [`web/web-store/src/modules/PageModulesContext.jsx`](../web/web-store/src/modules/PageModulesContext.jsx) |
 | Galería del builder | collage o carrusel de imágenes elegidas desde Media; el banner admite altura configurable por dispositivo | [`web/web-store/src/modules/ImageGallery.jsx`](../web/web-store/src/modules/ImageGallery.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
-| Splash de bienvenida | Capa inicial de la página principal; ajustes de activación, duración e imagen/GIF en el modal de estilos globales del Builder (`site_config`) | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
+| Splash de bienvenida | Capa inicial; configura tamaño, duración, imagen, imagen + título, spinner o spinner + título desde el Builder | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
+| Favicon dinámico | usa el logo del navbar en la pestaña de la tienda y del panel | [`web/web-store/src/site/SiteContext.jsx`](../web/web-store/src/site/SiteContext.jsx), [`web/web-admin/src/components/Layout.jsx`](../web/web-admin/src/components/Layout.jsx) |
 | Cliente API | wrapper de `fetch` a `/api/public/*` | [`web/web-store/src/api.js`](../web/web-store/src/api.js) |
 
 ### `web/web-admin/` — panel admin (SPA)

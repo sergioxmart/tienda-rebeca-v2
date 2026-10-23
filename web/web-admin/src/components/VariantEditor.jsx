@@ -39,6 +39,10 @@ function TrashIcon() {
   return <svg className="icon-trash" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h8l1-13M10 11v6m4-6v6" /></svg>;
 }
 
+function ZoomIcon() {
+  return <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5M10.8 7.5v6.6M7.5 10.8h6.6"/></svg>;
+}
+
 function variantLabel(variant) {
   const combination = (variant.attribute_values || [])
     .map((value) => `${value.attribute_name}: ${value.value}`)
@@ -66,6 +70,8 @@ export default function VariantEditor({ productId, variants, attributes, categor
   const [selectedId, setSelectedId] = useState(null);
   const [moving, setMoving] = useState(false);
   const [media, setMedia] = useState([]);
+  const [framingMedia, setFramingMedia] = useState(null);
+  const [framingDraft, setFramingDraft] = useState({ x: 50, y: 50, zoom: 100 });
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const mediaBusyRef = useRef(false);
@@ -370,6 +376,27 @@ export default function VariantEditor({ productId, variants, attributes, categor
       toast.error('No se pudo cambiar el orden', err.message);
       await loadMedia(editing.id);
     } finally { setMediaBusy(false); }
+  };
+
+  const openMediaFraming = (item) => {
+    setFramingMedia(item);
+    setFramingDraft({ x: Number(item.focal_position_x ?? 50), y: Number(item.focal_position_y ?? 50), zoom: Number(item.focal_zoom ?? 100) });
+  };
+
+  const saveMediaFraming = async () => {
+    if (!framingMedia) return;
+    setMediaBusy(true);
+    try {
+      const { media: updated } = await api.patch(`/api/admin/media/${framingMedia.id}`, {
+        focal_position_x: framingDraft.x,
+        focal_position_y: framingDraft.y,
+        focal_zoom: framingDraft.zoom,
+      });
+      setMedia((current) => current.map((item) => item.id === updated.id ? { ...item, ...updated } : item));
+      setFramingMedia(null);
+      toast.success('Encuadre de la foto guardado');
+    } catch (err) { toast.error('No se pudo guardar el encuadre', err.message); }
+    finally { setMediaBusy(false); }
   };
 
   const deleteOrphanMedia = async () => {
@@ -726,8 +753,9 @@ export default function VariantEditor({ productId, variants, attributes, categor
                 <p className="form-hint variant-media-order-hint">Usa las flechas para definir el orden en que aparecerá esta multimedia en la tienda.</p>
                 <div className="variant-media-grid">
                 {media.map((item, index) => <div className="variant-media-item" key={item.id}>
-                  {item.kind === 'image' ? <img src={item.url} alt={item.alt_text || ''} /> : <div className="variant-video-tile">▶ Video</div>}
+                  {item.kind === 'image' ? <div className="variant-media-item-preview"><img src={item.url} alt={item.alt_text || ''} style={{ objectPosition: `${item.focal_position_x ?? 50}% ${item.focal_position_y ?? 50}%`, transform: `scale(${Number(item.focal_zoom || 100) / 100})` }} /></div> : <div className="variant-video-tile">▶ Video</div>}
                   <div className="variant-media-item-actions">
+                    {item.kind === 'image' && <button type="button" className="btn btn-sm variant-media-frame-btn" aria-label={`Ajustar encuadre de la foto ${index + 1}`} title="Ajustar encuadre" disabled={mediaBusy} onClick={() => openMediaFraming(item)}><ZoomIcon /><span>Encuadre</span></button>}
                     <div className="variant-media-order-actions">
                       <button type="button" className="btn btn-sm variant-media-order-btn" aria-label={`Subir multimedia ${index + 1}`} title="Subir" disabled={mediaBusy || index === 0} onClick={(e) => { e.stopPropagation(); moveMedia(index, -1); }}><ChevronIcon direction="up" /></button>
                       <button type="button" className="btn btn-sm variant-media-order-btn" aria-label={`Bajar multimedia ${index + 1}`} title="Bajar" disabled={mediaBusy || index === media.length - 1} onClick={(e) => { e.stopPropagation(); moveMedia(index, 1); }}><ChevronIcon direction="down" /></button>
@@ -773,6 +801,21 @@ export default function VariantEditor({ productId, variants, attributes, categor
         ) : (
           <p style={{ margin: 0 }}>La variante se eliminará y su multimedia solo se desvinculará. Esta acción no se puede deshacer.</p>
         )}
+      </Modal>
+
+      <Modal
+        open={!!framingMedia}
+        onClose={() => !mediaBusy && setFramingMedia(null)}
+        title="Ajustar encuadre de la foto"
+        size="md"
+        footer={<><button className="btn" type="button" onClick={() => setFramingMedia(null)} disabled={mediaBusy}>Cancelar</button><button className="btn btn-primary" type="button" onClick={saveMediaFraming} disabled={mediaBusy}>{mediaBusy ? 'Guardando…' : 'Guardar encuadre'}</button></>}
+      >
+        {framingMedia && <div className="variant-media-framing">
+          <p className="form-hint">Ajusta qué parte de esta foto se ve en la galería de producto. Este encuadre se guarda para esta imagen.</p>
+          <div className="variant-media-framing-preview"><img src={framingMedia.url} alt="Vista previa del encuadre" style={{ objectPosition: `${framingDraft.x}% ${framingDraft.y}%`, transform: `scale(${framingDraft.zoom / 100})` }} /></div>
+          {[['x', 'Posición horizontal'], ['y', 'Posición vertical']].map(([axis, label]) => <label className="form-group" key={axis}><span>{label}: <strong>{framingDraft[axis]}%</strong></span><input type="range" min="0" max="100" value={framingDraft[axis]} onChange={(event) => setFramingDraft((current) => ({ ...current, [axis]: Number(event.target.value) }))} /></label>)}
+          <label className="form-group"><span>Zoom: <strong>{framingDraft.zoom}%</strong></span><input type="range" min="100" max="300" step="5" value={framingDraft.zoom} onChange={(event) => setFramingDraft((current) => ({ ...current, zoom: Number(event.target.value) }))} /></label>
+        </div>}
       </Modal>
 
       <Confirm

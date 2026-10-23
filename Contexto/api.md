@@ -177,7 +177,7 @@ de una transacción y crean un movimiento auditable.
 | GET | `/api/admin/media` | `?product_id=&variant_id=&category_id=&kind=&page=&limit=` | `media` |
 | POST | `/api/admin/media` | `multipart/form-data` con `file` (JPEG, PNG, WebP, AVIF o GIF), `product_id?`, `variant_id?`, `category_id?`, `alt_text?`; o JSON `{ kind: "video_embed", url, product_id, variant_id, category_id? }` | `media` |
 | POST | `/api/admin/media/:id/attach` | `{ product_id, variant_id }` | `media` (reutiliza un archivo existente en una variante) |
-| PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order?, category_id? }` | `media` |
+| PATCH | `/api/admin/media/:id` | `{ alt_text?, display_order?, category_id?, focal_position_x?, focal_position_y?, focal_zoom? }` | `media` (el encuadre acepta posiciones 0–100 y zoom 100–300) |
 | DELETE | `/api/admin/media/:id` | — | `media` (borrado definitivo solo si está huérfana; si está en uso devuelve `media_in_use`) |
 | DELETE | `/api/admin/media/:id/variants/:variantId` | — | `media` (desvincula de una variante, conserva el archivo) |
 | POST | `/api/admin/media/cleanup` | — | `media` (borra huérfanas >30d) |

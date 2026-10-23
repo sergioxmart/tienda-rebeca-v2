@@ -146,6 +146,9 @@ eliminaciones actuales desde la biblioteca son definitivas y las huérfanas
 antiguas se limpian con un cron (no en SQL). Al desvincular una carga directa
 de una variante, también se limpian sus IDs de producto y variante para que
 quede en la biblioteca sin seguir apareciendo como media del producto.
+La migración `013_media_focal_position.sql` agrega `focal_position_x`,
+`focal_position_y` (0–100) y `focal_zoom` (100–300), que el admin usa para
+evitar recortes y la tienda aplica en la galería del detalle.
 
 ### `product_variants` (`001_initial_schema.sql`)
 

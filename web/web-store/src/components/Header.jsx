@@ -49,17 +49,21 @@ export default function Header() {
   const logoBorderRadius = Number.isFinite(rawLogoBorderRadius)
     ? Math.min(100, Math.max(0, rawLogoBorderRadius))
     : 0;
-  const logoShapeStyle = logoBorderRadius >= 100
-    ? { width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }
-    : { borderRadius: `${logoBorderRadius / 2}%` };
   const textLogo = site?.navbar_logo_text || name;
   const logoMode = site?.navbar_logo_mode || 'image';
   const useTextLogo = ['text', 'image_text', 'custom_text'].includes(logoMode);
   const useImageLogo = logoMode !== 'text';
+  const rawNavbarHeight = Number(site?.navbar_height);
+  const navbarHeight = Number.isFinite(rawNavbarHeight) ? Math.min(140, Math.max(66, rawNavbarHeight)) : 66;
   const logoVerticalPadding = Number(site?.navbar_logo_vertical_padding);
+  const maxLogoVerticalPadding = Math.min(32, Math.max(1, Math.floor((navbarHeight - 36) / 2)));
   const headerVerticalPadding = Number.isFinite(logoVerticalPadding)
-    ? Math.min(32, Math.max(1, logoVerticalPadding))
+    ? Math.min(maxLogoVerticalPadding, Math.max(1, logoVerticalPadding))
     : 15;
+  const logoMaxHeight = Math.max(1, navbarHeight - headerVerticalPadding * 2);
+  const logoShapeStyle = logoBorderRadius >= 100
+    ? { width: `${logoMaxHeight}px`, height: `${logoMaxHeight}px`, maxWidth: `${logoMaxHeight}px`, maxHeight: `${logoMaxHeight}px`, borderRadius: '50%', objectFit: 'cover' }
+    : { maxHeight: `${logoMaxHeight}px`, borderRadius: `${logoBorderRadius / 2}%` };
   const logoFontFamily = LOGO_FONT_FAMILIES[site?.navbar_logo_font] || LOGO_FONT_FAMILIES.display;
   const mobileLogoAlignment = site?.navbar_mobile_logo_alignment === 'center' ? 'center' : 'left';
   const visibleCategories = Array.isArray(categories) ? categories.slice(0, 5) : [];
@@ -183,7 +187,7 @@ export default function Header() {
   return (
     <header className="header site-header">
       {showAnnouncement && <div className="announcement-bar"><div className="header-width">{announcement.split('·').map((part, index) => <React.Fragment key={`${part}-${index}`}>{index > 0 && <span>·</span>}{part.trim()}</React.Fragment>)}</div></div>}
-      <div className="header-inner site-header__inner" style={{ paddingTop: `${headerVerticalPadding}px`, paddingBottom: `${headerVerticalPadding}px` }}>
+      <div className="header-inner site-header__inner" style={{ height: `${navbarHeight}px`, minHeight: `${navbarHeight}px`, paddingTop: `${headerVerticalPadding}px`, paddingBottom: `${headerVerticalPadding}px` }}>
         <button
           className={`menu-toggle ${menuOpen ? 'is-open' : ''}`}
           type="button"

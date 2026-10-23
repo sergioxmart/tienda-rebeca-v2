@@ -44,6 +44,12 @@ para mantener layouts independientes (`store` o `service:<slug>`).
 La migración `012_custom_category_pages.sql` agrega `categories.is_custom_page`
 para mostrar módulos del Builder encima del catálogo habitual de una categoría.
 
+La migración `013_media_focal_position.sql` agrega posición y zoom del
+encuadre individual de cada imagen usada en las galerías de producto.
+
+La migración `013_media_focal_position.sql` agrega posición y zoom del
+encuadre individual de cada imagen usada en las galerías de producto.
+
 ## Regla para cambios futuros
 
 El baseline ya representa la historia condensada y no debe editarse en una

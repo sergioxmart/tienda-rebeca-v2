@@ -42,6 +42,9 @@ const GLOBAL_STYLE_DEFAULTS = Object.freeze({
   ...STORE_THEME_DEFAULTS,
   store_splash_enabled: true,
   store_splash_duration: 2.5,
+  store_splash_style: 'image',
+  store_splash_title: '',
+  store_splash_size: 520,
   store_splash_image_url: '',
   store_splash_image_border_radius: 100,
   store_splash_background_color: '#FAF7F2',
@@ -54,6 +57,9 @@ function normalizeGlobalStyles(config = {}) {
     ...normalizeStoreTheme(config),
     store_splash_enabled: config.store_splash_enabled !== false,
     store_splash_duration: Number.isFinite(duration) ? Math.min(10, Math.max(1, duration)) : GLOBAL_STYLE_DEFAULTS.store_splash_duration,
+    store_splash_style: ['image', 'image_title', 'spinner', 'spinner_title'].includes(config.store_splash_style) ? config.store_splash_style : GLOBAL_STYLE_DEFAULTS.store_splash_style,
+    store_splash_title: typeof config.store_splash_title === 'string' ? config.store_splash_title : '',
+    store_splash_size: Number.isFinite(Number(config.store_splash_size)) ? Math.min(520, Math.max(80, Number(config.store_splash_size))) : GLOBAL_STYLE_DEFAULTS.store_splash_size,
     store_splash_image_url: typeof config.store_splash_image_url === 'string' ? config.store_splash_image_url : '',
     store_splash_image_border_radius: Number.isFinite(imageBorderRadius) ? Math.min(100, Math.max(0, Math.round(imageBorderRadius))) : GLOBAL_STYLE_DEFAULTS.store_splash_image_border_radius,
     store_splash_background_color: HERO_COLOR_RE.test(String(config.store_splash_background_color || '')) ? String(config.store_splash_background_color).toUpperCase() : GLOBAL_STYLE_DEFAULTS.store_splash_background_color,
@@ -481,6 +487,7 @@ const NAV_DEFAULTS = {
   navbar_custom_logo_url: '',
   navbar_logo_border_radius: 0,
   navbar_logo_vertical_padding: 15,
+  navbar_height: 66,
   navbar_logo_text: 'Rebeca Andrade',
   navbar_logo_font: 'display',
   navbar_mobile_logo_alignment: 'left',
@@ -556,10 +563,14 @@ function GlobalSpacingField({ field, value, onChange }) {
   );
 }
 
-function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onUploadSplashImage, uploadingSplashImage }) {
+function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onOpenSplashPreview, onUploadSplashImage, uploadingSplashImage, siteName }) {
   const paletteFields = STORE_THEME_FIELDS.slice(0, 4);
   const typographyFields = STORE_THEME_FIELDS.slice(4);
   const splashImageBorderRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
+  const splashUsesImage = ['image', 'image_title'].includes(values.store_splash_style);
+  const splashUsesTitle = ['image_title', 'spinner_title'].includes(values.store_splash_style);
+  const splashSize = Math.min(520, Math.max(80, Number(values.store_splash_size) || 520));
+  const splashTitle = values.store_splash_title?.trim() || siteName || 'Rebeca Andrade';
   return (
     <div className="builder-global-styles">
       <div className="builder-global-styles-intro">
@@ -587,9 +598,25 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onUploadSplas
       <section className="builder-global-style-section builder-splash-settings">
         <div className="builder-global-style-heading"><h3>Pantalla de bienvenida</h3><span>Se muestra al abrir la página principal de la tienda.</span></div>
         <label className="builder-splash-toggle"><input type="checkbox" checked={values.store_splash_enabled} onChange={(event) => onChange('store_splash_enabled', event.target.checked)} /> Activar pantalla de bienvenida</label>
+        <div className="form-row builder-splash-style-row">
+          <div className="form-group">
+            <label htmlFor="builder-splash-style">Estilo de la pantalla</label>
+            <select id="builder-splash-style" className="select" value={values.store_splash_style} onChange={(event) => onChange('store_splash_style', event.target.value)} disabled={!values.store_splash_enabled}>
+              <option value="image">Solo imagen con fondo</option>
+              <option value="image_title">Imagen + título</option>
+              <option value="spinner">Spinner circular</option>
+              <option value="spinner_title">Spinner circular + título</option>
+            </select>
+          </div>
+          {splashUsesTitle && <div className="form-group">
+            <label htmlFor="builder-splash-title">Título</label>
+            <input id="builder-splash-title" className="input" value={values.store_splash_title} onChange={(event) => onChange('store_splash_title', event.target.value)} placeholder="Nombre de la tienda" disabled={!values.store_splash_enabled} />
+          </div>}
+        </div>
         <div className="builder-splash-controls">
           <label className="form-group"><span>Duración</span><span className="builder-splash-duration"><input className="input" type="number" min="1" max="10" step="0.5" value={values.store_splash_duration} onChange={(event) => onChange('store_splash_duration', event.target.value)} disabled={!values.store_splash_enabled} /><span>segundos</span></span></label>
-          <div className="form-group">
+          <label className="form-group builder-splash-size-field"><span>Tamaño del contenido: <strong>{splashSize}px</strong></span><input type="range" min="80" max="520" step="10" value={splashSize} onChange={(event) => onChange('store_splash_size', Number(event.target.value))} disabled={!values.store_splash_enabled} aria-label="Tamaño del contenido del splash" /><span className="help">Ajusta la imagen o el spinner que aparece al cargar.</span></label>
+          {splashUsesImage && <div className="form-group">
             <label htmlFor="builder-splash-image-url">Imagen o GIF</label>
             <input id="builder-splash-image-url" className="input" type="url" value={values.store_splash_image_url} onChange={(event) => onChange('store_splash_image_url', event.target.value)} placeholder="Pega una URL o elige desde Media" disabled={!values.store_splash_enabled} />
             <div className="builder-splash-upload-row">
@@ -601,15 +628,24 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onUploadSplas
               {values.store_splash_image_url && <button className="btn" type="button" onClick={() => onChange('store_splash_image_url', '')} disabled={!values.store_splash_enabled || uploadingSplashImage}>Quitar</button>}
             </div>
             <span className="help">Formatos: JPG, PNG, WebP, AVIF o GIF. Si no eliges una imagen, se muestra el nombre de la tienda.</span>
-          </div>
+          </div>}
         </div>
-        {values.store_splash_image_url && <div className="builder-splash-preview"><img className={splashImageBorderRadius === 100 ? 'is-circular' : ''} src={values.store_splash_image_url} alt="Vista previa de la pantalla de bienvenida" style={splashImageBorderRadius === 100 ? undefined : { borderRadius: `${splashImageBorderRadius / 2}%` }} /><span>Vista previa</span></div>}
+        <button className="builder-splash-preview-trigger" type="button" onClick={onOpenSplashPreview}>
+          {values.store_splash_style.startsWith('spinner')
+            ? <span className="spinner builder-splash-spinner" aria-hidden="true" style={{ width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` }} />
+            : values.store_splash_image_url
+              ? <img className={splashImageBorderRadius === 100 ? 'is-circular' : ''} src={values.store_splash_image_url} alt="" style={splashImageBorderRadius === 100 ? undefined : { borderRadius: `${splashImageBorderRadius / 2}%` }} />
+              : <span className="builder-splash-preview-brand">{splashTitle}</span>}
+          {splashUsesTitle && values.store_splash_image_url && <strong>{splashTitle}</strong>}
+          {values.store_splash_style === 'spinner_title' && <strong>{splashTitle}</strong>}
+          <span>Ver vista previa</span>
+        </button>
         <div className="builder-splash-appearance">
-          <div className="form-group builder-splash-radius-field">
+          {splashUsesImage && <div className="form-group builder-splash-radius-field">
             <label htmlFor="builder-splash-image-border-radius">Redondez de la imagen: <strong>{splashImageBorderRadius}%</strong></label>
             <input id="builder-splash-image-border-radius" type="range" min="0" max="100" step="1" value={splashImageBorderRadius} onChange={(event) => onChange('store_splash_image_border_radius', Number(event.target.value))} aria-label="Redondez de la imagen del splash" disabled={!values.store_splash_enabled || !values.store_splash_image_url} />
             <span className="help">0% conserva las esquinas rectas; 100% redondea completamente la imagen.</span>
-          </div>
+          </div>}
           <GlobalColorField
             field={{ key: 'store_splash_background_color', label: 'Fondo del splash', description: 'Color que cubre la pantalla mientras aparece la imagen.' }}
             value={values.store_splash_background_color}
@@ -628,6 +664,39 @@ function GlobalStoreStyles({ values, onChange, onOpenSplashPicker, onUploadSplas
         <small style={{ color: values.store_body_text_color }}>Texto base</small>
       </div>
     </div>
+  );
+}
+
+function SplashPreviewModal({ open, onClose, values, siteName }) {
+  const style = ['image', 'image_title', 'spinner', 'spinner_title'].includes(values.store_splash_style) ? values.store_splash_style : 'image';
+  const imageUrl = values.store_splash_image_url || '';
+  const imageRadius = Math.min(100, Math.max(0, Number(values.store_splash_image_border_radius) || 0));
+  const title = values.store_splash_title?.trim() || siteName || 'Rebeca Andrade';
+  const splashSize = Math.min(520, Math.max(80, Number(values.store_splash_size) || 520));
+  const backgroundColor = HERO_COLOR_RE.test(String(values.store_splash_background_color || ''))
+    ? values.store_splash_background_color
+    : '#FAF7F2';
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="Vista previa de la pantalla de bienvenida"
+      footer={<button className="btn" type="button" onClick={onClose}>Cerrar</button>}
+    >
+      <div className={`builder-splash-preview-stage is-${style}`} style={{ backgroundColor }}>
+        {style.startsWith('spinner')
+          ? <div className="builder-splash-spinner-preview"> <span className="spinner builder-splash-preview-stage-spinner" aria-hidden="true" style={{ width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` }} />{style === 'spinner_title' && <strong>{title}</strong>}</div>
+          : <div className={`builder-splash-preview-stage-content${style === 'image_title' ? ' has-title' : ''}`}>
+            {imageUrl
+              ? <img className={imageRadius === 100 ? 'is-circular' : ''} src={imageUrl} alt={style === 'image_title' ? title : siteName} style={{ maxWidth: `min(72vw, ${splashSize}px)`, maxHeight: `min(56vh, ${splashSize}px)`, ...(imageRadius === 100 ? undefined : { borderRadius: `${imageRadius / 2}%` }) }} />
+              : <span className="builder-splash-preview-stage-brand">{title}</span>}
+            {style === 'image_title' && imageUrl && <strong>{title}</strong>}
+            {!imageUrl && <i aria-hidden="true" />}
+          </div>}
+      </div>
+    </Modal>
   );
 }
 
@@ -930,8 +999,9 @@ function normalizeMediaPlacement(value) {
   }));
 }
 
-function MediaPickerModal({ open, onClose, items, loading, value, onSelect, title = 'Elegir imagen de Media' }) {
+function MediaPickerModal({ open, onClose, items, loading, value, onSelect, onUploadFiles, uploading = false, title = 'Elegir imagen de Media' }) {
   const [search, setSearch] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (open) setSearch('');
@@ -945,6 +1015,12 @@ function MediaPickerModal({ open, onClose, items, loading, value, onSelect, titl
       .filter(Boolean)
       .some((field) => String(field).toLowerCase().includes(normalizedSearch));
   });
+
+  const handleUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (files.length) await onUploadFiles(files);
+  };
 
   return (
     <Modal
@@ -965,6 +1041,10 @@ function MediaPickerModal({ open, onClose, items, loading, value, onSelect, titl
             aria-label="Buscar imagen en Media"
           />
           <span>{filteredItems.length} imagen{filteredItems.length === 1 ? '' : 'es'}</span>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={handleUpload} disabled={uploading} />
+          <button className="btn btn-primary" type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || loading}>
+            {uploading ? <><span className="spinner" /> Subiendo…</> : '+ Subir imágenes'}
+          </button>
         </div>
         {loading ? (
           <div className="builder-media-picker-empty"><span className="spinner" /> Cargando biblioteca…</div>
@@ -1130,7 +1210,9 @@ function ImageGalleryField({ value, onChange, onOpenPicker }) {
 function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, removeNavLink, onOpenLogoPicker }) {
   const customCodeEnabled = Boolean(navSettings.navbar_custom_code_enabled);
   const logoBorderRadius = Math.min(100, Math.max(0, Number(navSettings.navbar_logo_border_radius) || 0));
-  const logoVerticalPadding = Math.min(32, Math.max(1, Number(navSettings.navbar_logo_vertical_padding) || 15));
+  const navbarHeight = Math.min(140, Math.max(66, Number(navSettings.navbar_height) || 66));
+  const maxLogoVerticalPadding = Math.min(32, Math.max(1, Math.floor((navbarHeight - 36) / 2)));
+  const logoVerticalPadding = Math.min(maxLogoVerticalPadding, Math.max(1, Number(navSettings.navbar_logo_vertical_padding) || 15));
   const imageLogoModes = ['image', 'custom', 'image_text', 'custom_text'];
   const textLogoModes = ['text', 'image_text', 'custom_text'];
   const customImageLogoModes = ['custom', 'custom_text'];
@@ -1144,6 +1226,24 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
     <div className="builder-navbar-settings">
       <div className="builder-navbar-settings-heading">
         <div><span className="builder-kicker">Configuración del módulo</span><h3>Nav Bar de la tienda</h3><p>Estos cambios se guardan en el borrador y solo llegan a 5173 al publicar.</p></div>
+      </div>
+      <div className="form-group builder-navbar-radius-field">
+        <label htmlFor="builder-navbar-height">Altura del Nav Bar: <strong>{navbarHeight}px</strong></label>
+        <input
+          id="builder-navbar-height"
+          type="range"
+          min="66"
+          max="140"
+          step="1"
+          value={navbarHeight}
+          onChange={(event) => {
+            const height = Number(event.target.value);
+            setNavValue('navbar_height', height);
+            setNavValue('navbar_logo_vertical_padding', Math.min(Number(navSettings.navbar_logo_vertical_padding) || 15, Math.max(1, Math.floor((height - 36) / 2))));
+          }}
+          aria-label="Altura del Nav Bar"
+        />
+        <div className="help">La barra conserva esta altura; el logo se ajusta al espacio que dejan el padding superior e inferior.</div>
       </div>
       <div className="form-row">
         <div className="form-group">
@@ -1186,13 +1286,13 @@ function NavbarSettings({ navSettings, setNavValue, updateNavLink, addNavLink, r
             id="builder-navbar-logo-vertical-padding"
             type="range"
             min="1"
-            max="32"
+            max={maxLogoVerticalPadding}
             step="1"
             value={logoVerticalPadding}
             onChange={(event) => setNavValue('navbar_logo_vertical_padding', Number(event.target.value))}
             aria-label="Espacio superior e inferior del Nav Bar"
           />
-          <div className="help">1 px acerca el logo a los bordes superior e inferior; aumenta el valor para dejar más espacio.</div>
+          <div className="help">El valor define el espacio arriba y abajo del logo dentro de la altura configurada.</div>
         </div>
       )}
       {hasCustomImageLogo && (
@@ -1294,10 +1394,12 @@ export default function PageBuilder() {
   const [navbarOpen, setNavbarOpen] = useState(false);
   const [savedNavSettings, setSavedNavSettings] = useState(NAV_DEFAULTS);
   const [globalStylesOpen, setGlobalStylesOpen] = useState(false);
+  const [splashPreviewOpen, setSplashPreviewOpen] = useState(false);
   const [globalStyles, setGlobalStyles] = useState(GLOBAL_STYLE_DEFAULTS);
   const [savedGlobalStyles, setSavedGlobalStyles] = useState(GLOBAL_STYLE_DEFAULTS);
   const [globalStylesSaving, setGlobalStylesSaving] = useState(false);
   const [uploadingSplashImage, setUploadingSplashImage] = useState(false);
+  const [uploadingPickerImages, setUploadingPickerImages] = useState(false);
   const [mediaItems, setMediaItems] = useState([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
@@ -1371,6 +1473,45 @@ export default function PageBuilder() {
   const openSplashPicker = async () => {
     setSplashPickerOpen(true);
     if (!mediaLoaded) await loadMedia();
+  };
+
+  const uploadPickerImages = async (files) => {
+    const validFiles = [];
+    const failures = [];
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) failures.push(`${file.name}: solo se permiten imágenes`);
+      else if (file.size > 5 * 1024 * 1024) failures.push(`${file.name}: supera el límite de 5 MB`);
+      else validFiles.push(file);
+    }
+    if (!validFiles.length) {
+      toast.error('No se subieron imágenes', failures.join(' · '));
+      return;
+    }
+
+    setUploadingPickerImages(true);
+    const uploadedItems = [];
+    try {
+      for (const file of validFiles) {
+        try {
+          const form = new FormData();
+          form.append('file', file);
+          form.append('alt_text', file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || file.name);
+          const data = await api.upload('/api/admin/media', form);
+          if (data.media) uploadedItems.push(data.media);
+          else failures.push(`${file.name}: el servidor no devolvió la imagen`);
+        } catch (err) {
+          failures.push(`${file.name}: ${err.message || 'no se pudo subir'}`);
+        }
+      }
+      if (uploadedItems.length) {
+        setMediaItems((current) => [...uploadedItems, ...current.filter((item) => !uploadedItems.some((uploaded) => uploaded.id === item.id))]);
+        setMediaLoaded(true);
+        toast.success(`${uploadedItems.length} ${uploadedItems.length === 1 ? 'imagen subida a Media' : 'imágenes subidas a Media'}`);
+      }
+      if (failures.length) toast.error('Algunos archivos no se subieron', failures.join(' · '));
+    } finally {
+      setUploadingPickerImages(false);
+    }
   };
 
   const persistDraft = async (nextModules, nextNavSettings) => {
@@ -1460,7 +1601,14 @@ export default function PageBuilder() {
   const saveNavSettings = async () => {
     setNavSaving(true);
     try {
-      const next = { ...navSettings, navbar_links: navSettings.navbar_links.filter((link) => link.label.trim() && link.href.trim()) };
+      const navbarHeight = Math.min(140, Math.max(66, Number(navSettings.navbar_height) || 66));
+      const maxLogoVerticalPadding = Math.min(32, Math.max(1, Math.floor((navbarHeight - 36) / 2)));
+      const next = {
+        ...navSettings,
+        navbar_height: navbarHeight,
+        navbar_logo_vertical_padding: Math.min(maxLogoVerticalPadding, Math.max(1, Number(navSettings.navbar_logo_vertical_padding) || 15)),
+        navbar_links: navSettings.navbar_links.filter((link) => link.label.trim() && link.href.trim()),
+      };
       setNavSettings(next);
       if (await persistDraft(modules, next)) {
         setSavedNavSettings(next);
@@ -1795,8 +1943,10 @@ export default function PageBuilder() {
           </>
         }
       >
-        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onOpenSplashPicker={openSplashPicker} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} />
+        <GlobalStoreStyles values={globalStyles} onChange={(key, value) => setGlobalStyles((current) => ({ ...current, [key]: value }))} onOpenSplashPicker={openSplashPicker} onOpenSplashPreview={() => setSplashPreviewOpen(true)} onUploadSplashImage={uploadSplashImage} uploadingSplashImage={uploadingSplashImage} siteName={navSettings.site_name} />
       </Modal>
+
+      <SplashPreviewModal open={splashPreviewOpen} onClose={() => setSplashPreviewOpen(false)} values={globalStyles} siteName={navSettings.site_name} />
 
       <Modal
         open={navbarOpen}
@@ -1920,6 +2070,8 @@ export default function PageBuilder() {
         onClose={() => setMediaPickerField(null)}
         items={mediaItems}
         loading={mediaLoading}
+        onUploadFiles={uploadPickerImages}
+        uploading={uploadingPickerImages}
         value={mediaPickerField?.startsWith('image_gallery:')
           ? mediaPickerField.endsWith(':add') ? '' : editing?.settings?.images?.[Number(mediaPickerField.slice('image_gallery:'.length))]?.url || ''
           : mediaPickerField ? editing?.settings?.[mediaPickerField] : ''}
@@ -1947,6 +2099,8 @@ export default function PageBuilder() {
         onClose={() => setNavLogoPickerOpen(false)}
         items={mediaItems}
         loading={mediaLoading}
+        onUploadFiles={uploadPickerImages}
+        uploading={uploadingPickerImages}
         value={navSettings.navbar_custom_logo_url || ''}
         title="Elegir logo personalizado"
         onSelect={(url) => {
@@ -1960,6 +2114,8 @@ export default function PageBuilder() {
         onClose={() => setSplashPickerOpen(false)}
         items={mediaItems}
         loading={mediaLoading}
+        onUploadFiles={uploadPickerImages}
+        uploading={uploadingPickerImages}
         value={globalStyles.store_splash_image_url || ''}
         title="Elegir imagen o GIF para el splash"
         onSelect={(url) => {

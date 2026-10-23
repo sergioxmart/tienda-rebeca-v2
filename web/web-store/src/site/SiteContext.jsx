@@ -53,6 +53,20 @@ export function SiteProvider({ children }) {
     if (visibleSite) applyStoreTheme(visibleSite, activeCategory);
   }, [activeCategory, visibleSite]);
 
+  useEffect(() => {
+    if (!visibleSite) return;
+    document.title = visibleSite.site_name || 'Rebeca Andrade';
+    const iconUrl = visibleSite.navbar_custom_logo_url || visibleSite.logo_url;
+    if (!iconUrl) return;
+    let icon = document.querySelector('link[rel~="icon"]');
+    if (!icon) {
+      icon = document.createElement('link');
+      icon.rel = 'icon';
+      document.head.appendChild(icon);
+    }
+    icon.href = iconUrl;
+  }, [visibleSite]);
+
   return (
     <SiteContext.Provider value={{ site: visibleSite, categories, siteLoading }}>
       {children}

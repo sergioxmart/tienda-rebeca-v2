@@ -33,14 +33,23 @@ habitual de esa categoría. Las páginas conservan el Navbar y Footer globales.
   aplica un tema sin tocar lo publicado; se publica explícitamente.
 - **Tema** = snapshot de la lista ordenada de `page_modules` + un subset
   de `site_config` (`BUILDER_CONFIG_KEYS`: nombre del sitio, contacto,
-  navbar, colores de tienda, fondo del login admin).
+  navbar, colores de tienda, ajustes de splash y fondo del login admin).
 - La configuración del Nav Bar se edita en un modal del Builder. Incluye
   visibilidad, enlaces, código personalizado y una alternativa de logo
   textual con familia tipográfica predefinida; las claves
   `navbar_logo_mode`, `navbar_logo_text`, `navbar_logo_font` y
   `navbar_show_store` viajan en el mismo subset de `site_config`. También
-  permite combinar el logo cargado o personalizado con texto y ajustar el
-  espacio vertical del Nav Bar desde 1 px.
+  permite combinar el logo cargado o personalizado con texto, ajustar la
+  altura del Nav Bar (66 px por defecto) y el espacio vertical que determina
+  cuánto puede crecer el logo dentro de esa altura.
+- La pantalla de bienvenida se configura en Estilos globales: imagen con
+  fondo, imagen junto al título, spinner circular o spinner con título. El
+  borrador incluye estilo, tamaño, duración, imagen, redondez y color de fondo.
+- El spinner del splash usa el indicador circular compartido por la aplicación;
+  el logo configurado en el navbar también se aplica como favicon en la tienda
+  y el panel admin.
+- Los selectores de Media del Nav Bar, las galerías y el splash permiten
+  subir imágenes directamente a la biblioteca y elegirlas sin cerrar el modal.
 - El módulo Hero permite alinear su contenido, activar o quitar el overlay
   de color de la imagen de fondo y mover el bloque de contenido con posiciones
   independientes para escritorio y móvil desde el Editor visual del modal.

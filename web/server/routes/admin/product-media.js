@@ -89,7 +89,7 @@ export async function listMedia(req, res) {
 
   const { rows } = await query(
     `SELECT id, product_id, category_id, variant_id, kind, url, mime, size_bytes, width, height,
-            alt_text, display_order, created_at,
+            alt_text, display_order, focal_position_x, focal_position_y, focal_zoom, created_at,
             (
               product_id IS NULL
               AND variant_id IS NULL
@@ -284,6 +284,9 @@ export async function updateMedia(req, res, id) {
     validators.optionalString(body.alt_text, 'alt_text', { max: 500 }),
     body.display_order !== undefined && validators.int(body.display_order, 'display_order'),
     body.category_id !== undefined && body.category_id !== null && validators.int(body.category_id, 'category_id', { min: 1 }),
+    body.focal_position_x !== undefined && validators.int(body.focal_position_x, 'focal_position_x', { min: 0, max: 100 }),
+    body.focal_position_y !== undefined && validators.int(body.focal_position_y, 'focal_position_y', { min: 0, max: 100 }),
+    body.focal_zoom !== undefined && validators.int(body.focal_zoom, 'focal_zoom', { min: 100, max: 300 }),
   ])) return;
 
   const fields = [];
@@ -291,6 +294,9 @@ export async function updateMedia(req, res, id) {
   let i = 1;
   if (body.alt_text !== undefined)      { fields.push(`alt_text = $${i++}`);      values.push(body.alt_text); }
   if (body.display_order !== undefined) { fields.push(`display_order = $${i++}`); values.push(body.display_order); }
+  for (const key of ['focal_position_x', 'focal_position_y', 'focal_zoom']) {
+    if (body[key] !== undefined) { fields.push(`${key} = $${i++}`); values.push(body[key]); }
+  }
   if (body.category_id !== undefined) {
     if (body.category_id !== null) {
       const { rows: category } = await query('SELECT id FROM categories WHERE id = $1', [Number(body.category_id)]);
@@ -304,7 +310,7 @@ export async function updateMedia(req, res, id) {
 
   const { rows } = await query(
     `UPDATE product_media SET ${fields.join(', ')} WHERE id = $${i}
-      RETURNING id, product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, created_at`,
+      RETURNING id, product_id, category_id, variant_id, kind, url, mime, size_bytes, alt_text, display_order, focal_position_x, focal_position_y, focal_zoom, created_at`,
     values,
   );
   await recordAudit(req.user?.id, 'media.update', req.ip, { id, fields: Object.keys(body) });

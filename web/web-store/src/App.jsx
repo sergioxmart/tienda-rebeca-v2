@@ -45,6 +45,10 @@ function StoreSplash() {
   }, [pathname, preview.active, siteLoading, site?.store_splash_enabled, site?.store_splash_duration]);
 
   if (!visible) return null;
+  const configuredStyle = site?.store_splash_style;
+  const splashStyle = ['image', 'image_title', 'spinner', 'spinner_title'].includes(configuredStyle) ? configuredStyle : 'image';
+  const configuredSize = Number(site?.store_splash_size);
+  const splashSize = Number.isFinite(configuredSize) ? Math.min(520, Math.max(80, configuredSize)) : 520;
   const imageUrl = typeof site?.store_splash_image_url === 'string' ? site.store_splash_image_url : '';
   const configuredImageBorderRadius = site?.store_splash_image_border_radius;
   const imageBorderRadius = configuredImageBorderRadius == null || configuredImageBorderRadius === ''
@@ -56,11 +60,20 @@ function StoreSplash() {
     : '#FAF7F2';
   const isCircularImage = safeImageBorderRadius === 100;
   const siteName = site?.site_name || 'Rebeca Andrade';
+  const splashTitle = typeof site?.store_splash_title === 'string' && site.store_splash_title.trim()
+    ? site.store_splash_title.trim()
+    : siteName;
+  const spinnerStyle = { width: `${Math.min(56, splashSize / 5)}px`, height: `${Math.min(56, splashSize / 5)}px` };
   return (
-    <div className="store-splash" style={{ backgroundColor }} role="status" aria-live="polite" aria-label="Cargando tienda">
-      {imageUrl
-        ? <img className={`store-splash-image${isCircularImage ? ' is-circular' : ''}`} src={imageUrl} alt={siteName} style={isCircularImage ? undefined : { borderRadius: `${safeImageBorderRadius / 2}%` }} />
-        : <div className="store-splash-brand"><span>{siteName}</span><i aria-hidden="true" /></div>}
+    <div className={`store-splash store-splash--${splashStyle}`} style={{ backgroundColor }} role="status" aria-live="polite" aria-label="Cargando tienda">
+      {splashStyle.startsWith('spinner')
+        ? <div className="store-splash-spinner-content"><span className="spinner store-splash-spinner" style={spinnerStyle} aria-hidden="true" />{splashStyle === 'spinner_title' && <span className="store-splash-title">{splashTitle}</span>}</div>
+        : imageUrl
+          ? <div className={`store-splash-content${splashStyle === 'image_title' ? ' has-title' : ''}`}>
+            <img className={`store-splash-image${isCircularImage ? ' is-circular' : ''}`} src={imageUrl} alt={splashStyle === 'image_title' ? splashTitle : siteName} style={{ maxWidth: `min(78vw, ${splashSize}px)`, maxHeight: `min(72vh, ${splashSize}px)`, ...(isCircularImage ? undefined : { borderRadius: `${safeImageBorderRadius / 2}%` }) }} />
+            {splashStyle === 'image_title' && <span className="store-splash-title">{splashTitle}</span>}
+          </div>
+          : <div className="store-splash-brand"><span>{splashStyle === 'image_title' ? splashTitle : siteName}</span><i aria-hidden="true" /></div>}
     </div>
   );
 }

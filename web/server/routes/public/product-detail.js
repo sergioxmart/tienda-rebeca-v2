@@ -105,7 +105,8 @@ export async function getProductBySlug(req, res, slug) {
 
   // 4. Media (fotos)
   const { rows: media } = await query(
-    `SELECT pm.id, pm.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order
+    `SELECT pm.id, pm.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order,
+            pm.focal_position_x, pm.focal_position_y, pm.focal_zoom
        FROM product_media pm
       WHERE pm.deleted_at IS NULL AND pm.product_id = $1
      UNION ALL

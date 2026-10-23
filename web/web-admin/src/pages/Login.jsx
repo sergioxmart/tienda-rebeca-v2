@@ -71,6 +71,12 @@ export default function Login() {
           document.title = `${c.site_name} · Admin`;
         }
         if (typeof c.logo_url === 'string' && c.logo_url) setLogoUrl(c.logo_url);
+        const iconUrl = c.navbar_custom_logo_url || c.logo_url;
+        if (iconUrl) {
+          let icon = document.querySelector('link[rel~="icon"]');
+          if (!icon) { icon = document.createElement('link'); icon.rel = 'icon'; document.head.appendChild(icon); }
+          icon.href = iconUrl;
+        }
       } catch { /* fallback a la marca Rebeca Andrade */ }
     })();
   }, []);

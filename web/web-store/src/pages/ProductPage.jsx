@@ -374,8 +374,8 @@ export default function ProductPage() {
               className="gallery"
               role="img"
               aria-label={selectedGalleryImage?.alt_text || product.name}
-              style={image ? { backgroundImage: `url(${image})` } : undefined}
-            />
+              style={undefined}
+            >{image && <img className="gallery-main-image" src={image} alt="" decoding="async" style={{ objectPosition: `${selectedGalleryImage?.focal_position_x ?? 50}% ${selectedGalleryImage?.focal_position_y ?? 50}%`, transform: `scale(${Number(selectedGalleryImage?.focal_zoom || 100) / 100})` }} />}</div>
             {zoom.visible && image && (
               <div
                 className="gallery-zoom"
@@ -393,6 +393,7 @@ export default function ProductPage() {
                   style={{
                     width: `${GALLERY_ZOOM_SCALE * 100}%`,
                     height: `${GALLERY_ZOOM_SCALE * 100}%`,
+                    objectPosition: `${selectedGalleryImage?.focal_position_x ?? 50}% ${selectedGalleryImage?.focal_position_y ?? 50}%`,
                     left: `${zoom.imageLeft}%`,
                     top: `${zoom.imageTop}%`,
                   }}
@@ -409,7 +410,7 @@ export default function ProductPage() {
                 onClick={() => setActiveImageId(item.id)}
                 aria-label={`Ver foto ${item.alt_text || product.name}`}
               >
-                <img src={item.url} alt={item.alt_text || product.name} />
+                <img src={item.url} alt={item.alt_text || product.name} style={{ objectPosition: `${item.focal_position_x ?? 50}% ${item.focal_position_y ?? 50}%` }} />
               </button>
             ))}
           </div>}

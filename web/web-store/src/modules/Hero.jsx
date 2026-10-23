@@ -48,6 +48,7 @@ export default function Hero({ settings = {} }) {
     custom_code,
     content_align = 'center',
     hero_style = 'classic-overlay',
+    full_bleed = false,
     overlay_enabled = true,
     content_position,
     text_color,
@@ -187,7 +188,7 @@ export default function Hero({ settings = {} }) {
     return <CustomCode code={custom_code} className="hero-custom-code" />;
   }
   return (
-    <section className={`hero hero-style-${normalizedHeroStyle} hero-content-align-${normalizedContentAlign}${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
+    <section className={`hero hero-style-${normalizedHeroStyle} hero-content-align-${normalizedContentAlign}${full_bleed ? ' hero-full-bleed' : ''}${minimalVisual ? ' hero-minimal' : ''}${image_url ? ' hero-with-image' : ''}`} style={style}>
       {image_url && <div className={`hero-image-background${overlay_enabled === false ? ' is-without-overlay' : ''}`} aria-hidden="true" />}
       {!minimalVisual && <>
         <div className="hero-glow hero-glow-one" />

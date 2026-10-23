@@ -1,6 +1,6 @@
 # Módulo: Web Builder y temas
 
-> **Última actualización: 2026-10-20**
+> **Última actualización: 2026-10-23**
 
 El admin arma la home de la tienda con bloques (`page_modules`) y puede
 guardar/exportar el resultado completo como **tema**. Endpoints en
@@ -87,8 +87,10 @@ se rechaza en el backend.
 Tipos actuales: `hero`, `banner`, `categories`, `categories_grid`,
 `carousel`, `image_gallery`, `collections`, `text`, `contact`,
 `featured_products`, `recent_products`, `footer`. La galería puede mostrar
-un collage o un carrusel de una imagen por vez; el banner permite ajustar
-la altura de la imagen para escritorio y móvil.
+un collage o un carrusel de una imagen por vez; su visor de imágenes ajusta
+las fotos al viewport y permite configurar el color del fondo y de los
+botones de cierre y navegación. El banner permite ajustar la altura de la
+imagen para escritorio y móvil.
 
 ## Gotchas
 

@@ -83,6 +83,13 @@ export default function Header() {
   const navLinks = (customLinks.length > 0 ? customLinks : defaultNavLinks)
     .filter((link) => showStore || !(link.label.trim().toLowerCase() === 'tienda' && link.href === '/categoria'));
 
+  const isCurrentNavLink = (href) => {
+    if (!href || href.startsWith('http')) return false;
+    const targetPath = href.split(/[?#]/, 1)[0].replace(/\/$/, '') || '/';
+    const currentPath = location.pathname.replace(/\/$/, '') || '/';
+    return currentPath === targetPath;
+  };
+
   if (site?.navbar_custom_code_enabled && site.navbar_custom_code) {
     return <CustomCode code={site.navbar_custom_code} className="navbar-custom-code" />;
   }
@@ -203,11 +210,13 @@ export default function Header() {
           {useImageLogo && !logoUrl && <><span className="logo-mark">T</span>{!useTextLogo && <span>{name}<span className="accent">.</span></span>}</>}
         </Link>
         <nav className="nav site-nav" aria-label="Navegación principal">
-          {navLinks.map((link) => (
-            link.href.startsWith('http')
-              ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={link.featured ? 'nav-all' : ''}>{link.label}</a>
-              : <Link key={`${link.label}-${link.href}`} to={link.href} className={link.featured ? 'nav-all' : ''}>{link.label}</Link>
-          ))}
+          {navLinks.map((link) => {
+            const active = isCurrentNavLink(link.href);
+            const className = [link.featured ? 'nav-all' : '', active ? 'is-active' : ''].filter(Boolean).join(' ');
+            return link.href.startsWith('http')
+              ? <a key={`${link.label}-${link.href}`} href={link.href} target="_blank" rel="noreferrer" className={className || undefined}>{link.label}</a>
+              : <Link key={`${link.label}-${link.href}`} to={link.href} className={className || undefined} aria-current={active ? 'page' : undefined}>{link.label}</Link>;
+          })}
         </nav>
         {showSearch && <div className="desktop-search-control">
           <button

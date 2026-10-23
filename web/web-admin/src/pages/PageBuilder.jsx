@@ -111,6 +111,7 @@ const MODULE_SCHEMAS = {
         { value: 'classic-overlay', label: 'Clásico · texto sobre imagen' },
         { value: 'side-panel', label: 'Panel lateral · texto separado' },
       ] },
+      { key: 'full_bleed', label: 'Extender el Hero hasta los bordes de la pantalla', type: 'checkbox', defaultValue: false },
       { key: 'content_align', label: 'Alineación del contenido', type: 'select', defaultValue: 'center', options: [
         { value: 'left', label: 'Izquierda' },
         { value: 'center', label: 'Centro' },
@@ -218,6 +219,9 @@ const MODULE_SCHEMAS = {
         { value: 'collage', label: 'Collage' },
         { value: 'carousel', label: 'Carrusel · una imagen a la vez' },
       ] },
+      { key: 'lightbox_background_color', label: 'Color del fondo del visor', type: 'color', defaultValue: '#0C0F14' },
+      { key: 'lightbox_close_background_color', label: 'Color de fondo del botón cerrar', type: 'color', defaultValue: '#14161A' },
+      { key: 'lightbox_arrow_background_color', label: 'Color de fondo de las flechas', type: 'color', defaultValue: '#14161A' },
       { key: 'images', label: 'Imágenes', type: 'media_list', defaultValue: [] },
       { key: 'image_height_desktop', label: 'Altura · Escritorio', type: 'range', defaultValue: 560, min: 240, max: 760, step: 20, unit: 'px' },
       { key: 'image_height_mobile', label: 'Altura · Móvil', type: 'range', defaultValue: 380, min: 200, max: 600, step: 20, unit: 'px' },
@@ -380,7 +384,7 @@ const HERO_SETTING_GROUPS = [
     key: 'content',
     label: 'Contenido',
     description: 'Texto principal y ubicación del contenido.',
-    fields: ['eyebrow', 'title', 'subtitle', 'hero_style', 'content_align'],
+    fields: ['eyebrow', 'title', 'subtitle', 'hero_style', 'full_bleed', 'content_align'],
   },
   {
     key: 'appearance',

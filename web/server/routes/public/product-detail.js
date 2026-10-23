@@ -110,7 +110,8 @@ export async function getProductBySlug(req, res, slug) {
        FROM product_media pm
       WHERE pm.deleted_at IS NULL AND pm.product_id = $1
      UNION ALL
-     SELECT pm.id, pmv.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order
+     SELECT pm.id, pmv.variant_id, pm.kind, pm.url, pm.alt_text, pm.display_order,
+            pm.focal_position_x, pm.focal_position_y, pm.focal_zoom
        FROM product_media pm
        JOIN product_media_variants pmv ON pmv.media_id = pm.id
        JOIN product_variants linked_variant ON linked_variant.id = pmv.variant_id

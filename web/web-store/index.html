@@ -7,20 +7,6 @@
     <meta name="theme-color" content="#0F2A47" />
     <title>Rebeca Andrade</title>
     <script src="https://checkout.epayco.co/checkout-v2.js"></script>
-    <script>
-      // Inyecta el title desde /api/public/site-config antes de que
-      // React monte, para que la pestaña del browser muestre el nombre
-      // real. Si falla, queda el nombre de Rebeca Andrade del <title> de arriba.
-      (async () => {
-        try {
-          const r = await fetch('/api/public/site-config');
-          if (!r.ok) return;
-          const data = await r.json();
-          const name = data?.config?.site_name;
-          if (name) document.title = name;
-        } catch { /* ignore */ }
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

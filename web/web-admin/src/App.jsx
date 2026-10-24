@@ -4,7 +4,6 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
-
 const Login = React.lazy(() => import('./pages/Login.jsx'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard.jsx'));
 const Products = React.lazy(() => import('./pages/Products.jsx'));
@@ -19,6 +18,7 @@ const Themes = React.lazy(() => import('./pages/Themes.jsx'));
 const Inventory = React.lazy(() => import('./pages/Inventory.jsx'));
 const Orders = React.lazy(() => import('./pages/Orders.jsx'));
 const Sales = React.lazy(() => import('./pages/Sales.jsx'));
+const NewArrivalsOrder = React.lazy(() => import('./pages/NewArrivalsOrder.jsx'));
 
 function PageLoading() {
   return (
@@ -27,7 +27,6 @@ function PageLoading() {
     </div>
   );
 }
-
 function RequireAuth({ children }) {
   const { status } = useAuth();
   const location = useLocation();
@@ -71,6 +70,7 @@ export default function App() {
           <Route path="/site-config" element={<SiteConfig />} />
           <Route path="/users" element={<Users />} />
           <Route path="/builder" element={<PageBuilder />} />
+          <Route path="/new-arrivals-order" element={<NewArrivalsOrder />} />
           <Route path="/themes" element={<Themes />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

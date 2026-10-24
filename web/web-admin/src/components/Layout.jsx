@@ -26,6 +26,7 @@ const NAV_GROUPS = [
     label: 'Sitio Web',
     items: [
       { to: '/builder', label: 'Constructor', icon: 'layout' },
+      { to: '/new-arrivals-order', label: 'Orden de Mas Nuevo', icon: 'orders' },
       { to: '/themes', label: 'Temas', icon: 'sparkles' },
       { to: '/site-config', label: 'Configuración', icon: 'settings' },
     ],

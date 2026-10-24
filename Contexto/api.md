@@ -62,7 +62,7 @@ no tiene `section`, devuelve 403.
 | GET | `/api/public/categories` | — | Lista categorías activas. Incluye `is_service` y `is_custom_page` para identificar páginas especiales del Builder. |
 | GET | `/api/public/categories/:slug` | — | Detalle de una categoría. |
 | GET | `/api/public/attributes` | — | Lista de atributos globales con sus valores. Para los filtros del catálogo. |
-| GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=` | Catálogo paginado (12 por página por defecto, máximo 50); incluye `pagination: { page, limit, total, total_pages }`. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). |
+| GET | `/api/public/products` | `?category=&featured=&q=&attribute=&page=&limit=&sort=newest` | Catálogo paginado (12 por página por defecto, máximo 50); incluye `pagination: { page, limit, total, total_pages }`. `attribute` se puede repetir (`?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`). `sort=newest` usa el organizador guardado para “Lo más nuevo”; sin configuración conserva el orden actual. |
 | GET | `/api/public/products/:slug` | — | Detalle: producto + variantes + media + atributos. |
 | GET | `/api/public/page-modules` | `?page_key=store`, `service:<slug>` o `category:<slug>` | Lista módulos publicados activos de esa página. Las categorías personalizadas conservan su catálogo y muestran sus módulos antes de los productos. |
 | POST | `/api/public/cart/validate` | `{ items: [{ variant_id, product_id }] }` | Revalida eliminaciones y devuelve nombre, precio, imagen, atributos y stock vigentes. Sin auth. |
@@ -146,6 +146,13 @@ cuenta.
 | DELETE | `/api/admin/products/:id` | — | `products` |
 | POST | `/api/admin/products/:id/attributes` | `{ attribute_id, is_required?, display_order? }` | `products` |
 | DELETE | `/api/admin/products/:id/attributes/:attributeId` | — | `products` |
+
+### Orden de “Lo más nuevo”
+
+| Método | Path | Body / Respuesta | Section |
+| ------ | ---- | ---------------- | ------- |
+| GET | `/api/admin/new-arrivals-order` | Devuelve `config`, productos activos y categorías para organizar la sección. | `new_arrivals_order` |
+| PUT | `/api/admin/new-arrivals-order` | `{ config: { group_by_category, flat_product_ids, category_ids, category_product_ids } }` | `new_arrivals_order` |
 
 ### Variantes
 

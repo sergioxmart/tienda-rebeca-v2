@@ -75,6 +75,10 @@ runner, ver `Contexto/dev-setup.md`.
   ┌──────────────┐
   │ site_config  │  (key/value JSONB, sin FK)
   └──────────────┘
+
+  ┌──────────────────────┐
+  │ new_arrivals_order   │  (config JSONB, sin FK)
+  └──────────────────────┘
 ```
 
 ## Tablas
@@ -97,6 +101,13 @@ tienda principal; `page_key = 'service:<slug>'` corresponde a la landing de
 una categoría marcada como servicio; `page_key = 'category:<slug>'` guarda
 secciones adicionales de una categoría de productos personalizada.
 `position` se ordena dentro de cada página.
+
+### `new_arrivals_order` (`014_new_arrivals_order.sql`)
+
+Configuración independiente para la lista plana y la organización por
+categorías de “Lo más nuevo”. No tiene claves foráneas para tolerar productos
+y categorías inactivos o eliminados. La ausencia de su fila mantiene el orden
+anterior; la reversión manual está en `web/migrations/rollback/`.
 
 ### `attributes` + `attribute_values` (`001_initial_schema.sql`)
 

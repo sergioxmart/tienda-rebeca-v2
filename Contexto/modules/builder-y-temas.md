@@ -48,6 +48,11 @@ habitual de esa categoría. Las páginas conservan el Navbar y Footer globales.
   borrador incluye estilo, tamaño, duración, imagen, redondez, color de fondo
   y tipografía del título. Las fuentes personalizadas también se pueden
   seleccionar para los textos del Hero.
+- El Footer global se ajusta desde el Builder (descripción, categorías,
+  contacto, redes, orden de las tres columnas y texto de derechos de autor).
+  El teléfono aparece como número visible y opción para llamar. Los enlaces
+  sociales se leen de `site_config`: WhatsApp, Instagram, Facebook y TikTok;
+  el botón flotante muestra las redes configuradas y el teléfono disponible.
 - El spinner del splash usa el indicador circular compartido por la aplicación;
   el logo configurado en el navbar también se aplica como favicon en la tienda
   y el panel admin.

@@ -11,7 +11,7 @@ import { protect, recordAudit, notFound } from './_helpers.js';
 
 export const BUILDER_CONFIG_KEYS = [
   'site_name', 'contact_email', 'contact_phone', 'contact_phone_display',
-  'contact_address', 'contact_instagram', 'contact_facebook', 'admin_login_bg',
+  'contact_address', 'contact_whatsapp', 'contact_instagram', 'contact_facebook', 'contact_tiktok', 'admin_login_bg',
   'navbar_enabled', 'navbar_announcement', 'navbar_show_announcement',
   'navbar_show_search', 'navbar_show_cart', 'navbar_show_store', 'navbar_show_categories', 'navbar_links',
   'navbar_logo_mode', 'navbar_custom_logo_url', 'navbar_logo_border_radius', 'navbar_logo_vertical_padding', 'navbar_height', 'navbar_logo_text', 'navbar_logo_font', 'navbar_mobile_logo_alignment',

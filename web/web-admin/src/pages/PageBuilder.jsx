@@ -290,13 +290,23 @@ const MODULE_SCHEMAS = {
   },
   footer: {
     label: 'Footer',
-    description: 'Pie de página global con información de contacto y categorías.',
+    description: 'Pie de página global con información de contacto, categorías y redes sociales.',
     icon: '🧾',
     settings: [
       { key: 'title', label: 'Título del Footer', type: 'text', placeholder: 'Usa el nombre de la tienda si queda vacío' },
       { key: 'description', label: 'Descripción', type: 'textarea', placeholder: 'Mensaje breve de la tienda' },
       { key: 'show_categories', label: 'Mostrar categorías', type: 'checkbox', defaultValue: true },
       { key: 'show_contact', label: 'Mostrar contacto', type: 'checkbox', defaultValue: true },
+      { key: 'show_social_links', label: 'Mostrar enlaces a redes sociales', type: 'checkbox', defaultValue: true },
+      { key: 'column_order', label: 'Orden de las columnas', type: 'select', defaultValue: 'brand-categories-contact', options: [
+        { value: 'brand-categories-contact', label: 'Nombre · Categorías · Contacto' },
+        { value: 'brand-contact-categories', label: 'Nombre · Contacto · Categorías' },
+        { value: 'categories-brand-contact', label: 'Categorías · Nombre · Contacto' },
+        { value: 'categories-contact-brand', label: 'Categorías · Contacto · Nombre' },
+        { value: 'contact-brand-categories', label: 'Contacto · Nombre · Categorías' },
+        { value: 'contact-categories-brand', label: 'Contacto · Categorías · Nombre' },
+      ] },
+      { key: 'copyright_text', label: 'Texto de derechos de autor', type: 'text', placeholder: 'Usa el nombre de la tienda si queda vacío' },
     ],
   },
 };

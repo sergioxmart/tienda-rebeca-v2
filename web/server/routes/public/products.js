@@ -31,6 +31,12 @@ export async function listProducts(req, res) {
   const page = Math.max(1, parseIntParam(url.searchParams.get('page')) ?? 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, parseIntParam(url.searchParams.get('limit')) ?? DEFAULT_LIMIT));
   const offset = (page - 1) * limit;
+  const isNewArrivalsRequest = url.searchParams.get('sort') === 'newest';
+  let newArrivalsConfig = null;
+  if (isNewArrivalsRequest) {
+    const { rows } = await query('SELECT config FROM new_arrivals_order WHERE id = 1');
+    newArrivalsConfig = rows[0]?.config || null;
+  }
 
   // Filtros por atributo: `?attribute=color:Rojo&attribute=modelo-telefono:iPhone 15`
   // Cada filtro es (slug del atributo, value del atributo).
@@ -98,34 +104,73 @@ export async function listProducts(req, res) {
     where.push(`p.id = ANY($${baseParams.length})`);
   }
 
+  const categoryJoin = newArrivalsConfig ? 'LEFT JOIN' : 'JOIN';
+
   // Total
   const { rows: countRows } = await query(
     `SELECT COUNT(DISTINCT p.id) AS total
        FROM products p
-       JOIN categories c ON c.id = p.category_id
+       ${categoryJoin} categories c ON c.id = p.category_id
       WHERE ${where.join(' AND ')}`,
     baseParams,
   );
   const total = Number(countRows[0].total);
 
   // Datos paginados
-  baseParams.push(limit, offset);
+  const productParams = [...baseParams];
+  if (!newArrivalsConfig) productParams.push(limit, offset);
   const { rows: products } = await query(
     `SELECT p.id, p.category_id, p.sku, p.name, p.slug, p.description, p.brand,
             p.base_price, p.compare_at, p.featured, p.display_order,
             p.catalog_image_position_x, p.catalog_image_position_y, p.catalog_image_zoom,
             p.catalog_image_media_id,
-            c.slug AS category_slug, c.name AS category_name,
+            c.slug AS category_slug, c.name AS category_name, c.display_order AS category_display_order,
             COALESCE(SUM(CASE WHEN v.active THEN v.stock ELSE 0 END), 0) AS total_stock
        FROM products p
-       JOIN categories c ON c.id = p.category_id
+       ${categoryJoin} categories c ON c.id = p.category_id
        LEFT JOIN product_variants v ON v.product_id = p.id
       WHERE ${where.join(' AND ')}
-      GROUP BY p.id, c.slug, c.name
+      GROUP BY p.id, c.slug, c.name, c.display_order
       ORDER BY p.featured DESC, p.display_order, p.name
-      LIMIT $${baseParams.length - 1} OFFSET $${baseParams.length}`,
-    baseParams,
+      ${newArrivalsConfig ? '' : `LIMIT $${productParams.length - 1} OFFSET $${productParams.length}`}`,
+    productParams,
   );
+
+  if (newArrivalsConfig) {
+    const compareDefault = (a, b) => (
+      Number(b.featured) - Number(a.featured)
+      || Number(a.display_order) - Number(b.display_order)
+      || String(a.name).localeCompare(String(b.name), 'es')
+    );
+    const productOrders = newArrivalsConfig.category_product_ids || {};
+    if (newArrivalsConfig.group_by_category) {
+      const categoryOrder = new Map((newArrivalsConfig.category_ids || []).map((id, index) => [Number(id), index]));
+      products.sort((a, b) => {
+        const aCategory = a.category_id == null ? Number.MAX_SAFE_INTEGER : (categoryOrder.get(Number(a.category_id)) ?? Number.MAX_SAFE_INTEGER - 1);
+        const bCategory = b.category_id == null ? Number.MAX_SAFE_INTEGER : (categoryOrder.get(Number(b.category_id)) ?? Number.MAX_SAFE_INTEGER - 1);
+        if (aCategory !== bCategory) return aCategory - bCategory;
+        if (a.category_id != null && b.category_id != null && !categoryOrder.has(Number(a.category_id)) && !categoryOrder.has(Number(b.category_id))) {
+          const categoryFallback = Number(a.category_display_order) - Number(b.category_display_order)
+            || String(a.category_name).localeCompare(String(b.category_name), 'es');
+          if (categoryFallback) return categoryFallback;
+        }
+        const key = a.category_id == null ? 'uncategorized' : String(a.category_id);
+        const order = new Map((productOrders[key] || []).map((id, index) => [Number(id), index]));
+        const aProduct = order.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER;
+        const bProduct = order.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER;
+        return aProduct - bProduct || compareDefault(a, b);
+      });
+    } else {
+      const flatOrder = new Map((newArrivalsConfig.flat_product_ids || []).map((id, index) => [Number(id), index]));
+      products.sort((a, b) => (
+        (flatOrder.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER)
+        - (flatOrder.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER)
+        || compareDefault(a, b)
+      ));
+    }
+    products.splice(0, products.length, ...products.slice(offset, offset + limit));
+  }
+  for (const product of products) delete product.category_display_order;
 
   // Media batch
   if (products.length > 0) {

@@ -73,7 +73,7 @@ modelos de dominio conviviendo.
 | ------ | -------- | ---- | --- |
 | Entry point | `node:http`, migraciones al boot, security headers, router por prefijo, workers en background, graceful shutdown | [`web/server/server.js`](../web/server/server.js) | — |
 | Router público | `/api/public/*`: catálogo, carrito, pedidos, pagos, geocoding, portal de cliente | [`web/server/routes/public/index.js`](../web/server/routes/public/index.js) | [api.md](./api.md) |
-| Router admin | `/api/admin/*`: 14 sub-routers + fallback al legacy | [`web/server/routes/admin/index.js`](../web/server/routes/admin/index.js) | [api.md](./api.md) |
+| Router admin | `/api/admin/*`: 15 sub-routers + fallback al legacy | [`web/server/routes/admin/index.js`](../web/server/routes/admin/index.js) | [api.md](./api.md) |
 | Auth admin | login, logout, refresh, me, 2FA TOTP, recuperación | [`web/server/routes/auth.js`](../web/server/routes/auth.js) | [api.md](./api.md) |
 | Webhooks entrantes | confirmaciones firmadas de ePayco y Mercado Pago | [`web/server/routes/webhooks/`](../web/server/routes/webhooks/) | [pagos](./modules/pagos.md) |
 | Media | sirve `/media/*` desde `uploads/` | [`web/server/routes/media.js`](../web/server/routes/media.js) | — |
@@ -87,7 +87,7 @@ modelos de dominio conviviendo.
 | Ubicaciones Colombia | catálogo depto/ciudad + geocoding de direcciones | [`web/server/lib/colombia-locations.js`](../web/server/lib/colombia-locations.js), [`geocoding.js`](../web/server/lib/geocoding.js) | — |
 | Re-exports a `core/` | `web/server/lib/*` y `middleware/*` son 1-liners hacia `core/` | [`web/server/lib/`](../web/server/lib/), [`middleware/`](../web/server/middleware/) | [conventions.md](./conventions.md) |
 | Scripts | `setup-db.js`, `migrate.js`, `create-admin.js` | [`web/server/scripts/`](../web/server/scripts/) | [dev-setup.md](./dev-setup.md) |
-| Migraciones SQL | baseline `001` + migraciones forward-only; `011` agrega servicios y scopes del Builder | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
+| Migraciones SQL | baseline `001` + migraciones forward-only; `014` agrega configuración independiente para ordenar “Lo más nuevo” | [`web/migrations/`](../web/migrations/) | [db-schema.md](./db-schema.md) |
 
 ### `web/web-store/` — tienda pública (SPA)
 
@@ -103,6 +103,7 @@ Rutas: `/`, `/categoria/:category`, `/producto/:slug`, `/carrito`,
 | Contextos | sitio, cliente, ubicaciones, preview del builder | [`site/`](../web/web-store/src/site/), [`customer/`](../web/web-store/src/customer/), [`locations/`](../web/web-store/src/locations/), [`preview/`](../web/web-store/src/preview/) |
 | Tema de tienda | tokens CSS derivados de `site_config` | [`web/web-store/src/site/storeTheme.js`](../web/web-store/src/site/storeTheme.js) |
 | Splash de bienvenida | Capa inicial de la página principal; ajustes de activación, duración e imagen/GIF en el modal de estilos globales del Builder (`site_config`) | [`web/web-store/src/App.jsx`](../web/web-store/src/App.jsx), [`web/web-admin/src/pages/PageBuilder.jsx`](../web/web-admin/src/pages/PageBuilder.jsx) |
+| Lo más nuevo | usa orden manual plano o por categoría cuando existe configuración; sin ella conserva el orden anterior | [`web/web-store/src/modules/RecentProducts.jsx`](../web/web-store/src/modules/RecentProducts.jsx), [`web/server/routes/public/products.js`](../web/server/routes/public/products.js), [`modules/lo-mas-nuevo.md`](./modules/lo-mas-nuevo.md) |
 | Cliente API | wrapper de `fetch` a `/api/public/*` | [`web/web-store/src/api.js`](../web/web-store/src/api.js) |
 
 ### `web/web-admin/` — panel admin (SPA)
@@ -115,6 +116,7 @@ Rutas: `/login`, `/`, `/products`, `/inventory`, `/orders`, `/sales`,
 | Módulo | Qué hace | Ruta |
 | ------ | -------- | ---- |
 | Páginas | una por sección; las más grandes son PageBuilder, SiteConfig, Attributes, ProductForm, Themes | [`web/web-admin/src/pages/`](../web/web-admin/src/pages/) |
+| Organizador “Lo más nuevo” | administra orden plano, orden de categorías y orden de productos por categoría | [`web/web-admin/src/pages/NewArrivalsOrder.jsx`](../web/web-admin/src/pages/NewArrivalsOrder.jsx), [`web/server/routes/admin/new-arrivals-order.js`](../web/server/routes/admin/new-arrivals-order.js) |
 | Editor de variantes | matriz de combinaciones atributo × valor con stock y precio | [`web/web-admin/src/components/VariantEditor.jsx`](../web/web-admin/src/components/VariantEditor.jsx) |
 | Auth | contexto de sesión + refresh; `RequireAuth` en `App.jsx` | [`web/web-admin/src/auth/AuthContext.jsx`](../web/web-admin/src/auth/AuthContext.jsx) |
 | Layout / UI | sidebar, topbar, Modal, Confirm, Toast, Empty, MoneyInput | [`web/web-admin/src/components/`](../web/web-admin/src/components/) |

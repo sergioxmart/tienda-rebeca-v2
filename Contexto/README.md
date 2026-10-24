@@ -38,6 +38,7 @@ Solo para los módulos grandes o no obvios. El resto se entiende desde
 | [`modules/pagos.md`](./modules/pagos.md) | Checkout, intención de pago, ePayco + Mercado Pago, webhooks y reserva de stock. |
 | [`modules/builder-y-temas.md`](./modules/builder-y-temas.md) | Web Builder, `page_modules`, temas de tienda y de admin. |
 | [`modules/portal-cliente.md`](./modules/portal-cliente.md) | Cuentas de cliente final con OTP, sesiones y retención. |
+| [`modules/lo-mas-nuevo.md`](./modules/lo-mas-nuevo.md) | Orden independiente de productos de la sección “Lo más nuevo”. |
 
 ## Planes
 

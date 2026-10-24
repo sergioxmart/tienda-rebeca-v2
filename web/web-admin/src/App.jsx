@@ -18,6 +18,7 @@ import Themes from './pages/Themes.jsx';
 import Inventory from './pages/Inventory.jsx';
 import Orders from './pages/Orders.jsx';
 import Sales from './pages/Sales.jsx';
+import NewArrivalsOrder from './pages/NewArrivalsOrder.jsx';
 
 function RequireAuth({ children }) {
   const { status } = useAuth();
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/site-config" element={<SiteConfig />} />
         <Route path="/users" element={<Users />} />
         <Route path="/builder" element={<PageBuilder />} />
+        <Route path="/new-arrivals-order" element={<NewArrivalsOrder />} />
         <Route path="/themes" element={<Themes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

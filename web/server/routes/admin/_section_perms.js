@@ -25,4 +25,5 @@ export const SECTION_PERMS = {
 
   // Config: solo admin escribe, todos leen
   site_config: { write: ['admin'], read: ['admin', 'operator', 'viewer'] },
+  new_arrivals_order: { write: ['admin'], read: ['admin', 'operator', 'viewer'] },
 };

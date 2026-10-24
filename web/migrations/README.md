@@ -41,6 +41,12 @@ La migración `011_service_categories_and_page_scopes.sql` agrega la marca
 `categories.is_service` para páginas de servicios y `page_modules.page_key`
 para mantener layouts independientes (`store` o `service:<slug>`).
 
+La migración `014_new_arrivals_order.sql` crea el almacenamiento independiente
+del orden de “Lo más nuevo”. No inserta una configuración inicial, por lo que
+la sección conserva su orden anterior hasta el primer cambio guardado. Su
+reversión manual está en `rollback/014_new_arrivals_order.sql`; ese archivo
+queda fuera del patrón que ejecuta el runner.
+
 ## Regla para cambios futuros
 
 El baseline ya representa la historia condensada y no debe editarse en una

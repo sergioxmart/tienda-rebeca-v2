@@ -5,6 +5,7 @@ import React from 'react';
 import { Navigate, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
+import FloatingSocialLinks from './components/SocialLinks.jsx';
 import Home from './pages/Home.jsx';
 import Catalog from './pages/Catalog.jsx';
 import ProductPage from './pages/ProductPage.jsx';
@@ -119,6 +120,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <FloatingSocialLinks />
     </div>
   );
 }

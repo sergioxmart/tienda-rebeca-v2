@@ -4,7 +4,6 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import Layout from './components/Layout.jsx';
-
 const Login = React.lazy(() => import('./pages/Login.jsx'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard.jsx'));
 const Products = React.lazy(() => import('./pages/Products.jsx'));
@@ -19,7 +18,7 @@ const Themes = React.lazy(() => import('./pages/Themes.jsx'));
 const Inventory = React.lazy(() => import('./pages/Inventory.jsx'));
 const Orders = React.lazy(() => import('./pages/Orders.jsx'));
 const Sales = React.lazy(() => import('./pages/Sales.jsx'));
-
+const NewArrivalsOrder = React.lazy(() => import('./pages/NewArrivalsOrder.jsx'));
 function PageLoading() {
   return (
     <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -66,6 +65,7 @@ export default function App() {
           <Route path="/orders/:id" element={<Orders />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/categories" element={<Categories />} />
+          <Route path="/new-arrivals-order" element={<NewArrivalsOrder />} />
           <Route path="/attributes" element={<Attributes />} />
           <Route path="/media" element={<Media />} />
           <Route path="/site-config" element={<SiteConfig />} />

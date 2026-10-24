@@ -47,8 +47,11 @@ para mostrar módulos del Builder encima del catálogo habitual de una categorí
 La migración `013_media_focal_position.sql` agrega posición y zoom del
 encuadre individual de cada imagen usada en las galerías de producto.
 
-La migración `013_media_focal_position.sql` agrega posición y zoom del
-encuadre individual de cada imagen usada en las galerías de producto.
+La migración `014_new_arrivals_order.sql` crea el almacenamiento independiente
+del orden de “Lo más nuevo”. No inserta una configuración inicial, por lo que
+la sección conserva su orden anterior hasta el primer cambio guardado. Su
+reversión manual está en `rollback/014_new_arrivals_order.sql`; ese archivo
+queda fuera del patrón que ejecuta el runner.
 
 ## Regla para cambios futuros
 

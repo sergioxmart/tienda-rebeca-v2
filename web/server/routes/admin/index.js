@@ -23,6 +23,7 @@ import { tryHandleOrders } from './orders.js';
 import { tryHandleManualOrders } from './manual-orders.js';
 import { tryHandleSales } from './sales.js';
 import { tryHandleBuilder } from './builder.js';
+import { tryHandleNewArrivalsOrder } from './new-arrivals-order.js';
 import { handleAdmin as handleAdminLegacy } from './legacy.js';
 
 // Sub-routers de TechStore. Cada uno decide si matchea o no.
@@ -42,6 +43,7 @@ const subRouters = [
   tryHandleManualOrders,
   tryHandleSales,
   tryHandleBuilder,
+  tryHandleNewArrivalsOrder,
 ];
 
 /**
